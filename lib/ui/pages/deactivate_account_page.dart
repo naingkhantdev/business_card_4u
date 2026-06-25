@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth_gate.dart';
-import '../../bloc/auth/auth_provider.dart';
-import '../../core/navigation/app_navigator.dart';
-import '../../core/theme/app_colors.dart';
-import '../components/app_primary_button.dart';
-import '../components/app_toast.dart';
+import '../../providers/auth/auth_provider.dart';
+import '../../services/navigation/app_navigator.dart';
+import '../theme/app_colors.dart';
+import '../widgets/app_primary_button.dart';
+import '../widgets/app_toast.dart';
 
-class DeactivateAccountPage extends StatefulWidget {
+class DeactivateAccountPage extends ConsumerStatefulWidget {
   const DeactivateAccountPage({super.key});
 
   @override
-  State<DeactivateAccountPage> createState() => _DeactivateAccountPageState();
+  ConsumerState<DeactivateAccountPage> createState() =>
+      _DeactivateAccountPageState();
 }
 
-class _DeactivateAccountPageState extends State<DeactivateAccountPage> {
+class _DeactivateAccountPageState extends ConsumerState<DeactivateAccountPage> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _submitting = false;
@@ -40,8 +41,8 @@ class _DeactivateAccountPageState extends State<DeactivateAccountPage> {
     }
 
     setState(() => _submitting = true);
-    final auth = context.read<AuthProvider>();
-    final result = await auth.deactivateAccount(password);
+    final authNotifier = ref.read(authProvider.notifier);
+    final result = await authNotifier.deactivateAccount(password);
 
     if (!mounted) return;
 
@@ -58,7 +59,7 @@ class _DeactivateAccountPageState extends State<DeactivateAccountPage> {
     final message = result.message ??
         'Your account has been deactivated. Log in again within 7 days to restore it.';
 
-    await auth.completeDeactivatedLogout(message);
+    await authNotifier.completeDeactivatedLogout(message);
 
     final navigator = appNavigatorKey.currentState;
     if (navigator == null) return;

@@ -1,26 +1,27 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../bloc/auth/auth_provider.dart';
-import '../../core/theme/app_colors.dart';
-import '../components/app_primary_button.dart';
-import '../components/app_toast.dart';
-import '../components/loading_view.dart';
+import '../../providers/auth/auth_provider.dart';
+import '../theme/app_colors.dart';
+import '../widgets/app_primary_button.dart';
+import '../widgets/app_toast.dart';
+import '../widgets/loading_view.dart';
 import 'register_page.dart';
 
-class LoginPage extends StatefulWidget {
+class LoginPage extends ConsumerStatefulWidget {
   final String? initialMessage;
 
   const LoginPage({super.key, this.initialMessage});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends ConsumerState<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _passwordFocusNode = FocusNode();
   bool _obscurePassword = true;
   String? _lastShownMessage;
 
@@ -32,13 +33,23 @@ class _LoginPageState extends State<LoginPage> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _passwordFocusNode.dispose();
     super.dispose();
   }
 
   @override
   void initState() {
     super.initState();
-    if (widget.initialMessage != null && widget.initialMessage!.trim().isNotEmpty) {
+    _passwordFocusNode.addListener(() {
+      if (_passwordFocusNode.hasFocus) {
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (!mounted) return;
+          setState(() {});
+        });
+      }
+    });
+    if (widget.initialMessage != null &&
+        widget.initialMessage!.trim().isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         _lastShownMessage = widget.initialMessage;
@@ -49,16 +60,19 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
-    final pendingMessage = auth.pendingMessage;
+    final authState = ref.watch(authProvider).when(
+          data: (state) => state,
+          loading: () => AuthState(isCheckingSession: true),
+          error: (error, stackTrace) => AuthState(),
+        );
+    final pendingMessage = authState.pendingMessage;
 
     if (pendingMessage != null && pendingMessage != _lastShownMessage) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        final message = context.read<AuthProvider>().consumePendingMessage();
-        if (message == null) return;
-        _lastShownMessage = message;
-        _showInfoMessage(message);
+        _lastShownMessage = pendingMessage;
+        _showInfoMessage(pendingMessage);
+        ref.read(authProvider.notifier).clearPendingMessage();
       });
     } else if (pendingMessage == null) {
       _lastShownMessage = null;
@@ -83,163 +97,168 @@ class _LoginPageState extends State<LoginPage> {
         resizeToAvoidBottomInset: true,
         body: Stack(
           children: [
-          /// ================= MAIN CONTENT =================
-          SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                /// ================= HERO SECTION =================
-                SizedBox(
-                  height: 200,
-                  width: double.infinity,
-                  child: CustomPaint(
-                    painter: PremiumHeroPainter(),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const SizedBox(height: 40),
-                        RichText(
-                          text: TextSpan(
-                            text: 'businessCard',
-                            style: const TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF0B1220),
-                            ),
-                            children: const [
-                              TextSpan(
-                                text: '4U',
+            /// ================= MAIN CONTENT =================
+            Builder(builder: (context) {
+              final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+              final isKeyboardOpen = keyboardHeight > 100;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  /// ================= HERO SECTION =================
+                  SizedBox(
+                    height: isKeyboardOpen ? 80 : 200,
+                    width: double.infinity,
+                    child: CustomPaint(
+                      painter: PremiumHeroPainter(),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(height: 40),
+                          if (!isKeyboardOpen)
+                            RichText(
+                              text: const TextSpan(
+                                text: 'businessCard',
                                 style: TextStyle(
-                                  color: AppColors.primary,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0B1220),
                                 ),
+                                children: [
+                                  TextSpan(
+                                    text: '4U',
+                                    style: TextStyle(
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  /// ================= FULL WIDTH IMAGE =================
+                  if (!isKeyboardOpen)
+                    Image.asset(
+                      'assets/images/login.png',
+                      height: 200,
+                      fit: BoxFit.contain,
+                    ),
+
+                  /// ================= LOGIN FORM (scrollable) =================
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 16),
+                          _inputField(
+                            controller: _emailController,
+                            label: 'Email',
+                            icon: Icons.email_outlined,
                           ),
+                          const SizedBox(height: 18),
+                          _inputField(
+                            controller: _passwordController,
+                            label: 'Password',
+                            icon: Icons.lock_outline,
+                            obscure: _obscurePassword,
+                            focusNode: _passwordFocusNode,
+                            suffix: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 28),
+                          AppPrimaryButton(
+                            text: 'Log In',
+                            loading: authState.isLoading,
+                            onPressed: authState.isLoading
+                                ? null
+                                : () async {
+                                    final result = await ref
+                                        .read(authProvider.notifier)
+                                        .login(
+                                          _emailController.text.trim(),
+                                          _passwordController.text.trim(),
+                                        );
+
+                                    if (!result.isSuccess && context.mounted) {
+                                      final updatedAuthState =
+                                          ref.read(authProvider).valueOrNull;
+                                      AppToast.show(
+                                        context,
+                                        updatedAuthState?.lastErrorMessage ??
+                                            'Invalid email or password',
+                                        type: AppToastType.error,
+                                      );
+                                    }
+                                  },
+                            height: 52,
+                            borderRadius: BorderRadius.circular(26),
+                          ),
+                          const SizedBox(height: 16),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const RegisterPage(),
+                                ),
+                              );
+                            },
+                            child:
+                                const Text("Don't have an account? Register"),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Developed by Asia Brightway',
+                            style: TextStyle(
+                              color: Color(0xFF5B6473),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }),
+
+            /// ================= LOADING OVERLAY =================
+            if (authState.isLoading)
+              AbsorbPointer(
+                absorbing: true,
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const LoadingView(size: 120),
+                        const SizedBox(height: 16),
+                        TextButton(
+                          onPressed: () {
+                            ref.read(authProvider.notifier).cancelLoading();
+                          },
+                          child: const Text('Cancel'),
                         ),
                       ],
                     ),
                   ),
                 ),
-
-                const SizedBox(height: 20),
-
-                /// ================= FULL WIDTH IMAGE =================
-                SizedBox(
-                  width: double.infinity,
-                  child: Image.asset(
-                    'assets/images/login.png',
-                    height: 260,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-
-                /// ================= LOGIN FORM =================
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    children: [
-                      _inputField(
-                        controller: _emailController,
-                        label: 'Email',
-                        icon: Icons.email_outlined,
-                      ),
-                      const SizedBox(height: 18),
-                      _inputField(
-                        controller: _passwordController,
-                        label: 'Password',
-                        icon: Icons.lock_outline,
-                        obscure: _obscurePassword,
-                        suffix: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                          ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-                      AppPrimaryButton(
-                        text: 'Log In',
-                        loading: auth.isLoading,
-                        onPressed: auth.isLoading
-                            ? null
-                            : () async {
-                                final success =
-                                    await context.read<AuthProvider>().login(
-                                          _emailController.text.trim(),
-                                          _passwordController.text.trim(),
-                                        );
-
-                                if (!success && context.mounted) {
-                                  AppToast.show(
-                                    context,
-                                    context.read<AuthProvider>().lastErrorMessage ??
-                                        'Invalid email or password',
-                                    type: AppToastType.error,
-                                  );
-                                }
-                              },
-                        height: 52,
-                        borderRadius: BorderRadius.circular(26),
-                      ),
-                      const SizedBox(height: 16),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const RegisterPage(),
-                            ),
-                          );
-                        },
-                        child: const Text("Don't have an account? Register"),
-                      ),
-                      const SizedBox(height: 30),
-                      Text(
-                        'Developed by Asia Brightway',
-                        style: const TextStyle(
-                          color: Color(0xFF5B6473),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 40),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          /// ================= LOADING OVERLAY =================
-          if (auth.isLoading)
-            AbsorbPointer(
-              absorbing: true,
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const LoadingView(size: 120),
-                      const SizedBox(height: 16),
-                      TextButton(
-                        onPressed: () {
-                          context.read<AuthProvider>().cancelLoading();
-                        },
-                        child: const Text('Cancel'),
-                      ),
-                    ],
-                  ),
-                ),
               ),
-            ),
           ],
         ),
       ),
@@ -251,10 +270,12 @@ class _LoginPageState extends State<LoginPage> {
     required String label,
     required IconData icon,
     bool obscure = false,
+    FocusNode? focusNode,
     Widget? suffix,
   }) {
     return TextFormField(
       controller: controller,
+      focusNode: focusNode,
       obscureText: obscure,
       style: const TextStyle(
         color: Color(0xFF0B1220),

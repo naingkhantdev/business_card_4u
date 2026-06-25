@@ -1,21 +1,21 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../bloc/auth/auth_provider.dart';
-import '../../core/theme/app_colors.dart';
-import '../components/app_primary_button.dart';
-import '../components/app_toast.dart';
-import '../components/loading_view.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../providers/auth/auth_provider.dart';
+import '../theme/app_colors.dart';
+import '../widgets/app_primary_button.dart';
+import '../widgets/app_toast.dart';
+import '../widgets/loading_view.dart';
 
-class CompleteRegisterPage extends StatefulWidget {
+class CompleteRegisterPage extends ConsumerStatefulWidget {
   final String email;
   const CompleteRegisterPage({super.key, required this.email});
 
   @override
-  State<CompleteRegisterPage> createState() => _CompleteRegisterPageState();
+  ConsumerState<CompleteRegisterPage> createState() => _CompleteRegisterPageState();
 }
 
-class _CompleteRegisterPageState extends State<CompleteRegisterPage> {
+class _CompleteRegisterPageState extends ConsumerState<CompleteRegisterPage> {
   final _formKey = GlobalKey<FormState>();
 
   final _nameController = TextEditingController();
@@ -48,12 +48,12 @@ class _CompleteRegisterPageState extends State<CompleteRegisterPage> {
     );
   }
 
-  Future<void> _submit(AuthProvider auth) async {
+  Future<void> _submit() async {
     FocusScope.of(context).unfocus();
 
     if (!_formKey.currentState!.validate()) return;
 
-    final success = await context.read<AuthProvider>().completeRegister(
+    final result = await ref.read(authProvider.notifier).completeRegister(
           widget.email,
           _nameController.text.trim(),
           _passwordController.text.trim(),
@@ -62,7 +62,7 @@ class _CompleteRegisterPageState extends State<CompleteRegisterPage> {
 
     if (!mounted) return;
 
-    if (success) {
+    if (result.isSuccess) {
       _showMessage("Registration Successful");
       Navigator.popUntil(context, (route) => route.isFirst);
     } else {
@@ -72,7 +72,11 @@ class _CompleteRegisterPageState extends State<CompleteRegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
+    final authState = ref.watch(authProvider).when(
+          data: (state) => state,
+          loading: () => AuthState(isLoading: true),
+          error: (error, stackTrace) => AuthState(),
+        );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -182,7 +186,7 @@ class _CompleteRegisterPageState extends State<CompleteRegisterPage> {
                             _PremiumTextField(
                               controller: _nameController,
                               focusNode: _nameFocus,
-                              enabled: !auth.isLoading,
+                              enabled: !authState.isLoading,
                               hintText: "Full Name",
                               prefixIcon: Icons.person_outline_rounded,
                               textInputAction: TextInputAction.next,
@@ -199,7 +203,7 @@ class _CompleteRegisterPageState extends State<CompleteRegisterPage> {
                             _PremiumTextField(
                               controller: _passwordController,
                               focusNode: _passFocus,
-                              enabled: !auth.isLoading,
+                              enabled: !authState.isLoading,
                               hintText: "Password",
                               prefixIcon: Icons.lock_outline_rounded,
                               obscureText: _obscurePassword,
@@ -224,12 +228,12 @@ class _CompleteRegisterPageState extends State<CompleteRegisterPage> {
                             _PremiumTextField(
                               controller: _confirmController,
                               focusNode: _confirmFocus,
-                              enabled: !auth.isLoading,
+                              enabled: !authState.isLoading,
                               hintText: "Confirm Password",
                               prefixIcon: Icons.lock_reset_rounded,
                               obscureText: _obscureConfirm,
                               textInputAction: TextInputAction.done,
-                              onFieldSubmitted: (_) => _submit(auth),
+                              onFieldSubmitted: (_) => _submit(),
                               suffix: IconButton(
                                 onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
                                 icon: Icon(
@@ -269,8 +273,8 @@ class _CompleteRegisterPageState extends State<CompleteRegisterPage> {
 
                             AppPrimaryButton(
                               text: "Create Account",
-                              loading: auth.isLoading,
-                              onPressed: auth.isLoading ? null : () => _submit(auth),
+                              loading: authState.isLoading,
+                              onPressed: authState.isLoading ? null : _submit,
                               height: 54,
                               borderRadius: BorderRadius.circular(18),
                               fontSize: 15.5,
@@ -300,7 +304,7 @@ class _CompleteRegisterPageState extends State<CompleteRegisterPage> {
             ),
           ),
 
-          if (auth.isLoading) const _LoadingGlassOverlay(),
+          if (authState.isLoading) const _LoadingGlassOverlay(),
         ],
       ),
     );

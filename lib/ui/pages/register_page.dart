@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../bloc/auth/auth_provider.dart';
-import '../../core/theme/app_colors.dart';
-import '../components/app_primary_button.dart';
-import '../components/app_toast.dart';
+import '../../providers/auth/auth_provider.dart';
+import '../theme/app_colors.dart';
+import '../widgets/app_primary_button.dart';
+import '../widgets/app_toast.dart';
 import 'otp_page.dart';
 
-class RegisterPage extends StatefulWidget {
+class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
 
   @override
-  State<RegisterPage> createState() => _RegisterPageState();
+  ConsumerState<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
+class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _emailController = TextEditingController();
 
   void _toast(String message, {bool isError = false}) {
@@ -26,16 +26,15 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  Future<void> _submit(AuthProvider auth) async {
+  Future<void> _submit() async {
     final email = _emailController.text.trim();
 
-    final result = await auth.sendOtp(email);
+    final result = await ref.read(authProvider.notifier).sendOtp(email);
 
     if (!mounted) return;
-    final message = result.message;
 
-    if (message != null && message.trim().isNotEmpty) {
-      _toast(message, isError: !result.success);
+    if (result.message != null && result.message!.trim().isNotEmpty) {
+      _toast(result.message!, isError: !result.success);
     }
 
     if (result.success) {
@@ -54,7 +53,11 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
+    final authState = ref.watch(authProvider).when(
+          data: (state) => state,
+          loading: () => AuthState(isLoading: true),
+          error: (error, stackTrace) => AuthState(),
+        );
 
     const bg = AppColors.surfaceSoft;
     const text = Color(0xFF0B1220);
@@ -167,13 +170,13 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         child: TextField(
                           controller: _emailController,
-                          enabled: !auth.isLoading,
+                          enabled: !authState.isLoading,
                           keyboardType: TextInputType.emailAddress,
                           textInputAction: TextInputAction.done,
                           onSubmitted: (_) =>
-                              auth.isLoading ? null : _submit(auth),
+                              authState.isLoading ? null : _submit(),
                           decoration: const InputDecoration(
-                            hintText: 'name@company.com',
+                            hintText: 'example@gmail.com',
                             hintStyle: TextStyle(color: muted),
                             prefixIcon: Icon(
                               Icons.alternate_email_rounded,
@@ -194,8 +197,8 @@ class _RegisterPageState extends State<RegisterPage> {
                       const SizedBox(height: 14),
                       AppPrimaryButton(
                         text: 'Send code',
-                        loading: auth.isLoading,
-                        onPressed: auth.isLoading ? null : () => _submit(auth),
+                        loading: authState.isLoading,
+                        onPressed: authState.isLoading ? null : _submit,
                         height: 50,
                       ),
                       const SizedBox(height: 10),

@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../bloc/card/card_provider.dart';
-import '../../core/network/image_url.dart';
-import '../../data/models/business_card_model.dart';
-import '../components/loading_view.dart';
-import '../components/theme_toggle_button.dart';
+import '../../providers/card/card_provider.dart';
+import '../../network/image_url.dart';
+import '../../data/vos/business_card_model.dart';
+import '../widgets/app_toast.dart';
+import '../widgets/loading_view.dart';
+import '../widgets/theme_toggle_button.dart';
 
-class FriendRequestsPage extends StatefulWidget {
+class FriendRequestsPage extends ConsumerStatefulWidget {
   const FriendRequestsPage({super.key});
 
   @override
-  State<FriendRequestsPage> createState() => _FriendRequestsPageState();
+  ConsumerState<FriendRequestsPage> createState() =>
+      _FriendRequestsPageState();
 }
 
-class _FriendRequestsPageState extends State<FriendRequestsPage> {
+class _FriendRequestsPageState extends ConsumerState<FriendRequestsPage> {
   bool _isLoading = true;
   final Set<int> _acceptedIds = <int>{};
   final Set<int> _processingIds = <int>{};
@@ -29,11 +31,12 @@ class _FriendRequestsPageState extends State<FriendRequestsPage> {
   Future<void> _loadRequests() async {
     setState(() => _isLoading = true);
 
-    await context.read<CardProvider>().fetchFriendRequests();
+    await ref.read(cardProvider.notifier).fetchFriendRequests();
 
     if (!mounted) return;
 
-    final requests = context.read<CardProvider>().friendRequests;
+    final requests =
+        ref.read(cardProvider).valueOrNull?.friendRequests ?? [];
     setState(() {
       _requests = List<BusinessCardModel>.from(requests);
       _acceptedIds.removeWhere((id) => !_requests.any((card) => card.id == id));
@@ -44,32 +47,46 @@ class _FriendRequestsPageState extends State<FriendRequestsPage> {
   Future<void> _acceptRequest(int cardId) async {
     setState(() => _processingIds.add(cardId));
 
-    final ok = await context.read<CardProvider>().acceptFriendRequest(cardId);
+    final result =
+        await ref.read(cardProvider.notifier).acceptFriendRequest(cardId);
 
     if (!mounted) return;
 
     setState(() {
       _processingIds.remove(cardId);
-      if (ok) {
+      if (result.isSuccess) {
         _acceptedIds.add(cardId);
       }
     });
+
+    if (result.isSuccess) {
+      AppToast.show(context, 'Friend request accepted', type: AppToastType.success);
+    } else {
+      AppToast.show(context, result.message ?? 'Failed to accept request', type: AppToastType.error);
+    }
   }
 
   Future<void> _rejectRequest(int cardId) async {
     setState(() => _processingIds.add(cardId));
 
-    final ok = await context.read<CardProvider>().rejectFriendRequest(cardId);
+    final result =
+        await ref.read(cardProvider.notifier).rejectFriendRequest(cardId);
 
     if (!mounted) return;
 
     setState(() {
       _processingIds.remove(cardId);
-      if (ok) {
+      if (result.isSuccess) {
         _acceptedIds.remove(cardId);
         _requests.removeWhere((card) => card.id == cardId);
       }
     });
+
+    if (result.isSuccess) {
+      AppToast.show(context, 'Friend request rejected', type: AppToastType.destructiveSoft);
+    } else {
+      AppToast.show(context, result.message ?? 'Failed to reject request', type: AppToastType.error);
+    }
   }
 
   @override

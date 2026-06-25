@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:provider/provider.dart';
-import '../../bloc/card/card_provider.dart';
-import '../components/app_toast.dart';
-import '../components/loading_view.dart';
-import '../components/theme_toggle_button.dart';
+import '../../providers/card/card_provider.dart';
+import '../widgets/app_toast.dart';
+import '../widgets/loading_view.dart';
+import '../widgets/theme_toggle_button.dart';
 import 'card_detail_page.dart';
 
-class ScanPage extends StatefulWidget {
+class ScanPage extends ConsumerStatefulWidget {
   const ScanPage({super.key});
 
   @override
-  State<ScanPage> createState() => _ScanPageState();
+  ConsumerState<ScanPage> createState() => _ScanPageState();
 }
 
-class _ScanPageState extends State<ScanPage> {
+class _ScanPageState extends ConsumerState<ScanPage> {
   final MobileScannerController controller = MobileScannerController();
   bool _isProcessing = false;
 
@@ -26,19 +26,19 @@ class _ScanPageState extends State<ScanPage> {
 
   void _handleBarcode(BarcodeCapture capture) async {
     if (_isProcessing) return;
-    
+
     final List<Barcode> barcodes = capture.barcodes;
     if (barcodes.isEmpty) return;
-    
+
     final String? code = barcodes.first.rawValue;
     if (code == null || code.isEmpty) return;
 
     setState(() => _isProcessing = true);
-    
+
     try {
-      final card = await context.read<CardProvider>().scanQr(code);
+      final card = await ref.read(cardProvider.notifier).scanQr(code);
       if (!mounted) return;
-      
+
       if (card != null) {
         Navigator.pushReplacement(
           context,

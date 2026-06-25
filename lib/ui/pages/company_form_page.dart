@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../bloc/company/company_provider.dart';
-import '../../core/theme/app_colors.dart';
-import '../../data/models/company_model.dart';
-import '../components/app_primary_button.dart';
-import '../components/app_toast.dart';
-import '../components/loading_view.dart';
-import '../components/theme_toggle_button.dart';
+import '../../providers/company/company_provider.dart';
+import '../theme/app_colors.dart';
+import '../../data/vos/company_model.dart';
+import '../widgets/app_primary_button.dart';
+import '../widgets/app_toast.dart';
+import '../widgets/loading_view.dart';
+import '../widgets/theme_toggle_button.dart';
 
-class CompanyFormPage extends StatefulWidget {
+class CompanyFormPage extends ConsumerStatefulWidget {
   final CompanyModel? company;
   const CompanyFormPage({super.key, this.company});
 
   @override
-  State<CompanyFormPage> createState() => _CompanyFormPageState();
+  ConsumerState<CompanyFormPage> createState() => _CompanyFormPageState();
 }
 
-class _CompanyFormPageState extends State<CompanyFormPage> {
+class _CompanyFormPageState extends ConsumerState<CompanyFormPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _industryCtrl = TextEditingController();
@@ -59,7 +59,7 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    final provider = context.read<CompanyProvider>();
+    final notifier = ref.read(companyProvider.notifier);
     
     // Construct payload with required fields always included
     final payload = <String, dynamic>{
@@ -84,18 +84,32 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
       payload['email'] = _emailCtrl.text.trim();
     }
 
-    CompanyModel? result;
-    if (widget.company == null) {
-      result = await provider.createCompany(payload);
-    } else {
-      result = await provider.updateCompany(widget.company!.id, payload);
-    }
+    final result = widget.company == null
+        ? await notifier.createCompany(payload)
+        : await notifier.updateCompany(widget.company!.id, payload);
 
     if (!mounted) return;
-    if (result != null) {
-      Navigator.of(context).pop(result);
+    if (result.isSuccess) {
+      final companies =
+          ref.read(companyProvider).valueOrNull?.companies ?? [];
+      CompanyModel? saved;
+      if (widget.company != null) {
+        saved = companies.cast<CompanyModel?>().firstWhere(
+              (c) => c?.id == widget.company!.id,
+              orElse: () => widget.company,
+            );
+      } else if (companies.isNotEmpty) {
+        saved = companies.first;
+      }
+      if (saved != null) {
+        Navigator.of(context).pop(saved);
+      } else {
+        Navigator.of(context).pop();
+      }
     } else {
-      final errorMsg = provider.errorMessage ?? 'Failed to save company details';
+      final errorMsg = result.message ??
+          ref.read(companyProvider).valueOrNull?.errorMessage ??
+          'Failed to save company details';
       AppToast.show(
         context,
         errorMsg,
@@ -140,7 +154,7 @@ class _CompanyFormPageState extends State<CompanyFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    final saving = context.watch<CompanyProvider>().isSaving;
+    final saving = ref.watch(companyProvider).valueOrNull?.isSaving ?? false;
     final isEdit = widget.company != null;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(

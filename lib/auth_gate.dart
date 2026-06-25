@@ -1,24 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'bloc/auth/auth_provider.dart';
-import 'ui/components/loading_view.dart';
+import 'providers/auth/auth_provider.dart';
+import 'ui/widgets/loading_view.dart';
 import 'ui/pages/login_page.dart';
 import 'ui/pages/card_page.dart';
 
-class AuthGate extends StatelessWidget {
+class AuthGate extends ConsumerWidget {
   const AuthGate({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer<AuthProvider>(
-      builder: (context, auth, _) {
-        if (auth.isCheckingSession) {
-          return const Scaffold(
-            body: Center(child: LoadingView()),
-          );
-        }
-        if (auth.isLoggedIn) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authAsync = ref.watch(authProvider);
+
+    return authAsync.when(
+      loading: () => const Scaffold(
+        body: Center(child: LoadingView()),
+      ),
+      error: (error, stack) => const Scaffold(
+        body: Center(child: Text('Something went wrong')),
+      ),
+      data: (authState) {
+        if (authState.isLoggedIn) {
           return const CardPage();
         }
         return const LoginPage();

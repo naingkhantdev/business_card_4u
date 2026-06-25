@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
+    // id("com.google.gms.google-services") // Temporarily disabled for local dev (no google-services.json)
     // Flutter Gradle Plugin (must be last)
     id("dev.flutter.flutter-gradle-plugin")
 }
@@ -30,11 +31,16 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true // Enable core library desugaring
     }
 
     kotlinOptions {
         jvmTarget = "11"
     }
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.3")
 }
 
 flutter {

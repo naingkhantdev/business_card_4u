@@ -2,24 +2,24 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../bloc/auth/auth_provider.dart';
-import '../../core/theme/app_colors.dart';
-import '../components/app_primary_button.dart';
-import '../components/app_toast.dart';
-import '../components/loading_view.dart';
+import '../../providers/auth/auth_provider.dart';
+import '../theme/app_colors.dart';
+import '../widgets/app_primary_button.dart';
+import '../widgets/app_toast.dart';
+import '../widgets/loading_view.dart';
 import 'complete_register_page.dart';
 
-class OtpPage extends StatefulWidget {
+class OtpPage extends ConsumerStatefulWidget {
   final String email;
   const OtpPage({super.key, required this.email});
 
   @override
-  State<OtpPage> createState() => _OtpPageState();
+  ConsumerState<OtpPage> createState() => _OtpPageState();
 }
 
-class _OtpPageState extends State<OtpPage> {
+class _OtpPageState extends ConsumerState<OtpPage> {
   static const int _initialSeconds = 300;
 
   final _otpController = TextEditingController();
@@ -76,10 +76,12 @@ class _OtpPageState extends State<OtpPage> {
       return;
     }
 
-    final result = await context.read<AuthProvider>().verifyOtpOnly(widget.email, otp);
+    final result =
+        await ref.read(authProvider.notifier).verifyOtpOnly(widget.email, otp);
 
     if (!mounted) return;
-    final message = result.message ?? (result.success ? "OTP verified" : "Something went wrong");
+    final message = result.message ??
+        (result.success ? "OTP verified" : "Something went wrong");
     _showMessage(message, isError: !result.success);
 
     if (result.success) {
@@ -98,11 +100,12 @@ class _OtpPageState extends State<OtpPage> {
   Future<void> _resendOtp() async {
     if (_secondsRemaining != 0) return;
 
-    final result = await context.read<AuthProvider>().sendOtp(widget.email);
+    final result = await ref.read(authProvider.notifier).sendOtp(widget.email);
 
     if (!mounted) return;
     _showMessage(
-      result.message ?? (result.success ? "OTP resent" : "Failed to resend OTP"),
+      result.message ??
+          (result.success ? "OTP resent" : "Failed to resend OTP"),
       isError: !result.success,
     );
 
@@ -114,7 +117,11 @@ class _OtpPageState extends State<OtpPage> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
+    final authState = ref.watch(authProvider).when(
+          data: (state) => state,
+          loading: () => AuthState(isLoading: true),
+          error: (error, stackTrace) => AuthState(),
+        );
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -126,7 +133,8 @@ class _OtpPageState extends State<OtpPage> {
             child: GestureDetector(
               onTap: () => FocusScope.of(context).unfocus(),
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -204,7 +212,7 @@ class _OtpPageState extends State<OtpPage> {
                           _OtpPinField(
                             controller: _otpController,
                             focusNode: _otpFocus,
-                            enabled: !auth.isLoading,
+                            enabled: !authState.isLoading,
                             onCompleted: (_) => _verifyOtp(),
                           ),
 
@@ -213,8 +221,8 @@ class _OtpPageState extends State<OtpPage> {
                           // Verify button
                           AppPrimaryButton(
                             text: "Verify OTP",
-                            loading: auth.isLoading,
-                            onPressed: auth.isLoading ? null : _verifyOtp,
+                            loading: authState.isLoading,
+                            onPressed: authState.isLoading ? null : _verifyOtp,
                             height: 54,
                             borderRadius: BorderRadius.circular(18),
                             fontSize: 15.5,
@@ -225,15 +233,19 @@ class _OtpPageState extends State<OtpPage> {
                           // Resend
                           Center(
                             child: TextButton(
-                              onPressed: (_secondsRemaining == 0 && !auth.isLoading)
+                              onPressed: (_secondsRemaining == 0 &&
+                                      !authState.isLoading)
                                   ? _resendOtp
                                   : null,
                               child: Text(
-                                _secondsRemaining == 0 ? "Resend OTP" : "Resend available after $_formattedTime",
+                                _secondsRemaining == 0
+                                    ? "Resend OTP"
+                                    : "Resend available after $_formattedTime",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontWeight: FontWeight.w700,
-                                  color: (_secondsRemaining == 0 && !auth.isLoading)
+                                  color: (_secondsRemaining == 0 &&
+                                          !authState.isLoading)
                                       ? const Color(0xFF1E3C72)
                                       : Colors.black.withOpacity(.35),
                                 ),
@@ -249,7 +261,8 @@ class _OtpPageState extends State<OtpPage> {
                     // Tip footer
                     Row(
                       children: [
-                        Icon(Icons.lock_outline_rounded, size: 18, color: Colors.black.withOpacity(.45)),
+                        Icon(Icons.lock_outline_rounded,
+                            size: 18, color: Colors.black.withOpacity(.45)),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -271,7 +284,7 @@ class _OtpPageState extends State<OtpPage> {
           ),
 
           // Loading overlay premium
-          if (auth.isLoading) const _LoadingGlassOverlay(),
+          if (authState.isLoading) const _LoadingGlassOverlay(),
         ],
       ),
     );
@@ -436,7 +449,6 @@ class _TimerPill extends StatelessWidget {
   }
 }
 
-
 class _LoadingGlassOverlay extends StatelessWidget {
   const _LoadingGlassOverlay();
 
@@ -523,7 +535,9 @@ class _OtpPinFieldState extends State<_OtpPinField> {
     final value = widget.controller.text;
 
     return GestureDetector(
-      onTap: widget.enabled ? () => FocusScope.of(context).requestFocus(widget.focusNode) : null,
+      onTap: widget.enabled
+          ? () => FocusScope.of(context).requestFocus(widget.focusNode)
+          : null,
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -539,7 +553,8 @@ class _OtpPinFieldState extends State<_OtpPinField> {
                 keyboardType: TextInputType.number,
                 maxLength: 6,
                 autofocus: true,
-                decoration: const InputDecoration(counterText: "", border: InputBorder.none),
+                decoration: const InputDecoration(
+                    counterText: "", border: InputBorder.none),
               ),
             ),
           ),
@@ -548,7 +563,8 @@ class _OtpPinFieldState extends State<_OtpPinField> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(6, (i) {
               final char = i < value.length ? value[i] : '';
-              final isActive = widget.focusNode.hasFocus && i == value.length.clamp(0, 5);
+              final isActive =
+                  widget.focusNode.hasFocus && i == value.length.clamp(0, 5);
 
               return AnimatedContainer(
                 duration: const Duration(milliseconds: 140),
@@ -559,7 +575,9 @@ class _OtpPinFieldState extends State<_OtpPinField> {
                   color: Colors.white.withOpacity(.85),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: isActive ? AppColors.secondary : Colors.black.withOpacity(.10),
+                    color: isActive
+                        ? AppColors.secondary
+                        : Colors.black.withOpacity(.10),
                     width: isActive ? 1.6 : 1,
                   ),
                   boxShadow: [
@@ -575,7 +593,9 @@ class _OtpPinFieldState extends State<_OtpPinField> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
-                    color: char.isEmpty ? Colors.black.withOpacity(.18) : const Color(0xFF0B1220),
+                    color: char.isEmpty
+                        ? Colors.black.withOpacity(.18)
+                        : const Color(0xFF0B1220),
                   ),
                 ),
               );

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../core/theme/app_colors.dart';
-import '../components/theme_toggle_button.dart';
-import '../../data/models/company_model.dart';
+import '../theme/app_colors.dart';
+import '../widgets/theme_toggle_button.dart';
+import '../../data/vos/company_model.dart';
 
 class CompanyDetailPage extends StatelessWidget {
   final CompanyModel company;

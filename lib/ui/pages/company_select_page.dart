@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../bloc/auth/auth_provider.dart';
-import '../../bloc/company/company_provider.dart';
-import '../../core/theme/app_colors.dart';
-import '../../data/models/company_model.dart';
-import '../components/app_toast.dart';
-import '../components/loading_view.dart';
-import '../components/theme_toggle_button.dart';
+import '../../providers/auth/auth_provider.dart';
+import '../../providers/company/company_provider.dart';
+import '../theme/app_colors.dart';
+import '../../data/vos/company_model.dart';
+import '../widgets/app_toast.dart';
+import '../widgets/loading_view.dart';
+import '../widgets/theme_toggle_button.dart';
 import 'company_detail_page.dart'; // Uncommented
 import 'company_form_page.dart';
 
-class CompanySelectPage extends StatefulWidget {
+class CompanySelectPage extends ConsumerStatefulWidget {
   final bool isSelectionMode;
 
   const CompanySelectPage({
@@ -21,16 +21,16 @@ class CompanySelectPage extends StatefulWidget {
   });
 
   @override
-  State<CompanySelectPage> createState() => _CompanySelectPageState();
+  ConsumerState<CompanySelectPage> createState() => _CompanySelectPageState();
 }
 
-class _CompanySelectPageState extends State<CompanySelectPage> {
+class _CompanySelectPageState extends ConsumerState<CompanySelectPage> {
   @override
   void initState() {
     super.initState();
     Future.microtask(() {
       if (!mounted) return;
-      context.read<CompanyProvider>().fetchCompanies();
+      ref.read(companyProvider.notifier).fetchCompanies();
     });
   }
 
@@ -45,6 +45,10 @@ class _CompanySelectPageState extends State<CompanySelectPage> {
         'Company created successfully',
         type: AppToastType.success,
       );
+      // Auto refresh list
+      if (mounted) {
+        ref.read(companyProvider.notifier).fetchCompanies();
+      }
     }
   }
 
@@ -59,6 +63,10 @@ class _CompanySelectPageState extends State<CompanySelectPage> {
         'Company updated successfully',
         type: AppToastType.success,
       );
+      // Auto refresh list
+      if (mounted) {
+        ref.read(companyProvider.notifier).fetchCompanies();
+      }
     }
   }
 
@@ -102,30 +110,37 @@ class _CompanySelectPageState extends State<CompanySelectPage> {
     );
     if (!mounted) return;
     if (ok != true) return;
-    final provider = context.read<CompanyProvider>();
-    final success = await provider.deleteCompany(company.id);
+    final result =
+        await ref.read(companyProvider.notifier).deleteCompany(company.id);
 
     if (!mounted) return;
 
-    if (success) {
+    if (result.isSuccess) {
       AppToast.show(
         context,
         'Company deleted successfully',
         type: AppToastType.destructiveSoft,
       );
     } else {
-      final errorMsg = provider.errorMessage ?? "Failed to delete company";
+      final errorMsg = result.message ??
+          ref.read(companyProvider).valueOrNull?.errorMessage ??
+          "Failed to delete company";
       AppToast.show(
         context,
         errorMsg,
         type: AppToastType.error,
       );
     }
+
+    // Auto refresh after delete
+    if (mounted) {
+      ref.read(companyProvider.notifier).fetchCompanies();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<CompanyProvider>();
+    final companyState = ref.watch(companyProvider).valueOrNull ?? CompanyState();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -161,18 +176,22 @@ class _CompanySelectPageState extends State<CompanySelectPage> {
         icon: const Icon(Icons.add),
         label: const Text("Add New Company"),
       ),
-      body: provider.isLoading
+      body: companyState.isLoading
           ? const Center(child: LoadingView(size: 90))
-          : provider.companies.isEmpty
-              ? _buildEmptyState()
-              : RefreshIndicator(
-                  onRefresh: () => provider.fetchCompanies(),
-                  child: ListView.builder(
+          : RefreshIndicator(
+              onRefresh: () =>
+                  ref.read(companyProvider.notifier).fetchCompanies(),
+              child: companyState.companies.isEmpty
+                  ? SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: _buildEmptyState(),
+                    )
+                  : ListView.builder(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 12),
-                    itemCount: provider.companies.length,
+                    itemCount: companyState.companies.length,
                     itemBuilder: (_, i) {
-                      final c = provider.companies[i];
+                      final c = companyState.companies[i];
                       return _buildCompanyCard(c);
                     },
                   ),
@@ -209,15 +228,13 @@ class _CompanySelectPageState extends State<CompanySelectPage> {
   }
 
   Widget _buildCompanyCard(CompanyModel company) {
-    return Consumer<AuthProvider>(
-      builder: (context, auth, _) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        final isCreator = company.createdBy != null &&
-            auth.currentUser != null &&
-            company.createdBy == auth.currentUser!.id;
+    final authState = ref.watch(authProvider).valueOrNull;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isCreator = company.createdBy != null &&
+        authState?.currentUser != null &&
+        company.createdBy == authState!.currentUser!.id;
 
-        // The card widget itself (without margin)
-        final cardWidget = Container(
+    final cardWidget = Container(
           decoration: BoxDecoration(
             color: isDark ? const Color(0xFF0D1426) : Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -363,11 +380,9 @@ class _CompanySelectPageState extends State<CompanySelectPage> {
           ),
         );
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 14),
-          child: cardWidget,
-        );
-      },
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      child: cardWidget,
     );
   }
 }

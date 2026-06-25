@@ -1,29 +1,31 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:image_picker/image_picker.dart';
 
-import '../../bloc/card/card_provider.dart';
-import '../../core/network/image_url.dart';
-import '../../data/models/business_card_model.dart';
-import '../../data/models/company_model.dart';
-import '../../core/theme/app_colors.dart';
-import '../components/app_primary_button.dart';
-import '../components/app_toast.dart';
-import '../components/loading_view.dart';
-import '../components/theme_toggle_button.dart';
+import '../../providers/card/card_provider.dart';
+import '../../utils/app_result.dart';
+import '../../network/image_url.dart';
+import '../../data/vos/business_card_model.dart';
+import '../../data/vos/company_model.dart';
+import '../theme/app_colors.dart';
+import '../widgets/app_primary_button.dart';
+import '../widgets/app_toast.dart';
+import '../widgets/loading_view.dart';
 import 'company_select_page.dart';
 
-class AddCardPage extends StatefulWidget {
+class AddCardPage extends ConsumerStatefulWidget {
   final BusinessCardModel? card; // Pass card for edit mode
+  final String? cardType; // 'user_card' for own profile, 'saved_card' for manual
 
-  const AddCardPage({super.key, this.card});
+  const AddCardPage({super.key, this.card, this.cardType});
 
   @override
-  State<AddCardPage> createState() => _AddCardPageState();
+  ConsumerState<AddCardPage> createState() => _AddCardPageState();
 }
 
-class _AddCardPageState extends State<AddCardPage> {
+class _AddCardPageState extends ConsumerState<AddCardPage> {
   final _formKey = GlobalKey<FormState>();
 
   final _nameCtrl = TextEditingController();
@@ -145,7 +147,7 @@ class _AddCardPageState extends State<AddCardPage> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final provider = context.read<CardProvider>();
+    final notifier = ref.read(cardProvider.notifier);
     final companyId = _selectedCompanyId;
     final name = _nameCtrl.text.trim();
     final position = _positionCtrl.text.trim();
@@ -155,9 +157,9 @@ class _AddCardPageState extends State<AddCardPage> {
     final bio = _bioCtrl.text.trim();
     final profileImage = _profileImageCtrl.text.trim();
 
-    bool ok;
+    AppResult result;
     if (isEditing) {
-      ok = await provider.updateCard(
+      result = await notifier.updateCard(
         widget.card!.id,
         name: name.isEmpty ? null : name,
         companyId: companyId,
@@ -170,7 +172,7 @@ class _AddCardPageState extends State<AddCardPage> {
         imageFile: _pickedImage, // Pass image file
       );
     } else {
-      ok = await provider.createCard(
+      result = await notifier.createCard(
         name: name.isEmpty ? null : name,
         companyId: companyId,
         position: position.isEmpty ? null : position,
@@ -180,23 +182,20 @@ class _AddCardPageState extends State<AddCardPage> {
         bio: bio.isEmpty ? null : bio,
         profileImage: profileImage.isEmpty ? null : profileImage,
         imageFile: _pickedImage, // Pass image file
-        cardType: 'saved_card', // Manual entries are 'saved_card'
+        cardType: widget.cardType ?? 'saved_card',
       );
     }
 
     if (!mounted) return;
-    if (ok) {
-      _showToast(
-        isEditing
-            ? 'Business card updated successfully'
-            : 'Business card created successfully',
-      );
-      await Future.delayed(const Duration(milliseconds: 900));
-      if (!mounted) return;
+    if (result.isSuccess) {
+      // Success toast is shown by the caller after pop (to avoid timing issues with navigation)
       Navigator.of(context).pop(true);
     } else {
+      final msg = result.message;
       _showToast(
-        isEditing ? 'Failed to update card' : 'Failed to create card',
+        (msg != null && msg.isNotEmpty && msg != 'null')
+            ? msg
+            : (isEditing ? 'Failed to update card' : 'Failed to create card'),
         isError: true,
       );
     }
@@ -204,28 +203,30 @@ class _AddCardPageState extends State<AddCardPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isCreating = context.watch<CardProvider>().isCreating;
+    final isCreating =
+        ref.watch(cardProvider).valueOrNull?.isCreating ?? false;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF060B16) : const Color(0xFFF8FAFD),
+      backgroundColor:
+          isDark ? const Color(0xFF060B16) : const Color(0xFFF8FAFD),
       appBar: AppBar(
         title: Text(isEditing ? 'Edit Business Card' : 'Add Business Card',
             style: TextStyle(
-                color: isDark ? Colors.white : Colors.black87, fontWeight: FontWeight.w600)),
+                color: isDark ? Colors.white : Colors.black87,
+                fontWeight: FontWeight.w600)),
         backgroundColor: isDark ? const Color(0xFF060B16) : Colors.white,
         elevation: 0,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black87),
         actions: isEditing
             ? [
-                ThemeToggleButton(color: isDark ? Colors.white : Colors.black87),
                 IconButton(
                   onPressed: isCreating ? null : _submit,
                   icon: Icon(
                     Icons.save_outlined,
-                          color: isCreating
-                              ? const Color(0xFF94A3B8)
-                              : AppColors.primary,
+                    color: isCreating
+                        ? const Color(0xFF94A3B8)
+                        : AppColors.primary,
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -272,7 +273,8 @@ class _AddCardPageState extends State<AddCardPage> {
                                   )
                                 : _hasRemoteProfileImage
                                     ? Image.network(
-                                        ImageUrl.resolve(_profileImageCtrl.text)!,
+                                        ImageUrl.resolve(
+                                            _profileImageCtrl.text)!,
                                         fit: BoxFit.cover,
                                         errorBuilder: (_, __, ___) => Icon(
                                           Icons.person,
@@ -437,7 +439,8 @@ class _AddCardPageState extends State<AddCardPage> {
           labelText: label,
           hintText: hint,
           prefixIcon: icon != null
-              ? Icon(icon, color: isDark ? const Color(0xFF98A7C2) : Colors.grey[400])
+              ? Icon(icon,
+                  color: isDark ? const Color(0xFF98A7C2) : Colors.grey[400])
               : null,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -481,12 +484,14 @@ class _AddCardPageState extends State<AddCardPage> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF18243E) : const Color(0xFFEFF6FF),
+                color:
+                    isDark ? const Color(0xFF18243E) : const Color(0xFFEFF6FF),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 Icons.business,
-                color: isDark ? const Color(0xFF8FB6FF) : const Color(0xFF2563EB),
+                color:
+                    isDark ? const Color(0xFF8FB6FF) : const Color(0xFF2563EB),
               ),
             ),
             const SizedBox(width: 16),
@@ -498,9 +503,7 @@ class _AddCardPageState extends State<AddCardPage> {
                     "Selected Company",
                     style: TextStyle(
                       fontSize: 12,
-                      color: isDark
-                          ? const Color(0xFF98A7C2)
-                          : Colors.grey,
+                      color: isDark ? const Color(0xFF98A7C2) : Colors.grey,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -521,9 +524,7 @@ class _AddCardPageState extends State<AddCardPage> {
             Icon(
               Icons.arrow_forward_ios,
               size: 16,
-              color: isDark
-                  ? const Color(0xFF98A7C2)
-                  : Colors.grey[400],
+              color: isDark ? const Color(0xFF98A7C2) : Colors.grey[400],
             ),
           ],
         ),
