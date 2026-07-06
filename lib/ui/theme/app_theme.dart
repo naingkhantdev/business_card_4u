@@ -38,10 +38,10 @@ class AppTheme {
       brightness: Brightness.light,
       colorScheme: scheme,
       scaffoldBackgroundColor: AppColors.tertiary,
-      appBarTheme: AppBarTheme(
+      appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.tertiary,
         surfaceTintColor: AppColors.tertiary,
-        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+        iconTheme: IconThemeData(color: AppColors.textPrimary),
       ),
       fontFamily: 'Helvetica Neue',
       fontFamilyFallback: fontFamilyFallback,
@@ -57,7 +57,7 @@ class AppTheme {
   }
 
   static ThemeData dark() {
-    final scheme = ColorScheme(
+    const scheme = ColorScheme(
       brightness: Brightness.dark,
       primary: AppColors.primary,
       onPrimary: Colors.white,
@@ -91,10 +91,10 @@ class AppTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor: AppColors.darkSurface,
       canvasColor: AppColors.darkSurfaceAlt,
-      appBarTheme: AppBarTheme(
+      appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.darkSurface,
         surfaceTintColor: AppColors.darkSurface,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(color: Colors.white),
       ),
       fontFamily: 'Helvetica Neue',
       fontFamilyFallback: fontFamilyFallback,

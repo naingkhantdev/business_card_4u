@@ -107,11 +107,11 @@ class CardNotifier extends AsyncNotifier<CardState> {
           cards: updatedCards,
           isCreating: false,
         ));
-        return AppResult(true, 'Card created successfully');
+        return const AppResult(true, 'Card created successfully');
       } else {
         state =
             AsyncData(state.value?.copyWith(isCreating: false) ?? CardState());
-        return AppResult(false, 'Server did not return the created card');
+        return const AppResult(false, 'Server did not return the created card');
       }
     } catch (e) {
       state =
@@ -163,7 +163,7 @@ class CardNotifier extends AsyncNotifier<CardState> {
             AsyncData(state.value?.copyWith(isCreating: false) ?? CardState());
       }
 
-      return AppResult(true, 'Card updated successfully');
+      return const AppResult(true, 'Card updated successfully');
     } catch (e) {
       state =
           AsyncData(state.value?.copyWith(isCreating: false) ?? CardState());
@@ -218,7 +218,7 @@ class CardNotifier extends AsyncNotifier<CardState> {
     try {
       await _dataAgent.addFriend(cardId);
       await fetchFriendRequests();
-      return AppResult(true, 'Friend request sent');
+      return const AppResult(true, 'Friend request sent');
     } catch (e) {
       return AppResult(false, e.toString());
     }
@@ -237,14 +237,14 @@ class CardNotifier extends AsyncNotifier<CardState> {
 
   Future<AppResult> acceptFriendRequest(int cardId) async {
     try {
-      final res = await _dataAgent.acceptFriendRequest(cardId);
+      await _dataAgent.acceptFriendRequest(cardId);
       final updatedRequests = state.value?.friendRequests
               .where((card) => card.id != cardId)
               .toList() ??
           [];
       state = AsyncData(state.value!.copyWith(friendRequests: updatedRequests));
       await fetchCards();
-      return AppResult(true, 'Friend request accepted');
+      return const AppResult(true, 'Friend request accepted');
     } catch (e) {
       return AppResult(false, e.toString());
     }
@@ -258,7 +258,7 @@ class CardNotifier extends AsyncNotifier<CardState> {
               .toList() ??
           [];
       state = AsyncData(state.value!.copyWith(friendRequests: updatedRequests));
-      return AppResult(true, 'Friend request rejected');
+      return const AppResult(true, 'Friend request rejected');
     } catch (e) {
       return AppResult(false, e.toString());
     }
@@ -269,7 +269,7 @@ class CardNotifier extends AsyncNotifier<CardState> {
       await _dataAgent.removeFriend(cardId);
       await fetchCards();
       await fetchFriendRequests();
-      return AppResult(true, 'Friend removed');
+      return const AppResult(true, 'Friend removed');
     } catch (e) {
       return AppResult(false, e.toString());
     }

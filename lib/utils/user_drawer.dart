@@ -10,7 +10,6 @@ import '../data/vos/business_card_model.dart';
 import '../data/vos/user_model.dart';
 import '../ui/pages/card_detail_page.dart';
 import '../ui/pages/company_select_page.dart';
-import '../ui/widgets/app_toast.dart';
 
 class UserDrawer extends ConsumerWidget {
   const UserDrawer({super.key});
@@ -58,22 +57,33 @@ class UserDrawer extends ConsumerWidget {
                 accountCard = _findMyAccountCard(latestCards, currentUser);
               }
 
-              if (accountCard != null) {
+              final accountCardToOpen = accountCard;
+              if (accountCardToOpen != null) {
                 navigator.push(
                   MaterialPageRoute(
-                    builder: (_) => CardDetailPage(card: accountCard!),
+                    builder: (_) => CardDetailPage(card: accountCardToOpen),
                   ),
                 );
-              } else {
-                // Do not open Add page from profile click.
-                // User explicitly does not want to go to add business card from sidebar profile.
-                if (context.mounted) {
-                  AppToast.show(
-                    context,
-                    'No profile card found yet. Please create your user card from the main screen or add option.',
-                    type: AppToastType.info,
-                  );
-                }
+              } else if (currentUser != null) {
+                final fallbackCard = BusinessCardModel(
+                  id: 0,
+                  fullName: currentUser.name,
+                  position: 'Member',
+                  phones: const [],
+                  emails: [currentUser.email ?? ''],
+                  addresses: const [],
+                  user: currentUser,
+                  cardType: 'user_card',
+                  qrCodeData: 'user-${currentUser.id}-temp-qr',
+                  isFriend: false,
+                  friendStatus: 'none',
+                  friendRequestStatus: 'none',
+                );
+                navigator.push(
+                  MaterialPageRoute(
+                    builder: (_) => CardDetailPage(card: fallbackCard),
+                  ),
+                );
               }
             }),
             const SizedBox(height: 12),
@@ -163,7 +173,9 @@ class UserDrawer extends ConsumerWidget {
   Widget _buildModernHeader(UserModel? user, BusinessCardModel? accountCard, bool isDark, VoidCallback onAccountTap) {
     final name = user?.name ?? 'User';
     final email = user?.email ?? '';
-    final hasImage = accountCard?.profileImage != null && (accountCard!.profileImage ?? '').isNotEmpty;
+    final profileImage = accountCard?.profileImage;
+    final hasImage = profileImage != null && profileImage.isNotEmpty;
+    final avatarUrl = hasImage ? ImageUrl.resolve(profileImage) : null;
     final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
 
     return GestureDetector(
@@ -193,9 +205,7 @@ class UserDrawer extends ConsumerWidget {
               child: CircleAvatar(
                 radius: 30,
                 backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-                backgroundImage: hasImage
-                    ? NetworkImage(ImageUrl.resolve(accountCard!.profileImage!)!)
-                    : null,
+                backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
                 child: !hasImage
                     ? Text(
                         initial,

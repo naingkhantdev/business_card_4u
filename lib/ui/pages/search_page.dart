@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/card/card_provider.dart';
-import '../../providers/company/company_provider.dart';
 import '../theme/app_colors.dart';
 import '../../data/vos/business_card_model.dart';
 import '../widgets/card_item.dart';
 import '../widgets/loading_view.dart';
 import '../widgets/theme_toggle_button.dart';
-import '../../data/vos/company_model.dart';
 
 class SearchPage extends ConsumerStatefulWidget {
   const SearchPage({super.key});

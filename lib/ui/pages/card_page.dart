@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,7 +6,6 @@ import '../theme/app_theme.dart';
 
 import '../../providers/auth/auth_provider.dart';
 import '../../providers/card/card_provider.dart';
-import '../../network/image_url.dart';
 import '../theme/app_colors.dart';
 import '../theme/theme_provider.dart';
 import '../../data/vos/business_card_model.dart';
@@ -16,10 +16,8 @@ import '../widgets/my_qr_panel.dart';
 import '../widgets/app_primary_button.dart';
 import '../../utils/user_drawer.dart';
 import 'add_card_page.dart';
-import 'company_select_page.dart';
 import 'scan_page.dart'; // Added import
 import 'search_page.dart'; // Added import
-import 'card_detail_page.dart'; // Added import
 import 'friend_requests_page.dart';
 
 class CardPage extends ConsumerStatefulWidget {
@@ -671,8 +669,6 @@ class _CardPageState extends ConsumerState<CardPage>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final themeMode = ref.watch(themeProvider).valueOrNull ?? ThemeMode.system;
-    final isThemeDark = themeMode == ThemeMode.dark;
     if (_tabController == null) {
       _initTabController();
     }
@@ -745,6 +741,21 @@ class _CardPageState extends ConsumerState<CardPage>
           myProfileCard = null;
         }
       }
+
+      myProfileCard ??= BusinessCardModel(
+          id: 0,
+          fullName: currentUser.name,
+          position: 'Member',
+          phones: const [],
+          emails: [currentUser.email ?? ''],
+          addresses: const [],
+          user: currentUser,
+          cardType: 'user_card',
+          qrCodeData: 'user-${currentUser.id}-temp-qr',
+          isFriend: false,
+          friendStatus: 'none',
+          friendRequestStatus: 'none',
+        );
     }
 
     // 2. My Saved Cards -> Manual entries created by me ('saved_card')

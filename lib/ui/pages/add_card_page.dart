@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:image_picker/image_picker.dart';
 
+import '../../providers/auth/auth_provider.dart';
 import '../../providers/card/card_provider.dart';
 import '../../utils/app_result.dart';
 import '../../network/image_url.dart';
@@ -65,6 +66,17 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
       if (c.company != null) {
         _selectedCompanyId = c.company!.id;
         _selectedCompanyName = c.company!.name;
+      }
+    } else {
+      if (widget.cardType == 'user_card') {
+        final authState = ref.read(authProvider).valueOrNull;
+        final currentUser = authState?.currentUser;
+        if (currentUser != null) {
+          _nameCtrl.text = currentUser.name;
+          if (currentUser.email != null) {
+            _emailsCtrl.text = currentUser.email!;
+          }
+        }
       }
     }
   }
@@ -158,7 +170,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     final profileImage = _profileImageCtrl.text.trim();
 
     AppResult result;
-    if (isEditing) {
+    if (isEditing && widget.card!.id != 0) {
       result = await notifier.updateCard(
         widget.card!.id,
         name: name.isEmpty ? null : name,
@@ -182,7 +194,9 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         bio: bio.isEmpty ? null : bio,
         profileImage: profileImage.isEmpty ? null : profileImage,
         imageFile: _pickedImage, // Pass image file
-        cardType: widget.cardType ?? 'saved_card',
+        cardType: (isEditing && widget.card!.id == 0)
+            ? 'user_card'
+            : (widget.cardType ?? 'saved_card'),
       );
     }
 

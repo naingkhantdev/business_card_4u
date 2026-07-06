@@ -80,7 +80,7 @@ class CompanyNotifier extends AsyncNotifier<CompanyState> {
             ) ??
             CompanyState());
       }
-      return AppResult(true, 'Company created successfully');
+      return const AppResult(true, 'Company created successfully');
     } catch (e) {
       state = AsyncData(state.value?.copyWith(
             isSaving: false,
@@ -112,7 +112,7 @@ class CompanyNotifier extends AsyncNotifier<CompanyState> {
             ) ??
             CompanyState());
       }
-      return AppResult(true, 'Company updated successfully');
+      return const AppResult(true, 'Company updated successfully');
     } catch (e) {
       state = AsyncData(state.value?.copyWith(
             isSaving: false,

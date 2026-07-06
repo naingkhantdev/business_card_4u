@@ -8,6 +8,8 @@ import '../../services/auth/auth_session.dart';
 import '../../utils/app_result.dart';
 import '../../fcm/push_notification_service.dart';
 import '../data_agent_providers.dart';
+import '../card/card_provider.dart';
+import '../company/company_provider.dart';
 
 // Auth State Model
 class AuthState {
@@ -114,6 +116,9 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       await TokenStorage.save(request!.token);
       final user = UserModel.fromJson(request.user);
 
+      ref.invalidate(cardProvider);
+      ref.invalidate(companyProvider);
+
       state = AsyncData(AuthState(
         isLoggedIn: true,
         currentUser: user,
@@ -179,6 +184,9 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       await TokenStorage.save(res!.token);
       final user = UserModel.fromJson(res.user);
 
+      ref.invalidate(cardProvider);
+      ref.invalidate(companyProvider);
+
       state = AsyncData(AuthState(
         isLoggedIn: true,
         currentUser: user,
@@ -196,6 +204,8 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   Future<void> logout() async {
     await _dataAgent.logout();
     await TokenStorage.clear();
+    ref.invalidate(cardProvider);
+    ref.invalidate(companyProvider);
     state = AsyncData(AuthState(
       isLoggedIn: false,
       currentUser: null,
@@ -207,6 +217,8 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     try {
       final message = await _dataAgent.deactivateAccount(password);
       await TokenStorage.clear();
+      ref.invalidate(cardProvider);
+      ref.invalidate(companyProvider);
       state = AsyncData(AuthState(
         isLoggedIn: false,
         currentUser: null,
@@ -236,6 +248,8 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
   Future<void> completeDeactivatedLogout(String message) async {
     await TokenStorage.clear();
+    ref.invalidate(cardProvider);
+    ref.invalidate(companyProvider);
     state = AsyncData(AuthState(
       isLoggedIn: false,
       currentUser: null,

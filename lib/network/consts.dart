@@ -1,5 +1,5 @@
 // String get kBaseUrl => dotenv.env['BASE_URL'] ?? 'http://10.0.2.2:8000/api/';
-const kBaseUrl = 'http://192.168.1.5:8001/api/';
+const kBaseUrl = 'http://192.168.99.93:8001/api/';
 
 const kEndPointLogin = "login";
 const kEndPointSendOtp = "send-otp";

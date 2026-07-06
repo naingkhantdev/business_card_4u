@@ -12,7 +12,7 @@ import '../widgets/my_qr_panel.dart';
 import 'add_card_page.dart';
 import 'deactivate_account_page.dart';
 
-class CardDetailPage extends ConsumerWidget {
+class CardDetailPage extends ConsumerStatefulWidget {
   final BusinessCardModel card;
 
   const CardDetailPage({super.key, required this.card});
@@ -22,7 +22,6 @@ class CardDetailPage extends ConsumerWidget {
   static const secondary = Color(0xFFC4B5FD);      // #C4B5FD
   static const tertiary = Color(0xFFFAF7FF);       // #FAF7FF
 
-  static const _bg = Color(0xFFFAF7FF);
   static const _ink = Color(0xFF1F1A33);
   static const _muted = Color(0xFF6B647D);
   static const _primary = Color(0xFF6D28D9);
@@ -78,6 +77,22 @@ class CardDetailPage extends ConsumerWidget {
         color: isDark ? _darkMuted : _muted,
       );
 
+  @override
+  ConsumerState<CardDetailPage> createState() => _CardDetailPageState();
+}
+
+class _CardDetailPageState extends ConsumerState<CardDetailPage> {
+  late bool _isFriend;
+  late String _friendRequestStatus;
+  bool _isProcessing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _isFriend = widget.card.isFriend;
+    _friendRequestStatus = widget.card.friendRequestStatus ?? 'none';
+  }
+
   AlertDialog _buildActionDialog(
     BuildContext context, {
     required String title,
@@ -89,16 +104,16 @@ class CardDetailPage extends ConsumerWidget {
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return AlertDialog(
-      backgroundColor: isDark ? _darkSurface : Colors.white,
-      surfaceTintColor: isDark ? _darkSurface : Colors.white,
+      backgroundColor: isDark ? CardDetailPage._darkSurface : Colors.white,
+      surfaceTintColor: isDark ? CardDetailPage._darkSurface : Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: isDark ? _darkBorder : _border),
+        side: BorderSide(color: isDark ? CardDetailPage._darkBorder : CardDetailPage._border),
       ),
       title: Text(
         title,
         style: TextStyle(
-          color: isDark ? _darkInk : _ink,
+          color: isDark ? CardDetailPage._darkInk : CardDetailPage._ink,
           fontWeight: FontWeight.w700,
           fontSize: 16,
         ),
@@ -110,7 +125,7 @@ class CardDetailPage extends ConsumerWidget {
           Text(
             content,
             style: TextStyle(
-              color: isDark ? _darkMuted : _muted,
+              color: isDark ? CardDetailPage._darkMuted : CardDetailPage._muted,
               height: 1.45,
               fontSize: 14,
             ),
@@ -126,7 +141,7 @@ class CardDetailPage extends ConsumerWidget {
           onPressed: () => Navigator.pop(context, false),
           child: Text(
             'Cancel',
-            style: TextStyle(color: isDark ? _darkMuted : _muted),
+            style: TextStyle(color: isDark ? CardDetailPage._darkMuted : CardDetailPage._muted),
           ),
         ),
         TextButton(
@@ -134,7 +149,7 @@ class CardDetailPage extends ConsumerWidget {
           child: Text(
             confirmText,
             style: TextStyle(
-              color: destructive ? Colors.redAccent : _primary,
+              color: destructive ? Colors.redAccent : CardDetailPage._primary,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -167,7 +182,12 @@ class CardDetailPage extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final ref = this.ref;
+    final card = widget.card;
+    final isFriend = _isFriend;
+    final friendRequestStatus = _friendRequestStatus;
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final currentUser = ref.read(authProvider).valueOrNull?.currentUser;
     final isMyCard = currentUser != null && card.user?.id == currentUser.id;
@@ -181,12 +201,12 @@ class CardDetailPage extends ConsumerWidget {
             : null;
 
     return Scaffold(
-      backgroundColor: isDark ? _darkBg : CardDetailPage.tertiary,
+      backgroundColor: isDark ? CardDetailPage._darkBg : CardDetailPage.tertiary,
       appBar: AppBar(
-        backgroundColor: isDark ? _darkBg : CardDetailPage.tertiary,
+        backgroundColor: isDark ? CardDetailPage._darkBg : CardDetailPage.tertiary,
         elevation: 0,
         scrolledUnderElevation: 0,
-        foregroundColor: isDark ? _darkInk : _ink,
+        foregroundColor: isDark ? CardDetailPage._darkInk : CardDetailPage._ink,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => Navigator.pop(context),
@@ -197,60 +217,146 @@ class CardDetailPage extends ConsumerWidget {
               padding: const EdgeInsets.only(right: 4),
               child: TextButton.icon(
                 style: TextButton.styleFrom(
-                  foregroundColor:
-                      card.isFriend ? (isDark ? _darkMuted : _muted) : _primary,
+                  foregroundColor: isFriend
+                      ? (isDark ? CardDetailPage._darkMuted : CardDetailPage._muted)
+                      : (friendRequestStatus == 'pending_received' || friendRequestStatus == 'pending_sent' || friendRequestStatus == 'pending'
+                          ? const Color(0xFFF59E0B)
+                          : CardDetailPage._primary),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
-                    side: BorderSide(color: isDark ? _darkBorder : _border),
+                    side: BorderSide(color: isDark ? CardDetailPage._darkBorder : CardDetailPage._border),
                   ),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                 ),
-                onPressed: () async {
-                  if (card.isFriend) {
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) => _buildActionDialog(
-                        ctx,
-                        title: 'Unfriend',
-                        content: 'Are you sure you want to remove this friend?',
-                        confirmText: 'Unfriend',
-                        destructive: true,
-                        onConfirm: () => Navigator.pop(ctx, true),
-                      ),
-                    );
+                onPressed: _isProcessing
+                    ? null
+                    : () async {
+                        if (isFriend) {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => _buildActionDialog(
+                              ctx,
+                              title: 'Unfriend',
+                              content: 'Are you sure you want to remove this friend?',
+                              confirmText: 'Unfriend',
+                              destructive: true,
+                              onConfirm: () => Navigator.pop(ctx, true),
+                            ),
+                          );
 
-                    if (confirm == true && context.mounted) {
-                      final result = await ref
-                          .read(cardProvider.notifier)
-                          .removeFriend(card.id);
-                      if (result.isSuccess && context.mounted) {
-                        _showToast(context, 'Friend removed successfully',
-                            isDestructiveSoft: true);
-                        Navigator.pop(context);
-                      } else if (context.mounted) {
-                        _showToast(context, result.message ?? 'Failed to remove friend', isError: true);
-                      }
-                    }
-                  } else {
-                    final result = await ref
-                        .read(cardProvider.notifier)
-                        .addFriend(card.id);
-                    if (result.isSuccess && context.mounted) {
-                      _showToast(context, 'Friend request sent');
-                    } else if (context.mounted) {
-                      _showToast(context, result.message ?? 'Failed to send friend request', isError: true);
-                    }
-                  }
-                },
-                icon: Icon(
-                  card.isFriend
-                      ? Icons.person_remove_alt_1_rounded
-                      : Icons.person_add_alt_1_rounded,
-                  size: 18,
-                ),
+                          if (confirm == true && context.mounted) {
+                            setState(() => _isProcessing = true);
+                            final result = await ref
+                                .read(cardProvider.notifier)
+                                .removeFriend(card.id);
+                            if (!context.mounted) return;
+                            setState(() {
+                              _isProcessing = false;
+                              if (result.isSuccess) {
+                                _isFriend = false;
+                                _friendRequestStatus = 'none';
+                              }
+                            });
+                            if (result.isSuccess) {
+                              _showToast(context, 'Friend removed successfully',
+                                  isDestructiveSoft: true);
+                            } else {
+                              _showToast(context, result.message ?? 'Failed to remove friend', isError: true);
+                            }
+                          }
+                        } else if (friendRequestStatus == 'pending_received') {
+                          setState(() => _isProcessing = true);
+                          final result = await ref
+                              .read(cardProvider.notifier)
+                              .acceptFriendRequest(card.id);
+                          if (!context.mounted) return;
+                          setState(() {
+                            _isProcessing = false;
+                            if (result.isSuccess) {
+                              _isFriend = true;
+                              _friendRequestStatus = 'accepted';
+                            }
+                          });
+                          if (result.isSuccess) {
+                            _showToast(context, 'Friend request accepted');
+                          } else {
+                            _showToast(context, result.message ?? 'Failed to accept request', isError: true);
+                          }
+                        } else if (friendRequestStatus == 'pending_sent' || friendRequestStatus == 'pending') {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => _buildActionDialog(
+                              ctx,
+                              title: 'Cancel Request',
+                              content: 'Cancel the friend request sent to this user?',
+                              confirmText: 'Cancel Request',
+                              destructive: true,
+                              onConfirm: () => Navigator.pop(ctx, true),
+                            ),
+                          );
+                          if (confirm == true && context.mounted) {
+                            setState(() => _isProcessing = true);
+                            final res = await ref
+                                .read(cardProvider.notifier)
+                                .removeFriend(card.id);
+                            if (!context.mounted) return;
+                            setState(() {
+                              _isProcessing = false;
+                              if (res.isSuccess) {
+                                _friendRequestStatus = 'none';
+                                _isFriend = false;
+                              }
+                            });
+                            if (res.isSuccess) {
+                              _showToast(context, 'Friend request cancelled', isDestructiveSoft: true);
+                            } else {
+                              _showToast(context, res.message ?? 'Failed to cancel request', isError: true);
+                            }
+                          }
+                        } else {
+                          setState(() => _isProcessing = true);
+                          final result = await ref
+                              .read(cardProvider.notifier)
+                              .addFriend(card.id);
+                          if (!context.mounted) return;
+                          setState(() {
+                            _isProcessing = false;
+                            if (result.isSuccess) {
+                              _friendRequestStatus = 'pending_sent';
+                            }
+                          });
+                          if (result.isSuccess) {
+                            _showToast(context, 'Friend request sent');
+                          } else {
+                            _showToast(context, result.message ?? 'Failed to send friend request', isError: true);
+                          }
+                        }
+                      },
+                icon: _isProcessing
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.grey)),
+                      )
+                    : Icon(
+                        isFriend
+                            ? Icons.person_remove_alt_1_rounded
+                            : (friendRequestStatus == 'pending_received'
+                                ? Icons.check_rounded
+                                : (friendRequestStatus == 'pending_sent' || friendRequestStatus == 'pending'
+                                    ? Icons.schedule_rounded
+                                    : Icons.person_add_alt_1_rounded)),
+                        size: 18,
+                      ),
                 label: Text(
-                  card.isFriend ? 'Unfriend' : 'Connect',
+                  isFriend
+                      ? 'Unfriend'
+                      : (friendRequestStatus == 'pending_received'
+                          ? 'Accept'
+                          : (friendRequestStatus == 'pending_sent' || friendRequestStatus == 'pending'
+                              ? 'Pending'
+                              : 'Connect')),
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
@@ -260,11 +366,11 @@ class CardDetailPage extends ConsumerWidget {
               padding: const EdgeInsets.only(right: 8),
               child: PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert_rounded),
-                color: isDark ? _darkSurface : Colors.white,
-                surfaceTintColor: isDark ? _darkSurface : Colors.white,
+                color: isDark ? CardDetailPage._darkSurface : Colors.white,
+                surfaceTintColor: isDark ? CardDetailPage._darkSurface : Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: isDark ? _darkBorder : _border),
+                  side: BorderSide(color: isDark ? CardDetailPage._darkBorder : CardDetailPage._border),
                 ),
                 elevation: 2,
                 onSelected: (value) async {
@@ -287,8 +393,15 @@ class CardDetailPage extends ConsumerWidget {
 
                         final cards =
                             ref.read(cardProvider).valueOrNull?.cards ?? [];
-                        final updatedIndex =
-                            cards.indexWhere((c) => c.id == card.id);
+                        int updatedIndex = -1;
+                        if (card.id == 0) {
+                          updatedIndex = cards.indexWhere((c) =>
+                              c.cardType == 'user_card' &&
+                              (c.user?.id == currentUser?.id ||
+                                  c.createdBy == currentUser?.id));
+                        } else {
+                          updatedIndex = cards.indexWhere((c) => c.id == card.id);
+                        }
 
                         if (updatedIndex != -1) {
                           Navigator.pushReplacement(
@@ -361,12 +474,12 @@ class CardDetailPage extends ConsumerWidget {
                       children: [
                         Icon(Icons.edit_outlined,
                             size: 19,
-                            color: isDark ? _darkInk : Colors.black87),
+                            color: isDark ? CardDetailPage._darkInk : Colors.black87),
                         const SizedBox(width: 12),
                         Text(
                           'Edit',
                           style: TextStyle(
-                              color: isDark ? _darkInk : Colors.black87),
+                              color: isDark ? CardDetailPage._darkInk : Colors.black87),
                         ),
                       ],
                     ),
@@ -402,6 +515,7 @@ class CardDetailPage extends ConsumerWidget {
                       isDark: isDark,
                       isMyProfileCard: isMyProfileCard,
                       cardTypeLabel: card.cardType == 'saved_card' ? 'Saved' : 'Business',
+                      isFriend: isFriend,
                     ),
 
                     const SizedBox(height: 18),
@@ -411,8 +525,10 @@ class CardDetailPage extends ConsumerWidget {
                       card: card,
                       isDark: isDark,
                       isMyProfileCard: isMyProfileCard,
+                      isFriend: isFriend,
+                      friendRequestStatus: friendRequestStatus,
                       onFriendAction: () async {
-                        if (card.isFriend) {
+                        if (isFriend) {
                           final confirm = await showDialog<bool>(
                             context: context,
                             builder: (ctx) => _buildActionDialog(
@@ -425,26 +541,110 @@ class CardDetailPage extends ConsumerWidget {
                             ),
                           );
                           if (confirm == true && context.mounted) {
+                            setState(() => _isProcessing = true);
                             final res = await ref
                                 .read(cardProvider.notifier)
                                 .removeFriend(card.id);
-                            if (res.isSuccess && context.mounted) {
-                              _showToast(context, 'Friend removed',
-                                  isDestructiveSoft: true);
-                              Navigator.pop(context);
-                            } else if (context.mounted) {
+                            if (!context.mounted) return;
+                            setState(() {
+                              _isProcessing = false;
+                              if (res.isSuccess) {
+                                _isFriend = false;
+                                _friendRequestStatus = 'none';
+                              }
+                            });
+                            if (res.isSuccess) {
+                              _showToast(context, 'Friend removed', isDestructiveSoft: true);
+                            } else {
                               _showToast(context, res.message ?? 'Failed to remove friend', isError: true);
                             }
                           }
+                        } else if (friendRequestStatus == 'pending_sent' || friendRequestStatus == 'pending') {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => _buildActionDialog(
+                              ctx,
+                              title: 'Cancel Request',
+                              content: 'Cancel the friend request sent to this user?',
+                              confirmText: 'Cancel Request',
+                              destructive: true,
+                              onConfirm: () => Navigator.pop(ctx, true),
+                            ),
+                          );
+                          if (confirm == true && context.mounted) {
+                            setState(() => _isProcessing = true);
+                            final res = await ref
+                                .read(cardProvider.notifier)
+                                .removeFriend(card.id);
+                            if (!context.mounted) return;
+                            setState(() {
+                              _isProcessing = false;
+                              if (res.isSuccess) {
+                                _friendRequestStatus = 'none';
+                                _isFriend = false;
+                              }
+                            });
+                            if (res.isSuccess) {
+                              _showToast(context, 'Friend request cancelled', isDestructiveSoft: true);
+                            } else {
+                              _showToast(context, res.message ?? 'Failed to cancel request', isError: true);
+                            }
+                          }
                         } else {
+                          setState(() => _isProcessing = true);
                           final res = await ref
                               .read(cardProvider.notifier)
                               .addFriend(card.id);
-                          if (res.isSuccess && context.mounted) {
+                          if (!context.mounted) return;
+                          setState(() {
+                            _isProcessing = false;
+                            if (res.isSuccess) {
+                              _friendRequestStatus = 'pending_sent';
+                            }
+                          });
+                          if (res.isSuccess) {
                             _showToast(context, 'Friend request sent');
-                          } else if (context.mounted) {
+                          } else {
                             _showToast(context, res.message ?? 'Failed to send friend request', isError: true);
                           }
+                        }
+                      },
+                      onAcceptFriend: () async {
+                        setState(() => _isProcessing = true);
+                        final res = await ref
+                            .read(cardProvider.notifier)
+                            .acceptFriendRequest(card.id);
+                        if (!context.mounted) return;
+                        setState(() {
+                          _isProcessing = false;
+                          if (res.isSuccess) {
+                            _friendRequestStatus = 'accepted';
+                            _isFriend = true;
+                          }
+                        });
+                        if (res.isSuccess) {
+                          _showToast(context, 'Friend request accepted');
+                        } else {
+                          _showToast(context, res.message ?? 'Failed to accept request', isError: true);
+                        }
+                      },
+                      onRejectFriend: () async {
+                        setState(() => _isProcessing = true);
+                        final res = await ref
+                            .read(cardProvider.notifier)
+                            .rejectFriendRequest(card.id);
+                        if (!context.mounted) return;
+                        setState(() {
+                          _isProcessing = false;
+                          if (res.isSuccess) {
+                            _friendRequestStatus = 'none';
+                            _isFriend = false;
+                          }
+                        });
+                        if (res.isSuccess) {
+                          _showToast(context, 'Friend request declined', isDestructiveSoft: true);
+                        } else {
+                          _showToast(context, res.message ?? 'Failed to decline request', isError: true);
                         }
                       },
                       onShowQr: () {
@@ -459,12 +659,12 @@ class CardDetailPage extends ConsumerWidget {
                             expand: false,
                             builder: (_, sc) => Container(
                               decoration: BoxDecoration(
-                                color: isDark ? _darkSurface : Colors.white,
-                                borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(20)),
-                                border: Border.all(
-                                  color: isDark ? _darkBorder : _border,
-                                ),
+                                  color: isDark ? CardDetailPage._darkSurface : Colors.white,
+                                  borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(20)),
+                                  border: Border.all(
+                                    color: isDark ? CardDetailPage._darkBorder : CardDetailPage._border,
+                                  ),
                               ),
                               child: ListView(
                                 controller: sc,
@@ -476,7 +676,7 @@ class CardDetailPage extends ConsumerWidget {
                                       width: 36,
                                       height: 4,
                                       decoration: BoxDecoration(
-                                        color: isDark ? _darkBorder : _border,
+                                        color: isDark ? CardDetailPage._darkBorder : CardDetailPage._border,
                                         borderRadius:
                                             BorderRadius.circular(100),
                                       ),
@@ -488,7 +688,7 @@ class CardDetailPage extends ConsumerWidget {
                                     style: TextStyle(
                                       fontSize: 17,
                                       fontWeight: FontWeight.w700,
-                                      color: isDark ? _darkInk : _ink,
+                                      color: isDark ? CardDetailPage._darkInk : CardDetailPage._ink,
                                       letterSpacing: -0.3,
                                     ),
                                     textAlign: TextAlign.center,
@@ -522,8 +722,15 @@ class CardDetailPage extends ConsumerWidget {
 
                             final cards =
                                 ref.read(cardProvider).valueOrNull?.cards ?? [];
-                            final updatedIndex =
-                                cards.indexWhere((c) => c.id == card.id);
+                            int updatedIndex = -1;
+                            if (card.id == 0) {
+                              updatedIndex = cards.indexWhere((c) =>
+                                  c.cardType == 'user_card' &&
+                                  (c.user?.id == currentUser?.id ||
+                                      c.createdBy == currentUser?.id));
+                            } else {
+                              updatedIndex = cards.indexWhere((c) => c.id == card.id);
+                            }
                             if (updatedIndex != -1) {
                               Navigator.pushReplacement(
                                 context,
@@ -589,19 +796,20 @@ class _PurpleHero extends StatelessWidget {
   final bool isDark;
   final bool isMyProfileCard;
   final String cardTypeLabel;
+  final bool isFriend;
 
-  const _PurpleHero({required this.card, required this.avatarUrl, required this.isDark, required this.isMyProfileCard, required this.cardTypeLabel});
+  const _PurpleHero({required this.card, required this.avatarUrl, required this.isDark, required this.isMyProfileCard, required this.cardTypeLabel, required this.isFriend});
 
   @override
   Widget build(BuildContext context) {
     final firstLetter = card.fullName.isNotEmpty ? card.fullName[0].toUpperCase() : '?';
-    final accent = CardDetailPage.primary;
+    const accent = CardDetailPage.primary;
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22),
         gradient: isDark
-            ? LinearGradient(colors: [const Color(0xFF1A1433), CardDetailPage._darkSurface])
-            : LinearGradient(colors: [CardDetailPage.tertiary, const Color(0xFFF3ECFF)]),
+            ? const LinearGradient(colors: [Color(0xFF1A1433), CardDetailPage._darkSurface])
+            : const LinearGradient(colors: [CardDetailPage.tertiary, Color(0xFFF3ECFF)]),
         border: Border.all(color: isDark ? CardDetailPage._darkBorder : CardDetailPage.secondary.withOpacity(0.5)),
       ),
       padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
@@ -634,7 +842,7 @@ class _PurpleHero extends StatelessWidget {
                     const SizedBox(height: 8),
                     Wrap(spacing: 7, children: [
                       _PurpleBadge(label: isMyProfileCard ? 'Your Profile' : cardTypeLabel, isDark: isDark),
-                      if (card.isFriend) _PurpleBadge(label: 'Connected', isDark: isDark, accent: true),
+                      if (isFriend) _PurpleBadge(label: 'Connected', isDark: isDark, accent: true),
                     ]),
                   ],
                 ),
@@ -664,7 +872,7 @@ class _AvatarFallback extends StatelessWidget {
   final bool isDark;
   const _AvatarFallback({required this.letter, required this.isDark});
   @override
-  Widget build(BuildContext context) => Container(color: isDark ? const Color(0xFF1F2A44) : const Color(0xFF3B5CCC), alignment: Alignment.center, child: Text(letter, style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: -0.5)));
+  Widget build(BuildContext context) => Container(color: isDark ? const Color(0xFF1F2A44) : const Color(0xFF3B5CCC), alignment: Alignment.center, child: Text(letter, style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: -0.5)));
 }
 
 class _PurpleBadge extends StatelessWidget {
@@ -690,17 +898,43 @@ class _PurpleQuickActions extends StatelessWidget {
   final BusinessCardModel card;
   final bool isDark;
   final bool isMyProfileCard;
+  final bool isFriend;
+  final String friendRequestStatus;
   final VoidCallback onFriendAction;
+  final VoidCallback onAcceptFriend;
+  final VoidCallback onRejectFriend;
   final VoidCallback onShowQr;
   final VoidCallback onEdit;
-  const _PurpleQuickActions({required this.card, required this.isDark, required this.isMyProfileCard, required this.onFriendAction, required this.onShowQr, required this.onEdit});
+  const _PurpleQuickActions({
+    required this.card,
+    required this.isDark,
+    required this.isMyProfileCard,
+    required this.isFriend,
+    required this.friendRequestStatus,
+    required this.onFriendAction,
+    required this.onAcceptFriend,
+    required this.onRejectFriend,
+    required this.onShowQr,
+    required this.onEdit,
+  });
   @override
   Widget build(BuildContext context) {
     final items = <Widget>[];
     if (card.phones.isNotEmpty) items.add(_PurpleActionPill(icon: Icons.call_rounded, label: 'Call', onTap: () => _launch('tel:${card.phones.first}'), isDark: isDark));
     if (card.emails.isNotEmpty) items.add(_PurpleActionPill(icon: Icons.mail_rounded, label: 'Email', onTap: () => _launch('mailto:${card.emails.first}'), isDark: isDark));
     if (card.addresses.isNotEmpty) items.add(_PurpleActionPill(icon: Icons.place_rounded, label: 'Map', onTap: () { final q = Uri.encodeComponent(card.addresses.first); _launch('https://maps.google.com/?q=$q'); }, isDark: isDark));
-    if (!isMyProfileCard) items.add(_PurpleActionPill(icon: card.isFriend ? Icons.person_remove_rounded : Icons.person_add_alt_1_rounded, label: card.isFriend ? 'Unfriend' : 'Connect', onTap: onFriendAction, isDark: isDark, highlight: !card.isFriend));
+    if (!isMyProfileCard) {
+      if (isFriend) {
+        items.add(_PurpleActionPill(icon: Icons.person_remove_rounded, label: 'Unfriend', onTap: onFriendAction, isDark: isDark));
+      } else if (friendRequestStatus == 'pending_sent' || friendRequestStatus == 'pending') {
+        items.add(_PurpleActionPill(icon: Icons.schedule_rounded, label: 'Pending', onTap: onFriendAction, isDark: isDark, highlight: false));
+      } else if (friendRequestStatus == 'pending_received') {
+        items.add(_PurpleActionPill(icon: Icons.check_rounded, label: 'Accept', onTap: onAcceptFriend, isDark: isDark, highlight: true));
+        items.add(_PurpleActionPill(icon: Icons.close_rounded, label: 'Decline', onTap: onRejectFriend, isDark: isDark));
+      } else {
+        items.add(_PurpleActionPill(icon: Icons.person_add_alt_1_rounded, label: 'Connect', onTap: onFriendAction, isDark: isDark, highlight: true));
+      }
+    }
     if (isMyProfileCard) {
       items.add(_PurpleActionPill(icon: Icons.qr_code_2_rounded, label: 'QR', onTap: onShowQr, isDark: isDark));
       items.add(_PurpleActionPill(icon: Icons.edit_rounded, label: 'Edit', onTap: onEdit, isDark: isDark));
@@ -845,7 +1079,7 @@ class _PurpleCompanyCard extends StatelessWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(company.name, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: isDark ? CardDetailPage._darkInk : CardDetailPage._ink, letterSpacing: -0.3)),
       if ((company.industry ?? '').isNotEmpty || (company.businessType ?? '').isNotEmpty)
-        Text([company.industry, company.businessType].where((e) => e != null && e!.isNotEmpty).join(' • '), style: CardDetailPage.smallMutedStyle(isDark)),
+        Text([company.industry, company.businessType].where((e) => e != null && e.isNotEmpty).join(' • '), style: CardDetailPage.smallMutedStyle(isDark)),
       if ((company.website ?? '').isNotEmpty) _CompanyRow(icon: Icons.language, text: company.website!),
       if ((company.phone ?? '').isNotEmpty) _CompanyRow(icon: Icons.phone, text: company.phone!),
       if ((company.email ?? '').isNotEmpty) _CompanyRow(icon: Icons.email, text: company.email!),
@@ -858,5 +1092,5 @@ class _CompanyRow extends StatelessWidget {
   final String text;
   const _CompanyRow({required this.icon, required this.text});
   @override
-  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(top: 4), child: Row(children: [Icon(icon, size: 16), const SizedBox(width: 8), Expanded(child: Text(text, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)))]));
+  Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(top: 4), child: Row(children: [Icon(icon, size: 16), const SizedBox(width: 8), Expanded(child: Text(text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)))]));
 }

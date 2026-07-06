@@ -18,6 +18,7 @@ class CardItem extends ConsumerStatefulWidget {
 class _CardItemState extends ConsumerState<CardItem> {
   late bool _isFriend;
   late String _friendRequestStatus;
+  bool _isProcessing = false;
 
   @override
   void initState() {
@@ -34,6 +35,7 @@ class _CardItemState extends ConsumerState<CardItem> {
         oldWidget.card.friendRequestStatus != widget.card.friendRequestStatus) {
       _isFriend = widget.card.isFriend;
       _friendRequestStatus = widget.card.friendRequestStatus ?? 'none';
+      _isProcessing = false;
     }
   }
 
@@ -47,8 +49,9 @@ class _CardItemState extends ConsumerState<CardItem> {
     final isSaved = widget.card.cardType == 'saved_card';
     final canSendRequest = widget.card.cardType == 'user_card' &&
         !_isFriend &&
-        _friendRequestStatus == 'none';
-    final isPending = _friendRequestStatus == 'pending';
+        (_friendRequestStatus == 'none' || _friendRequestStatus == 'rejected');
+    final isPending = _friendRequestStatus == 'pending' || _friendRequestStatus == 'pending_sent';
+    final isPendingReceived = _friendRequestStatus == 'pending_received';
 
     final hasImage = widget.card.profileImage?.isNotEmpty == true;
     final avatarUrl =
@@ -210,7 +213,90 @@ class _CardItemState extends ConsumerState<CardItem> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        if (canSendRequest)
+                        if (isPendingReceived)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _isProcessing
+                                  ? SizedBox(
+                                      width: 24,
+                                      height: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        valueColor: AlwaysStoppedAnimation<Color>(accent),
+                                      ),
+                                    )
+                                  : Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        GestureDetector(
+                                          onTap: () async {
+                                            setState(() => _isProcessing = true);
+                                            final result = await ref
+                                                .read(cardProvider.notifier)
+                                                .rejectFriendRequest(widget.card.id);
+                                            if (!mounted) return;
+                                            setState(() {
+                                              _isProcessing = false;
+                                              if (result.isSuccess) {
+                                                _friendRequestStatus = 'none';
+                                                _isFriend = false;
+                                              }
+                                            });
+                                            if (result.isSuccess) {
+                                              _showToast('Friend request declined');
+                                            } else {
+                                              _showToast(result.message ?? 'Failed to decline request', isError: true);
+                                            }
+                                          },
+                                          child: Container(
+                                            width: 32,
+                                            height: 32,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: Colors.red.withOpacity(isDark ? .2 : .08),
+                                              border: Border.all(color: Colors.red.withOpacity(.35)),
+                                            ),
+                                            child: const Icon(Icons.close_rounded, size: 15, color: Colors.red),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        GestureDetector(
+                                          onTap: () async {
+                                            setState(() => _isProcessing = true);
+                                            final result = await ref
+                                                .read(cardProvider.notifier)
+                                                .acceptFriendRequest(widget.card.id);
+                                            if (!mounted) return;
+                                            setState(() {
+                                              _isProcessing = false;
+                                              if (result.isSuccess) {
+                                                _friendRequestStatus = 'accepted';
+                                                _isFriend = true;
+                                              }
+                                            });
+                                            if (result.isSuccess) {
+                                              _showToast('Friend request accepted');
+                                            } else {
+                                              _showToast(result.message ?? 'Failed to accept request', isError: true);
+                                            }
+                                          },
+                                          child: Container(
+                                            width: 32,
+                                            height: 32,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: Colors.green.withOpacity(isDark ? .2 : .08),
+                                              border: Border.all(color: Colors.green.withOpacity(.35)),
+                                            ),
+                                            child: const Icon(Icons.check_rounded, size: 15, color: Colors.green),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                            ],
+                          )
+                        else if (canSendRequest)
                           _CardAddBtn(
                             accent: accent,
                             isDark: isDark,
@@ -221,7 +307,7 @@ class _CardItemState extends ConsumerState<CardItem> {
                               if (!mounted) return;
                               if (result.isSuccess) {
                                 setState(
-                                    () => _friendRequestStatus = 'pending');
+                                    () => _friendRequestStatus = 'pending_sent');
                                 _showToast('Friend request sent');
                               }
                             },
