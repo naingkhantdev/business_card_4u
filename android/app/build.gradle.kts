@@ -17,8 +17,8 @@ android {
         applicationId = "com.example.business_card_app"
         minSdk = 23 // Updated to 23 as required by mobile_scanner
         targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode()
-        versionName = flutter.versionName()
+       versionCode = flutter.versionCode
+versionName = flutter.versionName
     }
 
     buildTypes {

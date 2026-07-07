@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/auth/auth_provider.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_typography.dart';
 import '../widgets/app_primary_button.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/loading_view.dart';
@@ -116,14 +117,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           const SizedBox(height: 40),
                           if (!isKeyboardOpen)
                             RichText(
-                              text: const TextSpan(
+                              text: TextSpan(
                                 text: 'businessCard',
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF0B1220),
+                                style: AppTypography.primary(
+                                  const TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF0B1220),
+                                  ),
                                 ),
-                                children: [
+                                children: const [
                                   TextSpan(
                                     text: '4U',
                                     style: TextStyle(
@@ -220,11 +223,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                 const Text("Don't have an account? Register"),
                           ),
                           const SizedBox(height: 16),
-                          const Text(
+                          Text(
                             'Developed by Asia Brightway',
-                            style: TextStyle(
-                              color: Color(0xFF5B6473),
-                              fontWeight: FontWeight.w500,
+                            style: AppTypography.tertiary(
+                              const TextStyle(
+                                color: Color(0xFF5B6473),
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 24),
@@ -277,13 +282,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       controller: controller,
       focusNode: focusNode,
       obscureText: obscure,
-      style: const TextStyle(
-        color: Color(0xFF0B1220),
-        fontWeight: FontWeight.w600,
+      style: AppTypography.secondary(
+        const TextStyle(
+          color: Color(0xFF0B1220),
+          fontWeight: FontWeight.w400,
+        ),
       ),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Color(0xFF5B6473)),
+        labelStyle: AppTypography.tertiary(
+          const TextStyle(color: Color(0xFF5B6473)),
+        ),
         prefixIcon: Icon(icon, color: const Color(0xFF5B6473)),
         suffixIcon: suffix,
         filled: true,
