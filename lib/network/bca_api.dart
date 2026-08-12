@@ -108,9 +108,12 @@ abstract class BcaApi {
 
   // NOTE on phones/emails/addresses/social_links: Laravel only treats repeated multipart
   // field names as an array if the key itself ends in []. When you build the `body` map for
-  // this call, use keys like 'phones[]', 'emails[]', 'addresses[]' with List<String> values
+  // this call, use keys like 'phones[]', 'emails[]' with List<String> values
   // (or 'phones[0]', 'phones[1]', ... ), not a bare 'phones' key, or the backend will only
   // see the last value and fail the `array` validation rule.
+  // Addresses are structured objects and must be flattened to
+  // 'addresses[0][street]', 'addresses[0][city]', ... keys
+  // (see _prepareListFieldsForMultipart in bca_data_agent_impl.dart).
   @MultiPart()
   @POST(kEndPointBusinessCards)
   Future<SingleCardResponse?> createCard(
@@ -143,6 +146,9 @@ abstract class BcaApi {
       @Query("query") String query,
       @Query("company_id") int? companyId,
       @Query("card_type") String? cardType,
+      @Query("city") String? city,
+      @Query("state") String? state,
+      @Query("country") String? country,
       );
 
   // CHANGED return type: backend wraps the single card as {status, message, data: {...}}.

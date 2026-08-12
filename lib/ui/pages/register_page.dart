@@ -109,7 +109,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                       'businessCard4U',
                       style: TextStyle(
                         color: text,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.w600,
                         fontSize: 16,
                       ),
                     ),
@@ -120,7 +120,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   'Create your account',
                   style: TextStyle(
                     color: text,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w600,
                     fontSize: 28,
                     height: 1.1,
                   ),
@@ -130,7 +130,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   'Enter your email to receive a verification code.',
                   style: TextStyle(
                     color: muted,
-                    fontWeight: FontWeight.w600,
                     fontSize: 14,
                     height: 1.45,
                   ),
@@ -157,7 +156,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                         'Email',
                         style: TextStyle(
                           color: text,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w500,
                           fontSize: 13,
                         ),
                       ),
@@ -188,10 +187,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                               vertical: 14,
                             ),
                           ),
-                          style: const TextStyle(
-                            color: text,
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: const TextStyle(color: text),
                         ),
                       ),
                       const SizedBox(height: 14),
@@ -206,7 +202,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                         'Code expires in 5 minutes.',
                         style: TextStyle(
                           color: muted,
-                          fontWeight: FontWeight.w600,
                           fontSize: 12,
                         ),
                       ),
@@ -219,7 +214,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     'businessCard4U ${DateTime.now().year}',
                     style: const TextStyle(
                       color: muted,
-                      fontWeight: FontWeight.w600,
                       fontSize: 12,
                     ),
                   ),

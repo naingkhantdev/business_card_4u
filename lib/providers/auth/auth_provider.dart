@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../network/dataagent/bca_data_agent.dart';
 import '../../data/request/login_request.dart';
 import '../../data/vos/user_model.dart';
+import '../../exception/custom_exception.dart';
 import '../../services/storage/token_storage.dart';
 import '../../services/auth/auth_session.dart';
 import '../../utils/app_result.dart';
@@ -129,15 +130,21 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
       return AppResult(true, request.message);
     } catch (e) {
-      final message = e.toString().replaceFirst('Exception: ', '').trim();
+      final message = _errorMessage(e, 'Login failed');
       state = AsyncData(AuthState(
         isLoggedIn: false,
         isLoading: false,
         pendingMessage: null,
-        lastErrorMessage: message.isEmpty ? 'Login failed' : message,
+        lastErrorMessage: message,
       ));
-      return AppResult(false, message.isEmpty ? 'Login failed' : message);
+      return AppResult(false, message);
     }
+  }
+
+  String _errorMessage(Object error, String fallback) {
+    if (error is CustomException) return error.errorVo.message;
+    final message = error.toString().replaceFirst('Exception: ', '').trim();
+    return message.isEmpty ? fallback : message;
   }
 
   void cancelLoading() {
@@ -150,8 +157,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       final message = await _dataAgent.sendOtp(email);
       return AppResult(true, message);
     } catch (e) {
-      final message = e.toString().replaceFirst('Exception: ', '').trim();
-      return AppResult(false, message.isEmpty ? 'Failed to send OTP' : message);
+      return AppResult(false, _errorMessage(e, 'Failed to send OTP'));
     }
   }
 
@@ -160,9 +166,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       final message = await _dataAgent.verifyOtp(email, otp);
       return AppResult(true, message);
     } catch (e) {
-      final message = e.toString().replaceFirst('Exception: ', '').trim();
-      return AppResult(
-          false, message.isEmpty ? 'OTP verification failed' : message);
+      return AppResult(false, _errorMessage(e, 'OTP verification failed'));
     }
   }
 
@@ -195,9 +199,9 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
       return AppResult(true, res.message);
     } catch (e) {
-      final message = e.toString().replaceFirst('Exception: ', '').trim();
-      return AppResult(
-          false, message.isEmpty ? 'Registration failed' : message);
+      // Reset loading state, otherwise the page spinner never clears.
+      state = AsyncData(AuthState(isLoggedIn: false, isLoading: false));
+      return AppResult(false, _errorMessage(e, 'Registration failed'));
     }
   }
 

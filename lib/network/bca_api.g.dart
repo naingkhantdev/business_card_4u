@@ -573,10 +573,8 @@ class _BcaApi implements BcaApi {
   @override
   Future<CardResponse?> myCards({String? cardType}) async {
     final _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{};
-    if (cardType != null) {
-      queryParameters[r'card_type'] = cardType;
-    }
+    final queryParameters = <String, dynamic>{r'card_type': cardType};
+    queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
     final _options = _setStreamType<CardResponse>(Options(
@@ -721,12 +719,18 @@ class _BcaApi implements BcaApi {
     String query,
     int? companyId,
     String? cardType,
+    String? city,
+    String? state,
+    String? country,
   ) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
       r'query': query,
       r'company_id': companyId,
       r'card_type': cardType,
+      r'city': city,
+      r'state': state,
+      r'country': country,
     };
     queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};

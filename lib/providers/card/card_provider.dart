@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../network/dataagent/bca_data_agent.dart';
+import '../../data/vos/address_model.dart';
 import '../../data/vos/business_card_model.dart';
 import '../../data/request/create_card_request.dart';
 import '../../utils/app_result.dart';
@@ -77,7 +78,7 @@ class CardNotifier extends AsyncNotifier<CardState> {
     String? position,
     List<String>? phones,
     List<String>? emails,
-    List<String>? addresses,
+    List<AddressModel>? addresses,
     String? bio,
     String? profileImage,
     XFile? imageFile,
@@ -127,7 +128,7 @@ class CardNotifier extends AsyncNotifier<CardState> {
     String? position,
     List<String>? phones,
     List<String>? emails,
-    List<String>? addresses,
+    List<AddressModel>? addresses,
     String? bio,
     String? profileImage,
     XFile? imageFile,
@@ -193,12 +194,18 @@ class CardNotifier extends AsyncNotifier<CardState> {
     String query, {
     int? companyId,
     String cardType = 'user_card',
+    String? city,
+    String? state,
+    String? country,
   }) async {
     try {
       final res = await _dataAgent.searchCards(
         query,
         companyId: companyId,
         cardType: cardType,
+        city: city,
+        state: state,
+        country: country,
       );
       return res ?? [];
     } catch (e) {

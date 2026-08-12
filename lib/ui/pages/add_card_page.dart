@@ -8,6 +8,7 @@ import '../../providers/auth/auth_provider.dart';
 import '../../providers/card/card_provider.dart';
 import '../../utils/app_result.dart';
 import '../../network/image_url.dart';
+import '../../data/vos/address_model.dart';
 import '../../data/vos/business_card_model.dart';
 import '../../data/vos/company_model.dart';
 import '../theme/app_colors.dart';
@@ -33,7 +34,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
   final _positionCtrl = TextEditingController();
   final _phonesCtrl = TextEditingController();
   final _emailsCtrl = TextEditingController();
-  final _addressesCtrl = TextEditingController();
+  final List<_AddressEntry> _addressEntries = [];
   final _bioCtrl = TextEditingController();
   final _profileImageCtrl = TextEditingController();
   int? _selectedCompanyId;
@@ -60,7 +61,9 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
       _positionCtrl.text = c.position;
       _phonesCtrl.text = c.phones.join(', ');
       _emailsCtrl.text = c.emails.join(', ');
-      _addressesCtrl.text = c.addresses.join(', ');
+      for (final address in c.addresses) {
+        _addressEntries.add(_AddressEntry.fromModel(address));
+      }
       _bioCtrl.text = c.bio ?? '';
       _profileImageCtrl.text = c.profileImage ?? '';
       if (c.company != null) {
@@ -78,6 +81,9 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
           }
         }
       }
+    }
+    if (_addressEntries.isEmpty) {
+      _addressEntries.add(_AddressEntry());
     }
   }
 
@@ -108,7 +114,9 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     _positionCtrl.dispose();
     _phonesCtrl.dispose();
     _emailsCtrl.dispose();
-    _addressesCtrl.dispose();
+    for (final entry in _addressEntries) {
+      entry.dispose();
+    }
     _bioCtrl.dispose();
     _profileImageCtrl.dispose();
     super.dispose();
@@ -165,7 +173,10 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     final position = _positionCtrl.text.trim();
     final phones = _splitToList(_phonesCtrl.text);
     final emails = _splitToList(_emailsCtrl.text);
-    final addresses = _splitToList(_addressesCtrl.text);
+    final addresses = _addressEntries
+        .where((e) => !e.isEmpty)
+        .map((e) => e.toModel())
+        .toList();
     final bio = _bioCtrl.text.trim();
     final profileImage = _profileImageCtrl.text.trim();
 
@@ -360,13 +371,10 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                     icon: Icons.email_outlined,
                     validator: _validateEmails,
                   ),
+                  const SizedBox(height: 24),
+                  _buildSectionTitle("Addresses"),
                   const SizedBox(height: 16),
-                  _buildPremiumTextField(
-                    controller: _addressesCtrl,
-                    label: "Addresses",
-                    hint: "e.g. 123 Main St, ...",
-                    icon: Icons.location_on_outlined,
-                  ),
+                  ..._buildAddressSection(),
                   const SizedBox(height: 24),
                   _buildSectionTitle("More"),
                   const SizedBox(height: 16),
@@ -409,13 +417,132 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     );
   }
 
+  List<Widget> _buildAddressSection() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final widgets = <Widget>[];
+
+    for (var i = 0; i < _addressEntries.length; i++) {
+      final entry = _addressEntries[i];
+      widgets.add(Container(
+        margin: EdgeInsets.only(top: i == 0 ? 0 : 16),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? const Color(0xFF1F2A44) : Colors.grey[300]!,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    "Address ${i + 1}",
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: isDark
+                          ? const Color(0xFF98A7C2)
+                          : Colors.grey[600],
+                    ),
+                  ),
+                ),
+                if (_addressEntries.length > 1)
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () {
+                      setState(() {
+                        _addressEntries.removeAt(i).dispose();
+                      });
+                    },
+                    icon: const Icon(Icons.delete_outline,
+                        size: 20, color: Colors.redAccent),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _buildPremiumTextField(
+              controller: entry.street,
+              label: "Street",
+              hint: "e.g. 123 Main St",
+              icon: Icons.location_on_outlined,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildPremiumTextField(
+                    controller: entry.city,
+                    label: "City",
+                    hint: "e.g. Yangon",
+                    validator: (_) => entry.isEmpty || entry.hasCity
+                        ? null
+                        : 'City is required',
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildPremiumTextField(
+                    controller: entry.state,
+                    label: "State / Region",
+                    hint: "Optional",
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildPremiumTextField(
+                    controller: entry.postalCode,
+                    label: "Postal Code",
+                    hint: "Optional",
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildPremiumTextField(
+                    controller: entry.country,
+                    label: "Country",
+                    hint: "e.g. Myanmar",
+                    validator: (_) => entry.isEmpty || entry.hasCountry
+                        ? null
+                        : 'Country is required',
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ));
+    }
+
+    widgets.add(Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton.icon(
+        onPressed: () {
+          setState(() {
+            _addressEntries.add(_AddressEntry());
+          });
+        },
+        icon: const Icon(Icons.add, size: 18),
+        label: const Text("Add address"),
+      ),
+    ));
+
+    return widgets;
+  }
+
   Widget _buildSectionTitle(String title) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Text(
       title,
       style: TextStyle(
         fontSize: 18,
-        fontWeight: FontWeight.bold,
+        fontWeight: FontWeight.w600,
         color: isDark ? const Color(0xFFEAF1FF) : const Color(0xFF1F2937),
       ),
     );
@@ -544,5 +671,57 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         ),
       ),
     );
+  }
+}
+
+/// Controllers for one structured address in the form. City and country are
+/// required by the API once any field of the entry is filled.
+class _AddressEntry {
+  final street = TextEditingController();
+  final city = TextEditingController();
+  final state = TextEditingController();
+  final postalCode = TextEditingController();
+  final country = TextEditingController();
+
+  _AddressEntry();
+
+  factory _AddressEntry.fromModel(AddressModel model) {
+    final entry = _AddressEntry();
+    entry.street.text = model.street ?? '';
+    entry.city.text = model.city ?? '';
+    entry.state.text = model.state ?? '';
+    entry.postalCode.text = model.postalCode ?? '';
+    entry.country.text = model.country ?? '';
+    return entry;
+  }
+
+  List<TextEditingController> get _controllers =>
+      [street, city, state, postalCode, country];
+
+  bool get isEmpty => _controllers.every((c) => c.text.trim().isEmpty);
+
+  bool get hasCity => city.text.trim().isNotEmpty;
+
+  bool get hasCountry => country.text.trim().isNotEmpty;
+
+  AddressModel toModel() {
+    String? valueOf(TextEditingController c) {
+      final text = c.text.trim();
+      return text.isEmpty ? null : text;
+    }
+
+    return AddressModel(
+      street: valueOf(street),
+      city: valueOf(city),
+      state: valueOf(state),
+      postalCode: valueOf(postalCode),
+      country: valueOf(country),
+    );
+  }
+
+  void dispose() {
+    for (final c in _controllers) {
+      c.dispose();
+    }
   }
 }

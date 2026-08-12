@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/auth/auth_provider.dart';
+import '../../utils/app_result.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_primary_button.dart';
 import '../widgets/app_toast.dart';
@@ -27,6 +28,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
 
   int _secondsRemaining = _initialSeconds;
   Timer? _timer;
+  bool _isVerifying = false;
 
   @override
   void initState() {
@@ -69,6 +71,11 @@ class _OtpPageState extends ConsumerState<OtpPage> {
   }
 
   Future<void> _verifyOtp() async {
+    // The pin field auto-submits on the 6th digit and the button can fire
+    // too; a second request would hit after the OTP is consumed server-side
+    // and come back as "Invalid OTP".
+    if (_isVerifying) return;
+
     final otp = _otpController.text.trim();
 
     if (otp.length != 6) {
@@ -76,8 +83,15 @@ class _OtpPageState extends ConsumerState<OtpPage> {
       return;
     }
 
-    final result =
-        await ref.read(authProvider.notifier).verifyOtpOnly(widget.email, otp);
+    _isVerifying = true;
+    final AppResult result;
+    try {
+      result = await ref
+          .read(authProvider.notifier)
+          .verifyOtpOnly(widget.email, otp);
+    } finally {
+      _isVerifying = false;
+    }
 
     if (!mounted) return;
     final message = result.message ??
@@ -162,7 +176,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                       style: TextStyle(
                         fontSize: 30,
                         height: 1.1,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w600,
                         color: Color(0xFF0B1220),
                       ),
                     ),
@@ -174,7 +188,6 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.black.withOpacity(.55),
-                        fontWeight: FontWeight.w500,
                       ),
                     ),
 
@@ -184,7 +197,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                       widget.email,
                       style: const TextStyle(
                         fontSize: 15,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w500,
                         color: Color(0xFF0B1220),
                       ),
                     ),
@@ -201,7 +214,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                             "Enter OTP",
                             style: TextStyle(
                               fontSize: 14,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w500,
                               color: Color(0xFF0B1220),
                             ),
                           ),
@@ -243,7 +256,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                                     : "Resend available after $_formattedTime",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.w500,
                                   color: (_secondsRemaining == 0 &&
                                           !authState.isLoading)
                                       ? const Color(0xFF1E3C72)
@@ -271,7 +284,6 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                               fontSize: 12.5,
                               height: 1.35,
                               color: Colors.black.withOpacity(.50),
-                              fontWeight: FontWeight.w500,
                             ),
                           ),
                         ),
@@ -439,7 +451,7 @@ class _TimerPill extends StatelessWidget {
           Text(
             timeText,
             style: TextStyle(
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w600,
               color: isExpired ? AppColors.errorBg : AppColors.secondary,
             ),
           ),
@@ -480,7 +492,7 @@ class _LoadingGlassOverlay extends StatelessWidget {
                   SizedBox(width: 12),
                   Text(
                     "Please wait...",
-                    style: TextStyle(fontWeight: FontWeight.w700),
+                    style: TextStyle(fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -592,7 +604,7 @@ class _OtpPinFieldState extends State<_OtpPinField> {
                   char.isEmpty ? "•" : char,
                   style: TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w500,
                     color: char.isEmpty
                         ? Colors.black.withOpacity(.18)
                         : const Color(0xFF0B1220),

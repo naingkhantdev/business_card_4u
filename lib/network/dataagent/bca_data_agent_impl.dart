@@ -6,8 +6,10 @@ import '../bca_api.dart';
 import '../dio_client.dart';
 import '../../data/vos/business_card_model.dart';
 import '../../data/vos/company_model.dart';
+import '../../data/vos/error_vo.dart';
 import '../../data/vos/user_model.dart';
 import '../../data/request/login_request.dart';
+import '../../exception/custom_exception.dart';
 import '../response/login_response.dart';
 import '../response/card_response.dart';
 
@@ -25,18 +27,19 @@ class BcaDataAgentImpl implements BcaDataAgent {
   // ================= AUTH =================
   @override
   Future<LoginResponse?> login(LoginRequest request) async {
-    return await _bcaApi.userLogin(request);
+    return _guard(() => _bcaApi.userLogin(request));
   }
 
   @override
   Future<String?> sendOtp(String email) async {
-    final response = await _bcaApi.sendOtp({"email": email});
+    final response = await _guard(() => _bcaApi.sendOtp({"email": email}));
     return response?.message;
   }
 
   @override
   Future<String?> verifyOtp(String email, String otp) async {
-    final response = await _bcaApi.verifyOtp({"email": email, "otp": otp});
+    final response =
+        await _guard(() => _bcaApi.verifyOtp({"email": email, "otp": otp}));
     return response?.message;
   }
 
@@ -47,12 +50,12 @@ class BcaDataAgentImpl implements BcaDataAgent {
     String password,
     String confirmPassword,
   ) async {
-    return await _bcaApi.completeRegister({
-      "email": email,
-      "name": name,
-      "password": password,
-      "password_confirmation": confirmPassword,
-    });
+    return _guard(() => _bcaApi.completeRegister({
+          "email": email,
+          "name": name,
+          "password": password,
+          "password_confirmation": confirmPassword,
+        }));
   }
 
   @override
@@ -197,8 +200,12 @@ class BcaDataAgentImpl implements BcaDataAgent {
     String query, {
     int? companyId,
     String cardType = 'user_card',
+    String? city,
+    String? state,
+    String? country,
   }) async {
-    final response = await _bcaApi.searchCards(query, companyId, cardType);
+    final response = await _bcaApi.searchCards(
+        query, companyId, cardType, city, state, country);
     return response?.cards;
   }
 
@@ -236,18 +243,62 @@ class BcaDataAgentImpl implements BcaDataAgent {
     await _bcaApi.removeFriend(cardId);
   }
 
+  /// Maps DioException into the app's CustomException carrying the API's
+  /// `message` so providers and UI never see raw Dio errors.
+  Future<T> _guard<T>(Future<T> Function() run) async {
+    try {
+      return await run();
+    } on DioException catch (e) {
+      throw CustomException(
+        statusCode: e.response?.statusCode,
+        errorVo: ErrorVo(message: _messageFromDioError(e)),
+      );
+    }
+  }
+
+  String _messageFromDioError(DioException e) {
+    final data = e.response?.data;
+    if (data is Map) {
+      final message = data['message'];
+      if (message is String && message.trim().isNotEmpty) {
+        return message;
+      }
+    }
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+        return 'Connection timed out. Please try again.';
+      case DioExceptionType.connectionError:
+        return 'Cannot reach the server. Check your internet connection.';
+      default:
+        return 'Something went wrong. Please try again.';
+    }
+  }
+
   /// Prepares list fields (phones, emails, etc) using 'key[]' naming so that
   /// Laravel's multipart form parser correctly receives them as arrays.
   void _prepareListFieldsForMultipart(Map<String, dynamic> map) {
     const listKeys = ['phones', 'emails', 'addresses', 'social_links'];
     for (final key in listKeys) {
       final value = map[key];
-      if (value is List && value.isNotEmpty) {
+      if (value is! List) continue;
+      map.remove(key);
+      if (value.isEmpty) continue;
+
+      if (value.first is Map) {
+        // Structured entries (addresses): flatten to key[i][field] so Laravel
+        // parses them as an array of objects. Null fields are omitted.
+        for (var i = 0; i < value.length; i++) {
+          final item = value[i] as Map;
+          item.forEach((field, fieldValue) {
+            if (fieldValue != null) {
+              map['$key[$i][$field]'] = fieldValue;
+            }
+          });
+        }
+      } else {
         map['$key[]'] = value;
-        map.remove(key);
-      } else if (value is List && value.isEmpty) {
-        // Send empty array explicitly if needed, or remove to let backend default
-        map.remove(key);
       }
     }
   }

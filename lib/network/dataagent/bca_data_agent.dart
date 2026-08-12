@@ -60,6 +60,9 @@ abstract class BcaDataAgent {
     String query, {
     int? companyId,
     String cardType = 'user_card',
+    String? city,
+    String? state,
+    String? country,
   });
 
   Future<BusinessCardModel?> scanQr(String qrData);

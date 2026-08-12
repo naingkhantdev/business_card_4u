@@ -16,7 +16,7 @@ CreateCardRequest _$CreateCardRequestFromJson(Map<String, dynamic> json) =>
       emails:
           (json['emails'] as List<dynamic>?)?.map((e) => e as String).toList(),
       addresses: (json['addresses'] as List<dynamic>?)
-          ?.map((e) => e as String)
+          ?.map((e) => AddressModel.fromJson(e as Map<String, dynamic>))
           .toList(),
       bio: json['bio'] as String?,
       profileImage: json['profile_image'] as String?,
@@ -30,7 +30,7 @@ Map<String, dynamic> _$CreateCardRequestToJson(CreateCardRequest instance) =>
       'position': instance.position,
       'phones': instance.phones,
       'emails': instance.emails,
-      'addresses': instance.addresses,
+      'addresses': instance.addresses?.map((e) => e.toJson()).toList(),
       'bio': instance.bio,
       'profile_image': instance.profileImage,
       'card_type': instance.cardType,

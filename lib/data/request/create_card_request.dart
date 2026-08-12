@@ -1,8 +1,10 @@
 import 'package:json_annotation/json_annotation.dart';
 
+import '../vos/address_model.dart';
+
 part 'create_card_request.g.dart';
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class CreateCardRequest {
   final String? name;
   @JsonKey(name: 'company_id')
@@ -10,7 +12,7 @@ class CreateCardRequest {
   final String? position;
   final List<String>? phones;
   final List<String>? emails;
-  final List<String>? addresses;
+  final List<AddressModel>? addresses;
   final String? bio;
   @JsonKey(name: 'profile_image')
   final String? profileImage;

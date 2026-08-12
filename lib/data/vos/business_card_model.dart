@@ -1,10 +1,11 @@
 import 'package:json_annotation/json_annotation.dart';
+import 'address_model.dart';
 import 'company_model.dart';
 import 'user_model.dart';
 
 part 'business_card_model.g.dart';
 
-@JsonSerializable()
+@JsonSerializable(explicitToJson: true)
 class BusinessCardModel {
   final int id;
   @JsonKey(name: 'full_name')
@@ -12,7 +13,7 @@ class BusinessCardModel {
   final String position;
   final List<String> phones;
   final List<String> emails;
-  final List<String> addresses;
+  final List<AddressModel> addresses;
   final String? bio;
   @JsonKey(name: 'profile_image')
   final String? profileImage;
@@ -72,7 +73,15 @@ class BusinessCardModel {
     safe['position'] ??= '';
     safe['phones'] ??= <String>[];
     safe['emails'] ??= <String>[];
-    safe['addresses'] ??= <String>[];
+    // Addresses are structured objects; fold legacy free-text entries
+    // (pre-migration data) into the street field.
+    final rawAddresses = safe['addresses'];
+    safe['addresses'] = rawAddresses is List
+        ? rawAddresses
+            .map((a) => a is String ? {'street': a} : a)
+            .whereType<Map<String, dynamic>>()
+            .toList()
+        : <Map<String, dynamic>>[];
 
     // Handle the complex createdAt logic first
     DateTime? createdAt;

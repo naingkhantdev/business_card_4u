@@ -922,7 +922,7 @@ class _PurpleQuickActions extends StatelessWidget {
     final items = <Widget>[];
     if (card.phones.isNotEmpty) items.add(_PurpleActionPill(icon: Icons.call_rounded, label: 'Call', onTap: () => _launch('tel:${card.phones.first}'), isDark: isDark));
     if (card.emails.isNotEmpty) items.add(_PurpleActionPill(icon: Icons.mail_rounded, label: 'Email', onTap: () => _launch('mailto:${card.emails.first}'), isDark: isDark));
-    if (card.addresses.isNotEmpty) items.add(_PurpleActionPill(icon: Icons.place_rounded, label: 'Map', onTap: () { final q = Uri.encodeComponent(card.addresses.first); _launch('https://maps.google.com/?q=$q'); }, isDark: isDark));
+    if (card.addresses.isNotEmpty) items.add(_PurpleActionPill(icon: Icons.place_rounded, label: 'Map', onTap: () { final q = Uri.encodeComponent(card.addresses.first.displayText); _launch('https://maps.google.com/?q=$q'); }, isDark: isDark));
     if (!isMyProfileCard) {
       if (isFriend) {
         items.add(_PurpleActionPill(icon: Icons.person_remove_rounded, label: 'Unfriend', onTap: onFriendAction, isDark: isDark));
@@ -1012,7 +1012,8 @@ class _PurpleContactList extends StatelessWidget {
       list.add(_ContactRow(icon: Icons.email_rounded, label: 'Email', value: e, onTap: () => _launch('mailto:$e'), isDark: isDark));
     }
     for (final a in card.addresses) {
-      list.add(_ContactRow(icon: Icons.location_on_rounded, label: 'Address', value: a, onTap: () { final q = Uri.encodeComponent(a); _launch('https://maps.google.com/?q=$q'); }, isDark: isDark));
+      final text = a.displayText;
+      list.add(_ContactRow(icon: Icons.location_on_rounded, label: 'Address', value: text, onTap: () { final q = Uri.encodeComponent(text); _launch('https://maps.google.com/?q=$q'); }, isDark: isDark));
     }
     if (list.isEmpty) return Text('No contact info.', style: TextStyle(color: isDark ? CardDetailPage._darkMuted : CardDetailPage._muted));
     return Column(children: list);

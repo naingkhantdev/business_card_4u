@@ -15,8 +15,9 @@ BusinessCardModel _$BusinessCardModelFromJson(Map<String, dynamic> json) =>
           (json['phones'] as List<dynamic>).map((e) => e as String).toList(),
       emails:
           (json['emails'] as List<dynamic>).map((e) => e as String).toList(),
-      addresses:
-          (json['addresses'] as List<dynamic>).map((e) => e as String).toList(),
+      addresses: (json['addresses'] as List<dynamic>)
+          .map((e) => AddressModel.fromJson(e as Map<String, dynamic>))
+          .toList(),
       bio: json['bio'] as String?,
       profileImage: json['profile_image'] as String?,
       company: json['company'] == null
@@ -25,9 +26,9 @@ BusinessCardModel _$BusinessCardModelFromJson(Map<String, dynamic> json) =>
       user: json['user'] == null
           ? null
           : UserModel.fromJson(json['user'] as Map<String, dynamic>),
-      createdBy: json['created_by'] as int?,
-      updatedBy: json['updated_by'] as int?,
-      deletedBy: json['deleted_by'] as int?,
+      createdBy: (json['created_by'] as num?)?.toInt(),
+      updatedBy: (json['updated_by'] as num?)?.toInt(),
+      deletedBy: (json['deleted_by'] as num?)?.toInt(),
       cardType: json['card_type'] as String? ?? 'user_card',
       qrCodeData: json['qr_code_data'] as String?,
       socialLinks: json['social_links'] as List<dynamic>?,
@@ -45,11 +46,11 @@ Map<String, dynamic> _$BusinessCardModelToJson(BusinessCardModel instance) =>
       'position': instance.position,
       'phones': instance.phones,
       'emails': instance.emails,
-      'addresses': instance.addresses,
+      'addresses': instance.addresses.map((e) => e.toJson()).toList(),
       'bio': instance.bio,
       'profile_image': instance.profileImage,
-      'company': instance.company,
-      'user': instance.user,
+      'company': instance.company?.toJson(),
+      'user': instance.user?.toJson(),
       'created_by': instance.createdBy,
       'updated_by': instance.updatedBy,
       'deleted_by': instance.deletedBy,

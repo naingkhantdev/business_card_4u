@@ -17,9 +17,11 @@ CompanyModel _$CompanyModelFromJson(Map<String, dynamic> json) => CompanyModel(
       phone: json['phone'] as String?,
       email: json['email'] as String?,
       createdBy: (json['created_by'] as num?)?.toInt(),
-      socials: (json['socials'] as List<dynamic>)
-          .map((e) => CompanySocialModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      socials: (json['socials'] as List<dynamic>?)
+              ?.map(
+                  (e) => CompanySocialModel.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
     );
 
 Map<String, dynamic> _$CompanyModelToJson(CompanyModel instance) =>
