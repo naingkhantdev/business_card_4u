@@ -28,6 +28,18 @@ class DioClient {
           debugPrint('=== API REQUEST ===');
           debugPrint('Method: ${options.method}');
           debugPrint('URL: ${options.uri}');
+
+          // The 60s default exists for cold-starting hosted instances, but a
+          // user staring at a login spinner will not wait that long — and the
+          // transient retry below would double it. Interactive auth screens get
+          // a short budget and no retry so a failure surfaces quickly.
+          if (_interactiveAuthPaths.any(options.path.contains)) {
+            options.connectTimeout = _authTimeout;
+            options.sendTimeout = _authTimeout;
+            options.receiveTimeout = _authTimeout;
+            options.extra['no_retry'] = true;
+          }
+
           final token = await TokenStorage.read();
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
@@ -80,7 +92,18 @@ class DioClient {
     return dio;
   }
 
+  /// Requests a user is actively waiting on with a spinner in front of them.
+  static const _interactiveAuthPaths = [
+    'login',
+    'send-otp',
+    'verify-otp',
+    'complete-register',
+  ];
+
+  static const _authTimeout = Duration(seconds: 15);
+
   static bool _shouldRetry(DioException error) {
+    if (error.requestOptions.extra['no_retry'] == true) return false;
     if (error.requestOptions.extra['retried'] == true) return false;
 
     final isTransient = error.type == DioExceptionType.connectionTimeout ||

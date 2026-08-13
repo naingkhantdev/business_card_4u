@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../network/dataagent/bca_data_agent.dart';
 import '../../data/request/login_request.dart';
 import '../../data/vos/user_model.dart';
-import '../../exception/custom_exception.dart';
 import '../../services/storage/token_storage.dart';
 import '../../services/auth/auth_session.dart';
 import '../../utils/app_result.dart';
+import '../../utils/error_message.dart';
 import '../../fcm/push_notification_service.dart';
 import '../data_agent_providers.dart';
 import '../card/card_provider.dart';
@@ -130,7 +130,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
       return AppResult(true, request.message);
     } catch (e) {
-      final message = _errorMessage(e, 'Login failed');
+      final message = _errorMessage(e, 'Could not sign you in. Please try again.');
       state = AsyncData(AuthState(
         isLoggedIn: false,
         isLoading: false,
@@ -141,11 +141,8 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     }
   }
 
-  String _errorMessage(Object error, String fallback) {
-    if (error is CustomException) return error.errorVo.message;
-    final message = error.toString().replaceFirst('Exception: ', '').trim();
-    return message.isEmpty ? fallback : message;
-  }
+  String _errorMessage(Object error, String fallback) =>
+      friendlyErrorMessage(error, fallback);
 
   void cancelLoading() {
     final currentState = state.valueOrNull ?? AuthState();
@@ -157,7 +154,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       final message = await _dataAgent.sendOtp(email);
       return AppResult(true, message);
     } catch (e) {
-      return AppResult(false, _errorMessage(e, 'Failed to send OTP'));
+      return AppResult(false, _errorMessage(e, 'Could not send the code. Please try again.'));
     }
   }
 
@@ -166,7 +163,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       final message = await _dataAgent.verifyOtp(email, otp);
       return AppResult(true, message);
     } catch (e) {
-      return AppResult(false, _errorMessage(e, 'OTP verification failed'));
+      return AppResult(false, _errorMessage(e, 'That code did not work. Please try again.'));
     }
   }
 
@@ -201,7 +198,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     } catch (e) {
       // Reset loading state, otherwise the page spinner never clears.
       state = AsyncData(AuthState(isLoggedIn: false, isLoading: false));
-      return AppResult(false, _errorMessage(e, 'Registration failed'));
+      return AppResult(false, _errorMessage(e, 'Could not complete sign up. Please try again.'));
     }
   }
 
@@ -230,9 +227,11 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       ));
       return AppResult(true, message);
     } catch (e) {
-      final message = e.toString().replaceFirst('Exception: ', '').trim();
       return AppResult(
-          false, message.isEmpty ? 'Failed to deactivate account' : message);
+        false,
+        friendlyErrorMessage(
+            e, 'Could not deactivate your account. Please try again.'),
+      );
     }
   }
 

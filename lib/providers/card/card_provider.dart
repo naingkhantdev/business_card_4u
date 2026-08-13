@@ -5,6 +5,7 @@ import '../../data/vos/address_model.dart';
 import '../../data/vos/business_card_model.dart';
 import '../../data/request/create_card_request.dart';
 import '../../utils/app_result.dart';
+import '../../utils/error_message.dart';
 import '../data_agent_providers.dart';
 
 // Combined Card State
@@ -112,12 +113,14 @@ class CardNotifier extends AsyncNotifier<CardState> {
       } else {
         state =
             AsyncData(state.value?.copyWith(isCreating: false) ?? CardState());
-        return const AppResult(false, 'Server did not return the created card');
+        return const AppResult(
+            false, 'The card could not be saved. Please try again.');
       }
     } catch (e) {
       state =
           AsyncData(state.value?.copyWith(isCreating: false) ?? CardState());
-      return AppResult(false, e.toString());
+      return AppResult(
+          false, friendlyErrorMessage(e, 'Could not create the card. Please try again.'));
     }
   }
 
@@ -132,6 +135,7 @@ class CardNotifier extends AsyncNotifier<CardState> {
     String? bio,
     String? profileImage,
     XFile? imageFile,
+    String? cardType,
   }) async {
     state = AsyncData(
         state.value?.copyWith(isCreating: true) ?? CardState(isCreating: true));
@@ -145,6 +149,10 @@ class CardNotifier extends AsyncNotifier<CardState> {
         addresses: addresses,
         bio: bio,
         profileImage: profileImage,
+        // Must be echoed back on update. A null here is serialized as an empty
+        // string by Dio's multipart encoder, which the API then writes over the
+        // stored card_type — see the guard in BusinessCardController::update.
+        cardType: cardType,
       );
 
       final updatedCard = await _dataAgent.updateCard(id, request.toJson(),
@@ -168,7 +176,8 @@ class CardNotifier extends AsyncNotifier<CardState> {
     } catch (e) {
       state =
           AsyncData(state.value?.copyWith(isCreating: false) ?? CardState());
-      return AppResult(false, e.toString());
+      return AppResult(
+          false, friendlyErrorMessage(e, 'Could not save your changes. Please try again.'));
     }
   }
 
@@ -186,7 +195,8 @@ class CardNotifier extends AsyncNotifier<CardState> {
       state = AsyncData(
           state.value?.copyWith(deleteMessage: 'Failed to delete card') ??
               CardState());
-      return AppResult(false, e.toString());
+      return AppResult(
+          false, friendlyErrorMessage(e, 'Could not delete the card. Please try again.'));
     }
   }
 
@@ -227,7 +237,8 @@ class CardNotifier extends AsyncNotifier<CardState> {
       await fetchFriendRequests();
       return const AppResult(true, 'Friend request sent');
     } catch (e) {
-      return AppResult(false, e.toString());
+      return AppResult(
+          false, friendlyErrorMessage(e, 'Could not send the friend request. Please try again.'));
     }
   }
 
@@ -253,7 +264,8 @@ class CardNotifier extends AsyncNotifier<CardState> {
       await fetchCards();
       return const AppResult(true, 'Friend request accepted');
     } catch (e) {
-      return AppResult(false, e.toString());
+      return AppResult(
+          false, friendlyErrorMessage(e, 'Could not accept the friend request. Please try again.'));
     }
   }
 
@@ -267,7 +279,8 @@ class CardNotifier extends AsyncNotifier<CardState> {
       state = AsyncData(state.value!.copyWith(friendRequests: updatedRequests));
       return const AppResult(true, 'Friend request rejected');
     } catch (e) {
-      return AppResult(false, e.toString());
+      return AppResult(
+          false, friendlyErrorMessage(e, 'Could not reject the friend request. Please try again.'));
     }
   }
 
@@ -278,7 +291,8 @@ class CardNotifier extends AsyncNotifier<CardState> {
       await fetchFriendRequests();
       return const AppResult(true, 'Friend removed');
     } catch (e) {
-      return AppResult(false, e.toString());
+      return AppResult(
+          false, friendlyErrorMessage(e, 'Could not remove this friend. Please try again.'));
     }
   }
 }

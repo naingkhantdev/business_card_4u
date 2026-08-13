@@ -172,6 +172,7 @@ class _CompanySelectPageState extends ConsumerState<CompanySelectPage> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
         onPressed: _addCompany,
         icon: const Icon(Icons.add),
         label: const Text("Add New Company"),

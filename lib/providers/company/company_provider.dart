@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../network/dataagent/bca_data_agent.dart';
 import '../../data/vos/company_model.dart';
 import '../../utils/app_result.dart';
+import '../../utils/error_message.dart';
 import '../data_agent_providers.dart';
 
 class CompanyState {
@@ -54,7 +55,7 @@ class CompanyNotifier extends AsyncNotifier<CompanyState> {
     } catch (e) {
       final newState = CompanyState(
         companies: [],
-        errorMessage: e.toString(),
+        errorMessage: friendlyErrorMessage(e),
       );
       state = AsyncData(newState);
       return newState;
@@ -84,10 +85,10 @@ class CompanyNotifier extends AsyncNotifier<CompanyState> {
     } catch (e) {
       state = AsyncData(state.value?.copyWith(
             isSaving: false,
-            errorMessage: e.toString(),
+            errorMessage: friendlyErrorMessage(e),
           ) ??
           CompanyState());
-      return AppResult(false, e.toString());
+      return AppResult(false, friendlyErrorMessage(e));
     }
   }
 
@@ -116,10 +117,10 @@ class CompanyNotifier extends AsyncNotifier<CompanyState> {
     } catch (e) {
       state = AsyncData(state.value?.copyWith(
             isSaving: false,
-            errorMessage: e.toString(),
+            errorMessage: friendlyErrorMessage(e),
           ) ??
           CompanyState());
-      return AppResult(false, e.toString());
+      return AppResult(false, friendlyErrorMessage(e));
     }
   }
 
@@ -135,8 +136,8 @@ class CompanyNotifier extends AsyncNotifier<CompanyState> {
       return AppResult(true, message ?? 'Company deleted');
     } catch (e) {
       state = AsyncData(
-          state.value?.copyWith(errorMessage: e.toString()) ?? CompanyState());
-      return AppResult(false, e.toString());
+          state.value?.copyWith(errorMessage: friendlyErrorMessage(e)) ?? CompanyState());
+      return AppResult(false, friendlyErrorMessage(e));
     }
   }
 }

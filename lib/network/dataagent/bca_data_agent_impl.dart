@@ -60,12 +60,12 @@ class BcaDataAgentImpl implements BcaDataAgent {
 
   @override
   Future<void> logout() async {
-    await _bcaApi.logout();
+    await _guard(() => _bcaApi.logout());
   }
 
   @override
   Future<UserModel?> getProfile() async {
-    final data = await _bcaApi.getProfile();
+    final data = await _guard(() => _bcaApi.getProfile());
     if (data is Map<String, dynamic> && data['user'] != null) {
       return UserModel.fromJson(
         Map<String, dynamic>.from(data['user'] as Map),
@@ -76,14 +76,15 @@ class BcaDataAgentImpl implements BcaDataAgent {
 
   @override
   Future<String?> deactivateAccount(String password) async {
-    final response = await _bcaApi.deactivateAccount({"password": password});
+    final response =
+        await _guard(() => _bcaApi.deactivateAccount({"password": password}));
     return response?.message;
   }
 
   // ================= COMPANIES =================
   @override
   Future<List<CompanyModel>?> getCompanies() async {
-    final response = await _bcaApi.getCompanies();
+    final response = await _guard(() => _bcaApi.getCompanies());
     if (response is Map<String, dynamic> && response['data'] is List) {
       return (response['data'] as List)
           .map((item) => CompanyModel.fromJson(Map<String, dynamic>.from(item)))
@@ -94,7 +95,7 @@ class BcaDataAgentImpl implements BcaDataAgent {
 
   @override
   Future<CompanyModel?> createCompany(Map<String, dynamic> data) async {
-    final response = await _bcaApi.createCompany(data);
+    final response = await _guard(() => _bcaApi.createCompany(data));
     if (response is Map<String, dynamic> &&
         response['data'] is Map<String, dynamic>) {
       return CompanyModel.fromJson(Map<String, dynamic>.from(response['data']));
@@ -104,7 +105,7 @@ class BcaDataAgentImpl implements BcaDataAgent {
 
   @override
   Future<CompanyModel?> getCompanyDetail(int id) async {
-    final response = await _bcaApi.getCompanyDetail(id);
+    final response = await _guard(() => _bcaApi.getCompanyDetail(id));
     if (response is Map<String, dynamic> &&
         response['data'] is Map<String, dynamic>) {
       return CompanyModel.fromJson(Map<String, dynamic>.from(response['data']));
@@ -114,7 +115,7 @@ class BcaDataAgentImpl implements BcaDataAgent {
 
   @override
   Future<CompanyModel?> updateCompany(int id, Map<String, dynamic> data) async {
-    final response = await _bcaApi.updateCompany(id, data);
+    final response = await _guard(() => _bcaApi.updateCompany(id, data));
     if (response is Map<String, dynamic> &&
         response['data'] is Map<String, dynamic>) {
       return CompanyModel.fromJson(Map<String, dynamic>.from(response['data']));
@@ -124,20 +125,20 @@ class BcaDataAgentImpl implements BcaDataAgent {
 
   @override
   Future<String?> deleteCompany(int id) async {
-    final response = await _bcaApi.deleteCompany(id);
+    final response = await _guard(() => _bcaApi.deleteCompany(id));
     return response?.message;
   }
 
   // ================= BUSINESS CARDS =================
   @override
   Future<CardResponse?> getCards() async {
-    return await _bcaApi.getCards();
+    return await _guard(() => _bcaApi.getCards());
   }
 
   // Dedicated for saved cards page: card_type=saved_card + created_by == current user
   @override
   Future<CardResponse?> getSavedCards() async {
-    return await _bcaApi.myCards(cardType: 'saved_card');
+    return await _guard(() => _bcaApi.myCards(cardType: 'saved_card'));
   }
 
   @override
@@ -159,7 +160,7 @@ class BcaDataAgentImpl implements BcaDataAgent {
       );
     }
 
-    final response = await _bcaApi.createCard(formDataMap);
+    final response = await _guard(() => _bcaApi.createCard(formDataMap));
     return response?.data;
   }
 
@@ -185,13 +186,13 @@ class BcaDataAgentImpl implements BcaDataAgent {
       );
     }
 
-    final response = await _bcaApi.updateCard(id, formDataMap);
+    final response = await _guard(() => _bcaApi.updateCard(id, formDataMap));
     return response?.data;
   }
 
   @override
   Future<String?> deleteCard(int id) async {
-    final response = await _bcaApi.deleteCard(id);
+    final response = await _guard(() => _bcaApi.deleteCard(id));
     return response?.message;
   }
 
@@ -204,43 +205,44 @@ class BcaDataAgentImpl implements BcaDataAgent {
     String? state,
     String? country,
   }) async {
-    final response = await _bcaApi.searchCards(
-        query, companyId, cardType, city, state, country);
+    final response = await _guard(() => _bcaApi.searchCards(
+        query, companyId, cardType, city, state, country));
     return response?.cards;
   }
 
   @override
   Future<BusinessCardModel?> scanQr(String qrData) async {
-    final response = await _bcaApi.scanQr({"qr_code_data": qrData});
+    final response =
+        await _guard(() => _bcaApi.scanQr({"qr_code_data": qrData}));
     return response?.data;
   }
 
   @override
   Future<BusinessCardModel?> addFriend(int cardId) async {
-    final response = await _bcaApi.addFriend(cardId);
+    final response = await _guard(() => _bcaApi.addFriend(cardId));
     return response?.data;
   }
 
   @override
   Future<List<BusinessCardModel>?> getFriendRequests() async {
-    final response = await _bcaApi.getFriendRequests();
+    final response = await _guard(() => _bcaApi.getFriendRequests());
     return response?.cards;
   }
 
   @override
   Future<BusinessCardModel?> acceptFriendRequest(int cardId) async {
-    final response = await _bcaApi.acceptFriendRequest(cardId);
+    final response = await _guard(() => _bcaApi.acceptFriendRequest(cardId));
     return response?.data;
   }
 
   @override
   Future<void> rejectFriendRequest(int cardId) async {
-    await _bcaApi.rejectFriendRequest(cardId);
+    await _guard(() => _bcaApi.rejectFriendRequest(cardId));
   }
 
   @override
   Future<void> removeFriend(int cardId) async {
-    await _bcaApi.removeFriend(cardId);
+    await _guard(() => _bcaApi.removeFriend(cardId));
   }
 
   /// Maps DioException into the app's CustomException carrying the API's
@@ -257,23 +259,177 @@ class BcaDataAgentImpl implements BcaDataAgent {
   }
 
   String _messageFromDioError(DioException e) {
+    final status = e.response?.statusCode;
     final data = e.response?.data;
+
     if (data is Map) {
+      // 422: prefer the per-field `errors` map. Laravel's top-level `message`
+      // reads like "The phones.0 field must be at least 6 characters.
+      // (and 3 more errors)", which is not something a user should ever see.
+      final errors = data['errors'];
+      if (errors is Map && errors.isNotEmpty) {
+        final lines = <String>[];
+        errors.forEach((field, messages) {
+          if (lines.length >= _maxValidationLines) return;
+          final raw = (messages is List && messages.isNotEmpty)
+              ? messages.first?.toString()
+              : messages?.toString();
+          if (raw == null || raw.trim().isEmpty) return;
+          lines.add(_humanizeValidationMessage(field.toString(), raw));
+        });
+
+        if (lines.isNotEmpty) {
+          final remaining = errors.length - lines.length;
+          if (remaining > 0) {
+            lines.add(remaining == 1
+                ? 'And 1 more item needs fixing.'
+                : 'And $remaining more items need fixing.');
+          }
+          return lines.join('\n');
+        }
+      }
+
       final message = data['message'];
       if (message is String && message.trim().isNotEmpty) {
-        return message;
+        final cleaned = message.trim();
+        // Never surface a stack trace, SQL error or exception class name.
+        // These leak through whenever the API runs with APP_DEBUG=true.
+        if (!_looksTechnical(cleaned)) {
+          return cleaned;
+        }
       }
     }
+
     switch (e.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
-        return 'Connection timed out. Please try again.';
+        return 'The server is taking too long to respond. Please try again.';
       case DioExceptionType.connectionError:
-        return 'Cannot reach the server. Check your internet connection.';
+        return 'Cannot reach the server. Please check your internet connection.';
+      case DioExceptionType.cancel:
+        return 'The request was cancelled.';
       default:
+        break;
+    }
+
+    switch (status) {
+      case 401:
+        return 'Your session has expired. Please log in again.';
+      case 403:
+        return 'You do not have permission to do that.';
+      case 404:
+        return 'We could not find what you were looking for.';
+      case 409:
+        return 'That item has already been changed. Please refresh and retry.';
+      case 413:
+        return 'That file is too large. Please choose a smaller image.';
+      case 429:
+        return 'Too many attempts. Please wait a moment and try again.';
+      default:
+        if (status != null && status >= 500) {
+          return 'Something went wrong on our end. Please try again shortly.';
+        }
         return 'Something went wrong. Please try again.';
     }
+  }
+
+  /// How many field errors to list before collapsing the rest into a count.
+  static const int _maxValidationLines = 3;
+
+  /// Rewrites a Laravel validation message so it names the field the way the
+  /// form labels it: "The addresses.0.city field is required." becomes
+  /// "Address 1 city is required."
+  String _humanizeValidationMessage(String field, String rawMessage) {
+    final label = _humanizeFieldName(field);
+    var message = rawMessage.trim();
+
+    message = message
+        .replaceAll('The $field field', label)
+        .replaceAll('The $field', label)
+        .replaceAll(field, label);
+
+    if (message.isEmpty) return '$label is invalid.';
+    if (!message.endsWith('.')) message = '$message.';
+    return message[0].toUpperCase() + message.substring(1);
+  }
+
+  /// Turns an API field path into a form label.
+  /// `phones.0` -> `Phone 1`, `addresses.0.postal_code` -> `Address 1 postal code`.
+  String _humanizeFieldName(String field) {
+    const overrides = <String, String>{
+      'company_id': 'Company',
+      'card_type': 'Card type',
+      'qr_code_data': 'QR code',
+      'profile_image': 'Profile image',
+      'social_links': 'Social links',
+      'business_type': 'Business type',
+      'current_password': 'Current password',
+      'new_password': 'New password',
+      'password_confirmation': 'Password confirmation',
+      'firebase_token': 'Notification token',
+    };
+
+    const singulars = <String, String>{
+      'phones': 'Phone',
+      'emails': 'Email',
+      'addresses': 'Address',
+      'socials': 'Social link',
+      'social_links': 'Social link',
+    };
+
+    final parts = field.split('.');
+    final buffer = <String>[];
+
+    for (var i = 0; i < parts.length; i++) {
+      final part = parts[i];
+      final index = int.tryParse(part);
+
+      // A numeric segment is a list position: show it as a 1-based number
+      // attached to the noun before it, e.g. "Phone 1".
+      if (index != null) {
+        buffer.add('${index + 1}');
+        continue;
+      }
+
+      final isFirst = buffer.isEmpty;
+      final nextIsIndex =
+          i + 1 < parts.length && int.tryParse(parts[i + 1]) != null;
+
+      String word;
+      if (nextIsIndex && singulars.containsKey(part)) {
+        word = singulars[part]!;
+      } else if (overrides.containsKey(part)) {
+        word = overrides[part]!;
+      } else {
+        word = part.replaceAll('_', ' ');
+      }
+
+      buffer.add(isFirst ? word : word.toLowerCase());
+    }
+
+    final label = buffer.join(' ').trim();
+    if (label.isEmpty) return 'This field';
+    return label[0].toUpperCase() + label.substring(1);
+  }
+
+  /// True when a server message is a developer-facing dump rather than
+  /// something a user can act on.
+  bool _looksTechnical(String message) {
+    const markers = [
+      'SQLSTATE',
+      'Exception',
+      'Stack trace',
+      'vendor\\laravel',
+      'vendor/laravel',
+      'Illuminate\\',
+      'PDOException',
+      'syntax error',
+      '.php',
+      'Call to ',
+      'Undefined ',
+    ];
+    return markers.any((marker) => message.contains(marker));
   }
 
   /// Prepares list fields (phones, emails, etc) using 'key[]' naming so that

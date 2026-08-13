@@ -193,6 +193,8 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         bio: bio.isEmpty ? null : bio,
         profileImage: profileImage.isEmpty ? null : profileImage,
         imageFile: _pickedImage, // Pass image file
+        // Preserve the existing type; omitting it blanks card_type server-side.
+        cardType: widget.card!.cardType,
       );
     } else {
       result = await notifier.createCard(
