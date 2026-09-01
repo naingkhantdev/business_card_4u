@@ -83,6 +83,10 @@ class CardNotifier extends AsyncNotifier<CardState> {
     String? bio,
     String? profileImage,
     XFile? imageFile,
+    String? frontImage,
+    String? backImage,
+    XFile? frontImageFile,
+    XFile? backImageFile,
     String? cardType,
   }) async {
     state = AsyncData(
@@ -97,11 +101,17 @@ class CardNotifier extends AsyncNotifier<CardState> {
         addresses: addresses,
         bio: bio,
         profileImage: profileImage,
+        frontImage: frontImage,
+        backImage: backImage,
         cardType: cardType,
       );
 
-      final createdCard =
-          await _dataAgent.createCard(request.toJson(), imageFile: imageFile);
+      final createdCard = await _dataAgent.createCard(
+        request.toJson(),
+        imageFile: imageFile,
+        frontImageFile: frontImageFile,
+        backImageFile: backImageFile,
+      );
 
       if (createdCard != null) {
         final updatedCards = [createdCard, ...?state.value?.cards];
@@ -136,6 +146,10 @@ class CardNotifier extends AsyncNotifier<CardState> {
     String? profileImage,
     XFile? imageFile,
     String? cardType,
+    String? frontImage,
+    String? backImage,
+    XFile? frontImageFile,
+    XFile? backImageFile,
   }) async {
     state = AsyncData(
         state.value?.copyWith(isCreating: true) ?? CardState(isCreating: true));
@@ -153,10 +167,17 @@ class CardNotifier extends AsyncNotifier<CardState> {
         // string by Dio's multipart encoder, which the API then writes over the
         // stored card_type — see the guard in BusinessCardController::update.
         cardType: cardType,
+        frontImage: frontImage,
+        backImage: backImage,
       );
 
-      final updatedCard = await _dataAgent.updateCard(id, request.toJson(),
-          imageFile: imageFile);
+      final updatedCard = await _dataAgent.updateCard(
+        id,
+        request.toJson(),
+        imageFile: imageFile,
+        frontImageFile: frontImageFile,
+        backImageFile: backImageFile,
+      );
 
       if (updatedCard != null) {
         final updatedCards = state.value?.cards.map((card) {

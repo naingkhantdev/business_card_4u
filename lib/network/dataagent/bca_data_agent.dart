@@ -46,12 +46,16 @@ abstract class BcaDataAgent {
   Future<BusinessCardModel?> createCard(
     Map<String, dynamic> data, {
     XFile? imageFile,
+    XFile? frontImageFile,
+    XFile? backImageFile,
   });
 
   Future<BusinessCardModel?> updateCard(
     int id,
     Map<String, dynamic> data, {
     XFile? imageFile,
+    XFile? frontImageFile,
+    XFile? backImageFile,
   });
 
   Future<String?> deleteCard(int id);

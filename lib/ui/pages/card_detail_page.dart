@@ -200,6 +200,9 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
             ? ImageUrl.resolve(card.profileImage!)
             : null;
 
+    final frontPhotoUrl = ImageUrl.resolve(card.frontImage);
+    final backPhotoUrl = ImageUrl.resolve(card.backImage);
+
     return Scaffold(
       backgroundColor: isDark ? CardDetailPage._darkBg : CardDetailPage.tertiary,
       appBar: AppBar(
@@ -760,6 +763,19 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                         ),
                       ),
 
+                    // ===== CARD PHOTOS =====
+                    if (frontPhotoUrl != null || backPhotoUrl != null)
+                      _PurpleSection(
+                        icon: Icons.photo_library_outlined,
+                        title: 'Card Photos',
+                        isDark: isDark,
+                        child: _CardPhotos(
+                          frontUrl: frontPhotoUrl,
+                          backUrl: backPhotoUrl,
+                          isDark: isDark,
+                        ),
+                      ),
+
                     // ===== CONTACTS =====
                     _PurpleSection(
                       icon: Icons.contact_phone_outlined,
@@ -1094,4 +1110,96 @@ class _CompanyRow extends StatelessWidget {
   const _CompanyRow({required this.icon, required this.text});
   @override
   Widget build(BuildContext context) => Padding(padding: const EdgeInsets.only(top: 4), child: Row(children: [Icon(icon, size: 16), const SizedBox(width: 8), Expanded(child: Text(text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)))]));
+}
+
+/// Photos of the physical card, front and back. Tapping one opens it full
+/// screen so small print stays readable.
+class _CardPhotos extends StatelessWidget {
+  final String? frontUrl;
+  final String? backUrl;
+  final bool isDark;
+
+  const _CardPhotos({this.frontUrl, this.backUrl, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final tiles = <Widget>[
+      if (frontUrl != null) _tile(context, frontUrl!, 'Front'),
+      if (backUrl != null) _tile(context, backUrl!, 'Back'),
+    ];
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < tiles.length; i++) ...[
+          if (i > 0) const SizedBox(width: 12),
+          Expanded(child: tiles[i]),
+        ],
+        // Keeps a single photo at half width instead of stretching it.
+        if (tiles.length == 1) const Spacer(),
+      ],
+    );
+  }
+
+  Widget _tile(BuildContext context, String url, String label) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: () => _openFullScreen(context, url, label),
+          child: AspectRatio(
+            aspectRatio: 1.6,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark
+                      ? CardDetailPage._darkBorder
+                      : CardDetailPage.secondary.withOpacity(0.45),
+                ),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Image.network(
+                url,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Icon(
+                  Icons.broken_image_outlined,
+                  color: isDark ? CardDetailPage._darkInk : CardDetailPage._ink,
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(label, style: CardDetailPage.bodyStyle(isDark)),
+      ],
+    );
+  }
+
+  void _openFullScreen(BuildContext context, String url, String label) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+            title: Text(label),
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              maxScale: 5,
+              child: Image.network(
+                url,
+                errorBuilder: (_, __, ___) => const Text(
+                  'Photo could not be loaded',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

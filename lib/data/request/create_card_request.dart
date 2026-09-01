@@ -16,6 +16,13 @@ class CreateCardRequest {
   final String? bio;
   @JsonKey(name: 'profile_image')
   final String? profileImage;
+
+  /// Existing stored paths, echoed back on edit so the server keeps the photo
+  /// when no new file is attached. New photos travel as multipart files.
+  @JsonKey(name: 'front_image')
+  final String? frontImage;
+  @JsonKey(name: 'back_image')
+  final String? backImage;
   @JsonKey(name: 'card_type')
   final String? cardType;
 
@@ -28,6 +35,8 @@ class CreateCardRequest {
     this.addresses,
     this.bio,
     this.profileImage,
+    this.frontImage,
+    this.backImage,
     this.cardType,
   });
 

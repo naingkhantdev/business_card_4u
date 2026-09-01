@@ -20,6 +20,8 @@ BusinessCardModel _$BusinessCardModelFromJson(Map<String, dynamic> json) =>
           .toList(),
       bio: json['bio'] as String?,
       profileImage: json['profile_image'] as String?,
+      frontImage: json['front_image'] as String?,
+      backImage: json['back_image'] as String?,
       company: json['company'] == null
           ? null
           : CompanyModel.fromJson(json['company'] as Map<String, dynamic>),
@@ -49,6 +51,8 @@ Map<String, dynamic> _$BusinessCardModelToJson(BusinessCardModel instance) =>
       'addresses': instance.addresses.map((e) => e.toJson()).toList(),
       'bio': instance.bio,
       'profile_image': instance.profileImage,
+      'front_image': instance.frontImage,
+      'back_image': instance.backImage,
       'company': instance.company?.toJson(),
       'user': instance.user?.toJson(),
       'created_by': instance.createdBy,

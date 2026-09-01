@@ -1,16 +1,19 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:image_picker/image_picker.dart';
 
 import '../../providers/auth/auth_provider.dart';
 import '../../providers/card/card_provider.dart';
+import '../../providers/ocr/card_scanner_provider.dart';
 import '../../utils/app_result.dart';
 import '../../network/image_url.dart';
 import '../../data/vos/address_model.dart';
 import '../../data/vos/business_card_model.dart';
 import '../../data/vos/company_model.dart';
+import '../../data/vos/scanned_card_data.dart';
+import '../../exception/custom_exception.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_primary_button.dart';
 import '../widgets/app_toast.dart';
@@ -37,10 +40,26 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
   final List<_AddressEntry> _addressEntries = [];
   final _bioCtrl = TextEditingController();
   final _profileImageCtrl = TextEditingController();
+
+  /// Paths of card photos already stored on the server (edit mode).
+  final _frontImageCtrl = TextEditingController();
+  final _backImageCtrl = TextEditingController();
+
   int? _selectedCompanyId;
   String? _selectedCompanyName;
   XFile? _pickedImage;
   Uint8List? _pickedImageBytes;
+
+  XFile? _pickedFrontImage;
+  Uint8List? _pickedFrontBytes;
+  XFile? _pickedBackImage;
+  Uint8List? _pickedBackBytes;
+
+  bool _isScanning = false;
+
+  /// Company read off the card. It is only a hint: cards link to companies by
+  /// id, so the user still picks the real record.
+  String? _scannedCompanyName;
 
   bool get isEditing => widget.card != null;
 
@@ -66,6 +85,8 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
       }
       _bioCtrl.text = c.bio ?? '';
       _profileImageCtrl.text = c.profileImage ?? '';
+      _frontImageCtrl.text = c.frontImage ?? '';
+      _backImageCtrl.text = c.backImage ?? '';
       if (c.company != null) {
         _selectedCompanyId = c.company!.id;
         _selectedCompanyName = c.company!.name;
@@ -108,6 +129,176 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     }
   }
 
+  /// Asks where the card photo should come from. Camera first: these are
+  /// photos of a card the user is holding.
+  Future<ImageSource?> _askPhotoSource(String title) {
+    return showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: Row(
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_camera_outlined),
+              title: const Text('Take a photo'),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from gallery'),
+              onTap: () => Navigator.pop(sheetContext, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickCardPhoto(_CardSide side) async {
+    final source = await _askPhotoSource(
+      side == _CardSide.front ? 'Front of card' : 'Back of card',
+    );
+    if (source == null) return;
+
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: source,
+        // Text recognition needs detail, so the photo is kept close to full size.
+        imageQuality: 90,
+      );
+      if (picked == null) return;
+
+      final bytes = await picked.readAsBytes();
+      if (!mounted) return;
+      setState(() {
+        if (side == _CardSide.front) {
+          _pickedFrontImage = picked;
+          _pickedFrontBytes = bytes;
+        } else {
+          _pickedBackImage = picked;
+          _pickedBackBytes = bytes;
+        }
+      });
+
+      if (side == _CardSide.front) {
+        await _autoFillFromFrontPhoto();
+      }
+    } on PlatformException catch (e) {
+      // mobile_scanner puts CAMERA in the merged manifest, so Android requires
+      // the permission to be granted before the camera intent will open.
+      debugPrint('Card photo picker failed: $e');
+      if (!mounted) return;
+      final deniedCamera = source == ImageSource.camera &&
+          '${e.code} ${e.message}'.toLowerCase().contains('denied');
+      _showToast(
+        deniedCamera
+            ? 'Camera permission is off. Allow it in Settings, or pick the photo from your gallery.'
+            : 'Could not open that photo',
+        isError: true,
+      );
+    } catch (e) {
+      debugPrint('Error picking card photo: $e');
+      if (mounted) _showToast('Could not open that photo', isError: true);
+    }
+  }
+
+  void _clearCardPhoto(_CardSide side) {
+    setState(() {
+      if (side == _CardSide.front) {
+        _pickedFrontImage = null;
+        _pickedFrontBytes = null;
+        _scannedCompanyName = null;
+      } else {
+        _pickedBackImage = null;
+        _pickedBackBytes = null;
+      }
+    });
+  }
+
+  /// Reads the front photo with on-device OCR and fills the form.
+  Future<void> _autoFillFromFrontPhoto() async {
+    final photo = _pickedFrontImage;
+    if (photo == null) {
+      _showToast('Add a front photo first', isError: true);
+      return;
+    }
+
+    setState(() => _isScanning = true);
+    try {
+      final scanned = await ref.read(cardScannerProvider).scan(photo.path);
+      if (!mounted) return;
+
+      if (scanned.isEmpty) {
+        _showToast('No readable text on this photo', isError: true);
+        return;
+      }
+
+      final filled = _applyScannedData(scanned);
+      _showToast(
+        filled.isEmpty
+            ? 'Nothing to fill — those fields already have values'
+            : 'Filled from photo: ${filled.join(', ')}',
+      );
+    } on CustomException catch (e) {
+      if (mounted) _showToast(e.errorVo.message, isError: true);
+    } catch (e) {
+      debugPrint('Card scan failed: $e');
+      if (mounted) _showToast('Could not read this photo', isError: true);
+    } finally {
+      if (mounted) setState(() => _isScanning = false);
+    }
+  }
+
+  /// Writes scanned values into empty fields only — anything the user already
+  /// typed wins over a guess. Returns the labels of the fields that were filled.
+  List<String> _applyScannedData(ScannedCardData scanned) {
+    final filled = <String>[];
+
+    void fill(TextEditingController controller, String? value, String label) {
+      final text = value?.trim() ?? '';
+      if (text.isEmpty || controller.text.trim().isNotEmpty) return;
+      controller.text = text;
+      filled.add(label);
+    }
+
+    fill(_nameCtrl, scanned.name, 'name');
+    fill(_positionCtrl, scanned.position, 'position');
+    fill(_phonesCtrl, scanned.phones.join(', '), 'phones');
+    fill(_emailsCtrl, scanned.emails.join(', '), 'emails');
+    // The card has no website field, so it is kept in the bio when that is free.
+    fill(_bioCtrl, scanned.website, 'website');
+
+    final address = scanned.address;
+    if (address != null) {
+      final emptyEntries = _addressEntries.where((entry) => entry.isEmpty);
+      if (emptyEntries.isNotEmpty) {
+        final target = emptyEntries.first;
+        target.street.text = address.street ?? '';
+        target.postalCode.text = address.postalCode ?? '';
+        filled.add('address');
+      }
+    }
+
+    setState(() {
+      _scannedCompanyName =
+          _selectedCompanyId == null ? scanned.companyName : null;
+    });
+
+    return filled;
+  }
+
   @override
   void dispose() {
     _nameCtrl.dispose();
@@ -118,6 +309,8 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
       entry.dispose();
     }
     _bioCtrl.dispose();
+    _frontImageCtrl.dispose();
+    _backImageCtrl.dispose();
     _profileImageCtrl.dispose();
     super.dispose();
   }
@@ -130,6 +323,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
       setState(() {
         _selectedCompanyId = result.id;
         _selectedCompanyName = result.name;
+        _scannedCompanyName = null;
       });
     }
   }
@@ -179,6 +373,8 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         .toList();
     final bio = _bioCtrl.text.trim();
     final profileImage = _profileImageCtrl.text.trim();
+    final frontImage = _frontImageCtrl.text.trim();
+    final backImage = _backImageCtrl.text.trim();
 
     AppResult result;
     if (isEditing && widget.card!.id != 0) {
@@ -195,6 +391,10 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         imageFile: _pickedImage, // Pass image file
         // Preserve the existing type; omitting it blanks card_type server-side.
         cardType: widget.card!.cardType,
+        frontImage: frontImage.isEmpty ? null : frontImage,
+        backImage: backImage.isEmpty ? null : backImage,
+        frontImageFile: _pickedFrontImage,
+        backImageFile: _pickedBackImage,
       );
     } else {
       result = await notifier.createCard(
@@ -207,6 +407,10 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         bio: bio.isEmpty ? null : bio,
         profileImage: profileImage.isEmpty ? null : profileImage,
         imageFile: _pickedImage, // Pass image file
+        frontImage: frontImage.isEmpty ? null : frontImage,
+        backImage: backImage.isEmpty ? null : backImage,
+        frontImageFile: _pickedFrontImage,
+        backImageFile: _pickedBackImage,
         cardType: (isEditing && widget.card!.id == 0)
             ? 'user_card'
             : (widget.cardType ?? 'saved_card'),
@@ -269,6 +473,19 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  _buildSectionTitle("Card Photos"),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Photograph the card. The front is read automatically to fill the form below.",
+                    style: TextStyle(
+                      fontSize: 13,
+                      color:
+                          isDark ? const Color(0xFF98A7C2) : Colors.grey[600],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildCardPhotosSection(),
+                  const SizedBox(height: 24),
                   _buildSectionTitle("Personal Info"),
                   const SizedBox(height: 16),
 
@@ -355,6 +572,30 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                   _buildSectionTitle("Company"),
                   const SizedBox(height: 16),
                   _buildCompanySelector(),
+                  if (_scannedCompanyName != null) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.document_scanner_outlined,
+                            size: 16,
+                            color: isDark
+                                ? const Color(0xFF98A7C2)
+                                : Colors.grey[600]),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            'Read from the card: "$_scannedCompanyName" — select or create it above.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? const Color(0xFF98A7C2)
+                                  : Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 24),
                   _buildSectionTitle("Contact Details"),
                   const SizedBox(height: 16),
@@ -536,6 +777,147 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     ));
 
     return widgets;
+  }
+
+  Widget _buildCardPhotosSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _buildCardPhotoTile(
+                side: _CardSide.front,
+                label: 'Front',
+                bytes: _pickedFrontBytes,
+                storedPath: _frontImageCtrl.text,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildCardPhotoTile(
+                side: _CardSide.back,
+                label: 'Back',
+                bytes: _pickedBackBytes,
+                storedPath: _backImageCtrl.text,
+              ),
+            ),
+          ],
+        ),
+        if (_pickedFrontImage != null) ...[
+          const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: _isScanning ? null : _autoFillFromFrontPhoto,
+              icon: _isScanning
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.auto_fix_high, size: 18),
+              label: Text(_isScanning ? 'Reading card...' : 'Fill from front photo'),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildCardPhotoTile({
+    required _CardSide side,
+    required String label,
+    required Uint8List? bytes,
+    required String storedPath,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final storedUrl = bytes == null ? ImageUrl.resolve(storedPath) : null;
+    final hasPhoto = bytes != null || storedUrl != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: _isScanning ? null : () => _pickCardPhoto(side),
+          borderRadius: BorderRadius.circular(12),
+          child: AspectRatio(
+            aspectRatio: 1.6,
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF0D1426) : Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF1F2A44) : Colors.grey[300]!,
+                ),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: bytes != null
+                  ? Image.memory(bytes, fit: BoxFit.cover)
+                  : storedUrl != null
+                      ? Image.network(
+                          storedUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              _cardPhotoPlaceholder(isDark, label),
+                        )
+                      : _cardPhotoPlaceholder(isDark, label),
+            ),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: isDark ? const Color(0xFF98A7C2) : Colors.grey[600],
+              ),
+            ),
+            const Spacer(),
+            // Only a freshly picked photo can be dropped: the API keeps the
+            // stored photo when no new file is sent, it cannot clear it.
+            if (bytes != null)
+              InkWell(
+                onTap: _isScanning ? null : () => _clearCardPhoto(side),
+                child: const Padding(
+                  padding: EdgeInsets.all(2),
+                  child: Icon(Icons.close, size: 16, color: Colors.redAccent),
+                ),
+              )
+            else if (hasPhoto)
+              Icon(Icons.check_circle,
+                  size: 14, color: Colors.green.withOpacity(0.8)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _cardPhotoPlaceholder(bool isDark, String label) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          label == 'Front'
+              ? Icons.add_a_photo_outlined
+              : Icons.flip_to_back_outlined,
+          size: 26,
+          color: isDark ? const Color(0xFF98A7C2) : Colors.grey[500],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '$label photo',
+          style: TextStyle(
+            fontSize: 12,
+            color: isDark ? const Color(0xFF98A7C2) : Colors.grey[500],
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildSectionTitle(String title) {
@@ -727,3 +1109,6 @@ class _AddressEntry {
     }
   }
 }
+
+/// Which face of the physical card a photo belongs to.
+enum _CardSide { front, back }

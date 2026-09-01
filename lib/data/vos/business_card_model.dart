@@ -17,6 +17,12 @@ class BusinessCardModel {
   final String? bio;
   @JsonKey(name: 'profile_image')
   final String? profileImage;
+
+  /// Photos of the physical card, stored on the server as paths under /storage.
+  @JsonKey(name: 'front_image')
+  final String? frontImage;
+  @JsonKey(name: 'back_image')
+  final String? backImage;
   final CompanyModel? company;
   final UserModel? user;
   @JsonKey(name: 'created_by')
@@ -50,6 +56,8 @@ class BusinessCardModel {
     required this.addresses,
     this.bio,
     this.profileImage,
+    this.frontImage,
+    this.backImage,
     this.company,
     this.user,
     this.createdBy,
@@ -104,6 +112,8 @@ class BusinessCardModel {
       addresses: model.addresses,
       bio: model.bio,
       profileImage: model.profileImage,
+      frontImage: model.frontImage,
+      backImage: model.backImage,
       company: model.company,
       user: model.user,
       createdBy: model.createdBy,
