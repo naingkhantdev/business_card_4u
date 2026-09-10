@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,7 +7,10 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../providers/auth/auth_provider.dart';
 import '../../providers/card/card_provider.dart';
+import '../../providers/company/company_provider.dart';
+import '../../services/ocr/card_ocr_service.dart';
 import '../../utils/app_result.dart';
+import '../../utils/business_card_parser.dart';
 import '../../network/image_url.dart';
 import '../../data/vos/address_model.dart';
 import '../../data/vos/business_card_model.dart';
@@ -14,14 +18,32 @@ import '../../data/vos/company_model.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_primary_button.dart';
 import '../widgets/app_toast.dart';
+import '../widgets/image_source_sheet.dart';
 import '../widgets/loading_view.dart';
 import 'company_select_page.dart';
+import '../theme/wallet_tokens.dart';
 
 class AddCardPage extends ConsumerStatefulWidget {
   final BusinessCardModel? card; // Pass card for edit mode
   final String? cardType; // 'user_card' for own profile, 'saved_card' for manual
 
-  const AddCardPage({super.key, this.card, this.cardType});
+  /// Photos of the physical card carried over from the scan flow, already
+  /// captured so the user is not asked for them a second time.
+  final XFile? frontImageFile;
+  final XFile? backImageFile;
+
+  /// Fields OCR read off those photos. Pre-fills the form; every value stays
+  /// editable because recognition is a guess, not a source of truth.
+  final ParsedCardData? scanned;
+
+  const AddCardPage({
+    super.key,
+    this.card,
+    this.cardType,
+    this.frontImageFile,
+    this.backImageFile,
+    this.scanned,
+  });
 
   @override
   ConsumerState<AddCardPage> createState() => _AddCardPageState();
@@ -39,10 +61,53 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
   final _profileImageCtrl = TextEditingController();
   int? _selectedCompanyId;
   String? _selectedCompanyName;
+  // The portrait shown on the card. Offered on the user's own profile card
+  // only: a card saved from someone else's is described by the photos of the
+  // card itself, and guessing a face for it is not this form's job.
   XFile? _pickedImage;
   Uint8List? _pickedImageBytes;
 
+  // Photos of the physical card. The XFile is set only when the user picked a
+  // new one this session; the URL is what the server already holds.
+  XFile? _frontImage;
+  Uint8List? _frontImageBytes;
+  String? _frontImageUrl;
+  XFile? _backImage;
+  Uint8List? _backImageBytes;
+  String? _backImageUrl;
+
+  /// Company name OCR found. Kept after the company is linked so the form can
+  /// say which scanned name produced it.
+  String? _scannedCompanyName;
+
+  /// Outcome of resolving [_scannedCompanyName]: true when the scan created the
+  /// company, false when it matched one already on file, null while unresolved.
+  bool? _companyCreatedByScan;
+
+  bool _isResolvingCompany = false;
+
+  /// Field keys that were filled by OCR rather than typed, so the form can
+  /// mark them as needing a glance.
+  final Set<String> _scannedFields = {};
+
+  bool _isRescanning = false;
+
   bool get isEditing => widget.card != null;
+
+  /// True when this form is editing (or creating) the signed-in user's own
+  /// profile card — the one other people find by search or QR.
+  bool get isOwnProfileCard {
+    final card = widget.card;
+    if (card == null) return widget.cardType == 'user_card';
+    if (card.cardType != 'user_card') return false;
+
+    final currentUser = ref.read(authProvider).valueOrNull?.currentUser;
+    if (currentUser == null) return false;
+    // id 0 is the placeholder card the app shows before the real one loads.
+    return card.id == 0 ||
+        card.user?.id == currentUser.id ||
+        card.createdBy == currentUser.id;
+  }
 
   void _showToast(String message, {bool isError = false}) {
     AppToast.show(
@@ -66,6 +131,8 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
       }
       _bioCtrl.text = c.bio ?? '';
       _profileImageCtrl.text = c.profileImage ?? '';
+      _frontImageUrl = ImageUrl.resolve(c.frontImage);
+      _backImageUrl = ImageUrl.resolve(c.backImage);
       if (c.company != null) {
         _selectedCompanyId = c.company!.id;
         _selectedCompanyName = c.company!.name;
@@ -85,28 +152,164 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     if (_addressEntries.isEmpty) {
       _addressEntries.add(_AddressEntry());
     }
-  }
 
-  Future<void> _pickImage() async {
-    debugPrint("Picking image...");
-    try {
-      final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    _frontImage = widget.frontImageFile;
+    _backImage = widget.backImageFile;
+    _loadPickedCardImageBytes();
 
-      if (pickedFile != null) {
-        debugPrint("Image picked: ${pickedFile.path}");
-        final bytes = await pickedFile.readAsBytes();
-        setState(() {
-          _pickedImage = pickedFile;
-          _pickedImageBytes = bytes;
-        });
-      } else {
-        debugPrint("No image picked");
-      }
-    } catch (e) {
-      debugPrint("Error picking image: $e");
+    final scanned = widget.scanned;
+    if (scanned != null) {
+      _applyScanned(scanned);
+    } else if (widget.frontImageFile != null) {
+      // Arrived straight from the scan entry point with a photo but no reading
+      // yet — do it here so there is one OCR path, shared with the in-form
+      // "Fill from photo" action.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _runOcr();
+      });
     }
   }
+
+  /// Reads the bytes of card photos handed over by the scan flow so they can
+  /// be previewed without hitting the file system again on every rebuild.
+  Future<void> _loadPickedCardImageBytes() async {
+    final front = _frontImage;
+    final back = _backImage;
+    final frontBytes = front == null ? null : await front.readAsBytes();
+    final backBytes = back == null ? null : await back.readAsBytes();
+    if (!mounted) return;
+    setState(() {
+      _frontImageBytes = frontBytes;
+      _backImageBytes = backBytes;
+    });
+  }
+
+  /// Writes OCR results into the form. Only empty fields are filled, so a
+  /// rescan can add what was missed without discarding the user's own edits.
+  void _applyScanned(ParsedCardData data) {
+    void fill(String key, TextEditingController controller, String? value) {
+      if (value == null || value.trim().isEmpty) return;
+      if (controller.text.trim().isNotEmpty) return;
+      controller.text = value.trim();
+      _scannedFields.add(key);
+    }
+
+    fill('name', _nameCtrl, data.name);
+    fill('position', _positionCtrl, data.position);
+    fill('phones', _phonesCtrl, data.phones.join(', '));
+    fill('emails', _emailsCtrl, data.emails.join(', '));
+
+    if (data.addressLines.isNotEmpty && _addressEntries.first.isEmpty) {
+      // City and country are required by the API once an address is started,
+      // and OCR cannot tell them apart from the rest of the address reliably.
+      // The whole block goes into `street` and the user splits it out.
+      _addressEntries.first.street.text = data.addressLines.join(', ');
+      _scannedFields.add('address');
+    }
+
+    if (_selectedCompanyId == null && data.company != null) {
+      _scannedCompanyName = data.company;
+    }
+  }
+
+  /// Picks the portrait for the user's own card. Unlike the card photos this
+  /// one is never scanned — it is a face, not a source of fields.
+  Future<void> _pickProfileImage() async {
+    final source = await _askImageSource('Profile photo');
+    if (source == null) return;
+
+    final pickedFile = await _pick(source);
+    if (pickedFile == null) return;
+
+    final bytes = await pickedFile.readAsBytes();
+    if (!mounted) return;
+    setState(() {
+      _pickedImage = pickedFile;
+      _pickedImageBytes = bytes;
+    });
+  }
+
+  /// Picks or captures a photo of one side of the physical card, then reads it
+  /// so the newly captured side can contribute to the form right away.
+  Future<void> _pickCardImage({required bool isFront}) async {
+    final source =
+        await _askImageSource(isFront ? 'Card front' : 'Card back');
+    if (source == null) return;
+
+    final pickedFile = await _pick(source);
+    if (pickedFile == null) return;
+
+    final bytes = await pickedFile.readAsBytes();
+    if (!mounted) return;
+    setState(() {
+      if (isFront) {
+        _frontImage = pickedFile;
+        _frontImageBytes = bytes;
+      } else {
+        _backImage = pickedFile;
+        _backImageBytes = bytes;
+      }
+    });
+
+    await _runOcr(silentWhenEmpty: true);
+  }
+
+  /// Re-reads whichever card photos are attached and fills any field still
+  /// blank. Existing values are never overwritten — see [_applyScanned].
+  Future<void> _runOcr({bool silentWhenEmpty = false}) async {
+    final front = _frontImage;
+    if (front == null) return;
+
+    setState(() => _isRescanning = true);
+    try {
+      final parsed = await const CardOcrService()
+          .scan(front: front, back: _backImage);
+      if (!mounted) return;
+
+      if (parsed.isEmpty) {
+        if (!silentWhenEmpty) {
+          _showToast(
+            "Couldn't read any text from that photo. Try better lighting, or fill the form in yourself.",
+            isError: true,
+          );
+        }
+        return;
+      }
+
+      setState(() => _applyScanned(parsed));
+      unawaited(_resolveScannedCompany());
+      if (!silentWhenEmpty) {
+        _showToast('Scanned details added. Check them before saving.');
+      }
+    } catch (e) {
+      debugPrint('OCR failed: $e');
+      if (!mounted) return;
+      if (!silentWhenEmpty) {
+        _showToast('Could not scan that photo. Please try again.',
+            isError: true);
+      }
+    } finally {
+      if (mounted) setState(() => _isRescanning = false);
+    }
+  }
+
+  Future<XFile?> _pick(ImageSource source) async {
+    try {
+      return await ImagePicker().pickImage(source: source);
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+      if (mounted) {
+        _showToast('Could not open the ${source == ImageSource.camera ? 'camera' : 'gallery'}.',
+            isError: true);
+      }
+      return null;
+    }
+  }
+
+  /// Delegates to the shared sheet so this form and the Saved Cards scan
+  /// entry offer the same choice in the same place.
+  Future<ImageSource?> _askImageSource(String title) =>
+      showImageSourceSheet(context, title: title);
 
   @override
   void dispose() {
@@ -130,12 +333,45 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
       setState(() {
         _selectedCompanyId = result.id;
         _selectedCompanyName = result.name;
+        // A hand-picked company overrides whatever the scan concluded, so the
+        // scan's own note about it should stop being shown.
+        _scannedCompanyName = null;
+        _companyCreatedByScan = null;
       });
     }
   }
 
-  bool get _hasRemoteProfileImage =>
-      ImageUrl.resolve(_profileImageCtrl.text) != null;
+  /// Links the card to the company OCR read off it, creating that company when
+  /// it is not on file yet.
+  ///
+  /// The card in the user's hand is the evidence that the company exists, so
+  /// filing it under its name is better than dropping the one detail the scan
+  /// did find. Cards carry little more than a name, so that is all the new
+  /// record gets; the profile can be completed from the Companies tab later.
+  ///
+  /// Failures stay quiet — the hint falls back to pointing at the picker, so a
+  /// card can still be saved by hand.
+  Future<void> _resolveScannedCompany() async {
+    final name = _scannedCompanyName;
+    if (name == null || _selectedCompanyId != null || _isResolvingCompany) {
+      return;
+    }
+
+    setState(() => _isResolvingCompany = true);
+    try {
+      final resolved =
+          await ref.read(companyProvider.notifier).resolveByName(name);
+      if (!mounted || resolved == null) return;
+
+      setState(() {
+        _selectedCompanyId = resolved.company.id;
+        _selectedCompanyName = resolved.company.name;
+        _companyCreatedByScan = resolved.created;
+      });
+    } finally {
+      if (mounted) setState(() => _isResolvingCompany = false);
+    }
+  }
 
   List<String> _splitToList(String input) {
     return input
@@ -193,6 +429,8 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         bio: bio.isEmpty ? null : bio,
         profileImage: profileImage.isEmpty ? null : profileImage,
         imageFile: _pickedImage, // Pass image file
+        frontImageFile: _frontImage,
+        backImageFile: _backImage,
         // Preserve the existing type; omitting it blanks card_type server-side.
         cardType: widget.card!.cardType,
       );
@@ -207,6 +445,8 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         bio: bio.isEmpty ? null : bio,
         profileImage: profileImage.isEmpty ? null : profileImage,
         imageFile: _pickedImage, // Pass image file
+        frontImageFile: _frontImage,
+        backImageFile: _backImage,
         cardType: (isEditing && widget.card!.id == 0)
             ? 'user_card'
             : (widget.cardType ?? 'saved_card'),
@@ -236,175 +476,113 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
 
     return Scaffold(
       backgroundColor:
-          isDark ? const Color(0xFF060B16) : const Color(0xFFF8FAFD),
+          isDark ? Wallet.darkGround : const Color(0xFFF8FAFD),
       appBar: AppBar(
         title: Text(isEditing ? 'Edit Business Card' : 'Add Business Card',
             style: TextStyle(
                 color: isDark ? Colors.white : Colors.black87,
                 fontWeight: FontWeight.w600)),
-        backgroundColor: isDark ? const Color(0xFF060B16) : Colors.white,
+        backgroundColor: isDark ? Wallet.darkGround : Colors.white,
         elevation: 0,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black87),
-        actions: isEditing
-            ? [
-                IconButton(
-                  onPressed: isCreating ? null : _submit,
-                  icon: Icon(
-                    Icons.save_outlined,
-                    color: isCreating
-                        ? const Color(0xFF94A3B8)
-                        : AppColors.primary,
-                  ),
-                ),
-                const SizedBox(width: 8),
-              ]
-            : null,
       ),
+      bottomNavigationBar: _buildSubmitBar(isCreating, isDark),
       body: Stack(
         children: [
           SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
             child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSectionTitle("Personal Info"),
+                  _buildCardPhotosPanel(),
                   const SizedBox(height: 16),
-
-                  // Profile Image Picker
-                  Center(
-                    child: GestureDetector(
-                      onTap: _pickImage,
-                      child: Stack(
-                        children: [
-                          Container(
-                            width: 100,
-                            height: 100,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isDark
-                                  ? const Color(0xFF10182B)
-                                  : Colors.grey[200],
-                              border: Border.all(
-                                  color: isDark
-                                      ? const Color(0xFF24304B)
-                                      : Colors.grey[300]!,
-                                  width: 2),
-                            ),
-                            clipBehavior: Clip.antiAlias,
-                            child: _pickedImageBytes != null
-                                ? Image.memory(
-                                    _pickedImageBytes!,
-                                    fit: BoxFit.cover,
-                                  )
-                                : _hasRemoteProfileImage
-                                    ? Image.network(
-                                        ImageUrl.resolve(
-                                            _profileImageCtrl.text)!,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => Icon(
-                                          Icons.person,
-                                          size: 50,
-                                          color: isDark
-                                              ? const Color(0xFF98A7C2)
-                                              : Colors.grey,
-                                        ),
-                                      )
-                                    : Icon(
-                                        Icons.person,
-                                        size: 50,
-                                        color: isDark
-                                            ? const Color(0xFF98A7C2)
-                                            : Colors.grey,
-                                      ),
-                          ),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFF2563EB),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.edit,
-                                  size: 16, color: Colors.white),
-                            ),
-                          ),
-                        ],
+                  _buildSection(
+                    icon: Icons.badge_outlined,
+                    title: 'Personal info',
+                    subtitle: isOwnProfileCard
+                        ? 'Your photo, name, and role as others see them'
+                        : 'The name and role printed on the card',
+                    children: [
+                      if (isOwnProfileCard) ...[
+                        _buildProfilePhotoRow(),
+                        const SizedBox(height: 16),
+                      ],
+                      _buildPremiumTextField(
+                        controller: _nameCtrl,
+                        fieldKey: 'name',
+                        label: "Full name",
+                        hint: "e.g. John Doe",
+                        icon: Icons.person_outline,
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  _buildPremiumTextField(
-                    controller: _nameCtrl,
-                    label: "Full Name",
-                    hint: "e.g. John Doe",
-                    icon: Icons.person_outline,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildPremiumTextField(
-                    controller: _positionCtrl,
-                    label: "Position",
-                    hint: "e.g. Software Engineer",
-                    icon: Icons.work_outline,
-                  ),
-                  const SizedBox(height: 24),
-                  _buildSectionTitle("Company"),
-                  const SizedBox(height: 16),
-                  _buildCompanySelector(),
-                  const SizedBox(height: 24),
-                  _buildSectionTitle("Contact Details"),
-                  const SizedBox(height: 16),
-                  _buildPremiumTextField(
-                    controller: _phonesCtrl,
-                    label: "Phones",
-                    hint: "e.g. 998991112233, ...",
-                    icon: Icons.phone_outlined,
-                    validator: _validatePhones,
+                      const SizedBox(height: 14),
+                      _buildPremiumTextField(
+                        controller: _positionCtrl,
+                        fieldKey: 'position',
+                        label: "Position",
+                        hint: "e.g. Software Engineer",
+                        icon: Icons.work_outline,
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
-                  _buildPremiumTextField(
-                    controller: _emailsCtrl,
-                    label: "Emails",
-                    hint: "e.g. mail@example.com, ...",
-                    icon: Icons.email_outlined,
-                    validator: _validateEmails,
+                  _buildSection(
+                    icon: Icons.apartment_outlined,
+                    title: 'Company',
+                    subtitle: 'Links this card to a company record',
+                    children: [
+                      _buildCompanySelector(),
+                      ..._buildScannedCompanyHint(),
+                    ],
                   ),
-                  const SizedBox(height: 24),
-                  _buildSectionTitle("Addresses"),
                   const SizedBox(height: 16),
-                  ..._buildAddressSection(),
-                  const SizedBox(height: 24),
-                  _buildSectionTitle("More"),
-                  const SizedBox(height: 16),
-                  _buildPremiumTextField(
-                    controller: _bioCtrl,
-                    label: "Bio",
-                    hint: "Short description...",
-                    icon: Icons.info_outline,
-                    maxLines: 3,
+                  _buildSection(
+                    icon: Icons.contact_phone_outlined,
+                    title: 'Contact details',
+                    subtitle: 'Separate several entries with commas',
+                    children: [
+                      _buildPremiumTextField(
+                        controller: _phonesCtrl,
+                        fieldKey: 'phones',
+                        label: "Phones",
+                        hint: "e.g. 998991112233, ...",
+                        icon: Icons.phone_outlined,
+                        validator: _validatePhones,
+                      ),
+                      const SizedBox(height: 14),
+                      _buildPremiumTextField(
+                        controller: _emailsCtrl,
+                        fieldKey: 'emails',
+                        label: "Emails",
+                        hint: "e.g. mail@example.com, ...",
+                        icon: Icons.email_outlined,
+                        validator: _validateEmails,
+                      ),
+                    ],
                   ),
-                  // const SizedBox(height: 16),
-                  // _buildPremiumTextField(
-                  //   controller: _profileImageCtrl,
-                  //   label: "Profile Image URL",
-                  //   hint: "https://...",
-                  //   icon: Icons.image_outlined,
-                  // ),
-                  const SizedBox(height: 32),
-                  if (!isEditing)
-                    AppPrimaryButton(
-                      text: 'Create Card',
-                      loading: isCreating,
-                      onPressed: isCreating ? null : _submit,
-                      height: 50,
-                      borderRadius: BorderRadius.circular(12),
-                      fontSize: 16,
-                    ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
+                  _buildSection(
+                    icon: Icons.place_outlined,
+                    title: 'Addresses',
+                    subtitle: 'Where this person works',
+                    children: _buildAddressSection(),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildSection(
+                    icon: Icons.notes_outlined,
+                    title: 'More',
+                    subtitle: 'Anything worth remembering about this contact',
+                    children: [
+                      _buildPremiumTextField(
+                        controller: _bioCtrl,
+                        label: "Bio",
+                        hint: "Short description...",
+                        icon: Icons.info_outline,
+                        maxLines: 3,
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -419,6 +597,525 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     );
   }
 
+  /// Photos of the physical card, first because they are what a scanned card
+  /// starts from — and what fills the rest of the form in.
+  Widget _buildCardPhotosPanel() {
+    final hasFront = _frontImageBytes != null || _frontImageUrl != null;
+
+    return _buildSection(
+      icon: Icons.credit_card_outlined,
+      title: isOwnProfileCard ? 'Your card photos' : 'Card photos',
+      subtitle: hasFront
+          ? 'Tap a photo to replace it. Scanning only fills empty fields.'
+          : (isOwnProfileCard
+              ? 'Add both sides of your printed card so people can see the '
+                  'real thing.'
+              : 'Add a photo of the card to fill this form automatically.'),
+      trailing: hasFront
+          ? TextButton.icon(
+              onPressed: _isRescanning ? null : () => _runOcr(),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primary,
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                textStyle: const TextStyle(
+                    fontSize: 12.5, fontWeight: FontWeight.w600),
+              ),
+              icon: _isRescanning
+                  ? const SizedBox(
+                      width: 13,
+                      height: 13,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.auto_fix_high, size: 16),
+              label: Text(_isRescanning ? 'Reading…' : 'Rescan'),
+            )
+          : null,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildCardPhotoTile(
+                label: 'Front',
+                bytes: _frontImageBytes,
+                remoteUrl: _frontImageUrl,
+                isFront: true,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildCardPhotoTile(
+                label: 'Back',
+                bytes: _backImageBytes,
+                remoteUrl: _backImageUrl,
+                isFront: false,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// A titled panel. Grouping a long form into panels gives it a hierarchy —
+  /// each block reads as one decision instead of an undifferentiated stack of
+  /// inputs.
+  Widget _buildSection({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    Widget? trailing,
+    required List<Widget> children,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
+      decoration: BoxDecoration(
+        color: isDark ? Wallet.darkSurface : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark ? Wallet.darkLine : Wallet.ground,
+        ),
+        boxShadow: isDark
+            ? null
+            : const [
+                BoxShadow(
+                  color: Color(0x0D101828),
+                  blurRadius: 18,
+                  offset: Offset(0, 6),
+                ),
+              ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(isDark ? 0.18 : 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  icon,
+                  size: 18,
+                  color: isDark ? AppColors.primaryLight : AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w700,
+                        color: isDark
+                            ? Wallet.darkInk
+                            : Wallet.ink,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.35,
+                          color: isDark
+                              ? const Color(0xFF8C9DBA)
+                              : const Color(0xFF6B7688),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (trailing != null) trailing,
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  /// Sticky action bar. On a form this long the primary action should not be
+  /// something you have to scroll to find.
+  Widget _buildSubmitBar(bool isCreating, bool isDark) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+          20, 12, 20, 12 + MediaQuery.of(context).padding.bottom),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF080E1C) : Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: isDark ? Wallet.darkLine : Wallet.ground,
+          ),
+        ),
+      ),
+      child: AppPrimaryButton(
+        text: isEditing ? 'Save changes' : 'Create card',
+        loading: isCreating,
+        onPressed: isCreating ? null : _submit,
+        height: 52,
+        borderRadius: BorderRadius.circular(14),
+        fontSize: 16,
+      ),
+    );
+  }
+
+  /// The portrait picker for the user's own card: the avatar itself is the
+  /// control, with the text beside it saying what tapping does.
+  Widget _buildProfilePhotoRow() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bytes = _pickedImageBytes;
+    final remoteUrl = ImageUrl.resolve(widget.card?.profileImage);
+    final hasPhoto = bytes != null || remoteUrl != null;
+    final name = _nameCtrl.text.trim();
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+
+    return InkWell(
+      onTap: _pickProfileImage,
+      borderRadius: BorderRadius.circular(14),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 72,
+            height: 72,
+            child: Stack(
+              children: [
+                Container(
+                  width: 72,
+                  height: 72,
+                  padding: const EdgeInsets.all(3),
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [AppColors.primary, AppColors.secondary],
+                    ),
+                  ),
+                  child: ClipOval(
+                    child: bytes != null
+                        ? Image.memory(bytes, fit: BoxFit.cover)
+                        : (remoteUrl != null
+                            ? Image.network(
+                                remoteUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) =>
+                                    _buildAvatarFallback(initial, isDark),
+                              )
+                            : _buildAvatarFallback(initial, isDark)),
+                  ),
+                ),
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isDark
+                            ? Wallet.darkSurface
+                            : Colors.white,
+                        width: 2,
+                      ),
+                    ),
+                    child: Icon(
+                      hasPhoto
+                          ? Icons.edit_rounded
+                          : Icons.add_a_photo_rounded,
+                      size: 12,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hasPhoto ? 'Change profile photo' : 'Add a profile photo',
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w700,
+                    color: isDark
+                        ? Wallet.darkInk
+                        : Wallet.ink,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  'Shown at the top of your card and next to your name in '
+                  'search results.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.35,
+                    color: isDark
+                        ? const Color(0xFF8C9DBA)
+                        : const Color(0xFF6B7688),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatarFallback(String initial, bool isDark) {
+    return Container(
+      color: isDark ? Wallet.darkSurface : const Color(0xFFF1ECFF),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: TextStyle(
+          fontSize: 26,
+          fontWeight: FontWeight.w900,
+          color: isDark ? AppColors.primaryLight : AppColors.primary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardPhotoTile({
+    required String label,
+    required Uint8List? bytes,
+    required String? remoteUrl,
+    required bool isFront,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final hasImage = bytes != null || remoteUrl != null;
+
+    return GestureDetector(
+      onTap: () => _pickCardImage(isFront: isFront),
+      child: AspectRatio(
+        // Roughly the proportions of a printed business card, so the preview
+        // reads as the card itself rather than a generic image slot.
+        aspectRatio: 1.7,
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark ? Wallet.darkSurface : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: hasImage
+                  ? (isDark ? Wallet.darkLine : Colors.grey.shade300)
+                  : AppColors.primary.withOpacity(0.4),
+              width: hasImage ? 1 : 1.5,
+              style: BorderStyle.solid,
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (bytes != null)
+                Image.memory(bytes, fit: BoxFit.cover)
+              else if (remoteUrl != null)
+                Image.network(
+                  remoteUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) =>
+                      _buildCardPhotoPlaceholder(label, isDark),
+                )
+              else
+                _buildCardPhotoPlaceholder(label, isDark),
+              if (hasImage)
+                Positioned(
+                  left: 8,
+                  bottom: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.55),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              if (hasImage)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.55),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.edit,
+                        size: 13, color: Colors.white),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardPhotoPlaceholder(String label, bool isDark) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.add_a_photo_outlined,
+          size: 22,
+          color: isDark ? Wallet.accentDark : AppColors.primary,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: isDark ? Wallet.darkInk : Wallet.ink,
+          ),
+        ),
+        Text(
+          label == 'Back' ? 'Optional' : 'Required to scan',
+          style: TextStyle(
+            fontSize: 11,
+            color: isDark ? Wallet.darkMuted : Colors.grey[600],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Reports what became of the company name OCR read off the card: filed as a
+  /// new company, matched to one already on file, or still unresolved — in
+  /// which case it points at the picker, as it always did.
+  ///
+  /// Auto-linking is silent about the id it chose, and the user may well
+  /// disagree with it, so the outcome is always stated and the picker stays one
+  /// tap away underneath.
+  List<Widget> _buildScannedCompanyHint() {
+    final scannedName = _scannedCompanyName;
+    if (scannedName == null) return [];
+
+    final IconData icon;
+    final String message;
+    // Only the unresolved state asks for a decision; the others are reports.
+    final bool needsChoice;
+
+    if (_isResolvingCompany) {
+      icon = Icons.hourglass_top;
+      message = 'Filing "$scannedName"…';
+      needsChoice = false;
+    } else if (_companyCreatedByScan == true) {
+      icon = Icons.add_business_outlined;
+      message = 'Added "$scannedName" as a new company. '
+          'Its industry and business type can be filled in any time.';
+      needsChoice = false;
+    } else if (_companyCreatedByScan == false) {
+      icon = Icons.auto_awesome;
+      message = 'Matched "$scannedName" to a company already on file.';
+      needsChoice = false;
+    } else {
+      icon = Icons.auto_awesome;
+      message = 'Scanned "$scannedName" — pick the matching company';
+      needsChoice = true;
+    }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return [
+      const SizedBox(height: 10),
+      InkWell(
+        onTap: _isResolvingCompany ? null : _pickCompany,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(isDark ? 0.14 : 0.07),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 15, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  message,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark
+                        ? Wallet.darkInk
+                        : Wallet.ink,
+                  ),
+                ),
+              ),
+              if (!_isResolvingCompany)
+                Text(
+                  needsChoice ? 'Choose' : 'Change',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    ];
+  }
+
+  /// Marks a field OCR filled in, so the user knows which values to
+  /// double-check before saving. It sits in the field's label row rather than
+  /// inside the input, where it used to crowd long values like emails.
+  Widget _buildScannedBadge() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tint = isDark ? AppColors.primaryLight : AppColors.primary;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(7, 3, 9, 3),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(isDark ? 0.20 : 0.09),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: AppColors.primary.withOpacity(isDark ? 0.40 : 0.20),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.auto_awesome, size: 11, color: tint),
+          const SizedBox(width: 5),
+          Text(
+            'Scanned',
+            style: TextStyle(
+              fontSize: 10.5,
+              height: 1.1,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
+              color: tint,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   List<Widget> _buildAddressSection() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final widgets = <Widget>[];
@@ -426,12 +1123,17 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     for (var i = 0; i < _addressEntries.length; i++) {
       final entry = _addressEntries[i];
       widgets.add(Container(
-        margin: EdgeInsets.only(top: i == 0 ? 0 : 16),
-        padding: const EdgeInsets.all(12),
+        margin: EdgeInsets.only(top: i == 0 ? 0 : 14),
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 16),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
+          color: isDark
+              ? const Color(0xFF0A0F1C)
+              : const Color(0xFFFBFCFE),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isDark ? const Color(0xFF1F2A44) : Colors.grey[300]!,
+            color: isDark
+                ? Wallet.darkLine
+                : Wallet.ground,
           ),
         ),
         child: Column(
@@ -446,7 +1148,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                       color: isDark
-                          ? const Color(0xFF98A7C2)
+                          ? Wallet.darkMuted
                           : Colors.grey[600],
                     ),
                   ),
@@ -470,6 +1172,9 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
               label: "Street",
               hint: "e.g. 123 Main St",
               icon: Icons.location_on_outlined,
+              maxLines: 2,
+              // Only the first entry can be scan-filled; see _applyScanned.
+              fieldKey: i == 0 ? 'address' : null,
             ),
             const SizedBox(height: 12),
             Row(
@@ -538,18 +1243,10 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     return widgets;
   }
 
-  Widget _buildSectionTitle(String title) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.w600,
-        color: isDark ? const Color(0xFFEAF1FF) : const Color(0xFF1F2937),
-      ),
-    );
-  }
-
+  /// One form field: a label row above the input (which is where the scanned
+  /// badge lives) and a bordered input below it. The borders come from
+  /// [InputDecoration] rather than a wrapping container so focus, error, and
+  /// scanned states are all visible without tracking focus by hand.
   Widget _buildPremiumTextField({
     required TextEditingController controller,
     required String label,
@@ -557,121 +1254,167 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     IconData? icon,
     String? Function(String?)? validator,
     int maxLines = 1,
+    String? fieldKey,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0D1426) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? const Color(0xFF1F2A44) : Colors.transparent,
+    final isScanned = fieldKey != null && _scannedFields.contains(fieldKey);
+
+    final idle = isScanned
+        ? AppColors.primary.withOpacity(isDark ? 0.38 : 0.26)
+        : (isDark ? const Color(0xFF232F4C) : const Color(0xFFE2E8F2));
+    final fill = isScanned
+        ? AppColors.primary.withOpacity(isDark ? 0.10 : 0.04)
+        : (isDark ? Wallet.darkSurface : const Color(0xFFF9FAFC));
+    const error = Color(0xFFDC2626);
+
+    OutlineInputBorder outline(Color color, double width) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: color, width: width),
+        );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.2,
+                color:
+                    isDark ? const Color(0xFF9FB0CC) : const Color(0xFF5B6779),
+              ),
+            ),
+            if (isScanned) ...[
+              const SizedBox(width: 8),
+              _buildScannedBadge(),
+            ],
+          ],
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.16 : 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+        const SizedBox(height: 7),
+        TextFormField(
+          controller: controller,
+          validator: validator,
+          maxLines: maxLines,
+          style: TextStyle(
+            fontSize: 15,
+            color: isDark ? Wallet.darkInk : Wallet.ink,
           ),
-        ],
-      ),
-      child: TextFormField(
-        controller: controller,
-        validator: validator,
-        maxLines: maxLines,
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: hint,
-          prefixIcon: icon != null
-              ? Icon(icon,
-                  color: isDark ? const Color(0xFF98A7C2) : Colors.grey[400])
-              : null,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(
+              fontSize: 14,
+              color: isDark ? Wallet.darkFaint : const Color(0xFFA3ADBD),
+            ),
+            prefixIcon: icon != null
+                ? Icon(icon,
+                    size: 20,
+                    color: isScanned
+                        ? AppColors.primary.withOpacity(isDark ? 0.85 : 0.7)
+                        : (isDark
+                            ? const Color(0xFF7A8AA8)
+                            : const Color(0xFF9AA5B5)))
+                : null,
+            prefixIconConstraints:
+                const BoxConstraints(minWidth: 44, minHeight: 0),
+            filled: true,
+            fillColor: fill,
+            isDense: true,
+            contentPadding: EdgeInsets.fromLTRB(icon != null ? 0 : 14, 14, 14, 14),
+            enabledBorder: outline(idle, 1),
+            focusedBorder: outline(AppColors.primary, 1.6),
+            errorBorder: outline(error, 1),
+            focusedErrorBorder: outline(error, 1.6),
+            errorStyle: const TextStyle(fontSize: 11.5, color: error),
           ),
-          filled: true,
-          fillColor: isDark ? const Color(0xFF0D1426) : Colors.white,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
-        style: TextStyle(
-          color: isDark ? const Color(0xFFEAF1FF) : Colors.black87,
-        ),
-      ),
+      ],
     );
   }
 
+  /// Matches the text fields: same label row, same border treatment, so the
+  /// picker reads as one of the form's fields rather than a card floating
+  /// above them.
   Widget _buildCompanySelector() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return InkWell(
-      onTap: _pickCompany,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF0D1426) : Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isDark ? const Color(0xFF1F2A44) : Colors.grey[200]!,
+    final hasCompany = _selectedCompanyName != null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Selected company',
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.2,
+            color: isDark ? const Color(0xFF9FB0CC) : const Color(0xFF5B6779),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.16 : 0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color:
-                    isDark ? const Color(0xFF18243E) : const Color(0xFFEFF6FF),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(
-                Icons.business,
-                color:
-                    isDark ? const Color(0xFF8FB6FF) : const Color(0xFF2563EB),
+        const SizedBox(height: 7),
+        InkWell(
+          onTap: _pickCompany,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Wallet.darkSurface
+                  : const Color(0xFFF9FAFC),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark
+                    ? Wallet.darkLine
+                    : const Color(0xFFE2E8F2),
               ),
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Selected Company",
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(9),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(isDark ? 0.18 : 0.08),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Icon(
+                    Icons.business_outlined,
+                    size: 20,
+                    color: isDark
+                        ? AppColors.primaryLight
+                        : AppColors.primary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _selectedCompanyName ?? 'Choose a company',
                     style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? const Color(0xFF98A7C2) : Colors.grey,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 15,
+                      fontWeight:
+                          hasCompany ? FontWeight.w600 : FontWeight.w400,
+                      color: hasCompany
+                          ? (isDark
+                              ? Wallet.darkInk
+                              : Wallet.ink)
+                          : (isDark
+                              ? Wallet.darkFaint
+                              : const Color(0xFFA3ADBD)),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _selectedCompanyName ?? "None",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: _selectedCompanyName != null
-                          ? (isDark ? const Color(0xFFEAF1FF) : Colors.black87)
-                          : Colors.grey[400],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 14,
+                  color: isDark
+                      ? const Color(0xFF7A8AA8)
+                      : const Color(0xFF9AA5B5),
+                ),
+              ],
             ),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: isDark ? const Color(0xFF98A7C2) : Colors.grey[400],
-            ),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 }

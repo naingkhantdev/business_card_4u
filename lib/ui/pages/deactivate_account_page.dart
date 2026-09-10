@@ -7,6 +7,7 @@ import '../../services/navigation/app_navigator.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_primary_button.dart';
 import '../widgets/app_toast.dart';
+import '../theme/wallet_tokens.dart';
 
 class DeactivateAccountPage extends ConsumerStatefulWidget {
   const DeactivateAccountPage({super.key});
@@ -77,17 +78,17 @@ class _DeactivateAccountPageState extends ConsumerState<DeactivateAccountPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF060B16) : const Color(0xFFF8FAFD),
+      backgroundColor: isDark ? Wallet.darkGround : const Color(0xFFF8FAFD),
       appBar: AppBar(
         title: Text(
           'Deactivate Account',
           style: TextStyle(
-            color: isDark ? Colors.white : const Color(0xFF0B1220),
+            color: isDark ? Colors.white : Wallet.ink,
             fontWeight: FontWeight.w800,
           ),
         ),
-        backgroundColor: isDark ? const Color(0xFF060B16) : Colors.white,
-        surfaceTintColor: isDark ? const Color(0xFF060B16) : Colors.white,
+        backgroundColor: isDark ? Wallet.darkGround : Colors.white,
+        surfaceTintColor: isDark ? Wallet.darkGround : Colors.white,
         elevation: 0,
         iconTheme: IconThemeData(
           color: isDark ? Colors.white : Colors.black87,
@@ -100,10 +101,10 @@ class _DeactivateAccountPageState extends ConsumerState<DeactivateAccountPage> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF0D1426) : Colors.white,
+                color: isDark ? Wallet.darkSurface : Colors.white,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: isDark ? const Color(0xFF1F2A44) : const Color(0xFFE7ECF5),
+                  color: isDark ? Wallet.darkLine : const Color(0xFFE7ECF5),
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -132,7 +133,7 @@ class _DeactivateAccountPageState extends ConsumerState<DeactivateAccountPage> {
                   Text(
                     'Your account will be turned off now.',
                     style: TextStyle(
-                      color: isDark ? const Color(0xFFEAF1FF) : const Color(0xFF0B1220),
+                      color: isDark ? Wallet.darkInk : Wallet.ink,
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
                     ),
@@ -141,7 +142,7 @@ class _DeactivateAccountPageState extends ConsumerState<DeactivateAccountPage> {
                   Text(
                     'You can get it back by logging in again within 7 days.',
                     style: TextStyle(
-                      color: isDark ? const Color(0xFF98A7C2) : const Color(0xFF5B6473),
+                      color: isDark ? Wallet.darkMuted : const Color(0xFF5B6473),
                       height: 1.5,
                       fontWeight: FontWeight.w600,
                     ),
@@ -152,21 +153,21 @@ class _DeactivateAccountPageState extends ConsumerState<DeactivateAccountPage> {
                     obscureText: _obscurePassword,
                     enabled: !_submitting,
                     style: TextStyle(
-                      color: isDark ? const Color(0xFFEAF1FF) : const Color(0xFF0B1220),
+                      color: isDark ? Wallet.darkInk : Wallet.ink,
                     ),
                     decoration: InputDecoration(
                       labelText: 'Password',
                       labelStyle: TextStyle(
-                        color: isDark ? const Color(0xFF98A7C2) : const Color(0xFF5B6473),
+                        color: isDark ? Wallet.darkMuted : const Color(0xFF5B6473),
                       ),
                       filled: true,
-                      fillColor: isDark ? const Color(0xFF10182B) : Colors.white,
+                      fillColor: isDark ? Wallet.darkSurface : Colors.white,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(14),
                       ),
                       prefixIcon: Icon(
                         Icons.lock_outline,
-                        color: isDark ? const Color(0xFF98A7C2) : const Color(0xFF5B6473),
+                        color: isDark ? Wallet.darkMuted : const Color(0xFF5B6473),
                       ),
                       suffixIcon: IconButton(
                         onPressed: _submitting
@@ -180,7 +181,7 @@ class _DeactivateAccountPageState extends ConsumerState<DeactivateAccountPage> {
                           _obscurePassword
                               ? Icons.visibility_off_rounded
                               : Icons.visibility_rounded,
-                          color: isDark ? const Color(0xFF98A7C2) : const Color(0xFF5B6473),
+                          color: isDark ? Wallet.darkMuted : const Color(0xFF5B6473),
                         ),
                       ),
                     ),
@@ -199,7 +200,7 @@ class _DeactivateAccountPageState extends ConsumerState<DeactivateAccountPage> {
                     child: Text(
                       'Cancel',
                       style: TextStyle(
-                        color: isDark ? const Color(0xFF98A7C2) : AppColors.secondary,
+                        color: isDark ? Wallet.darkMuted : AppColors.secondary,
                         fontWeight: FontWeight.w700,
                       ),
                     ),

@@ -4,8 +4,8 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../providers/card/card_provider.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/loading_view.dart';
-import '../widgets/theme_toggle_button.dart';
 import 'card_detail_page.dart';
+import '../theme/wallet_tokens.dart';
 
 class ScanPage extends ConsumerStatefulWidget {
   const ScanPage({super.key});
@@ -68,22 +68,19 @@ class _ScanPageState extends ConsumerState<ScanPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF060B16) : Colors.black,
+      backgroundColor: isDark ? Wallet.darkGround : Colors.black,
       appBar: AppBar(
         title: Text(
           'Scan QR Code',
           style: TextStyle(
-            color: isDark ? Colors.white : const Color(0xFF0B1220),
+            color: isDark ? Colors.white : Wallet.ink,
             fontWeight: FontWeight.w800,
           ),
         ),
-        backgroundColor: isDark ? const Color(0xFF060B16) : Colors.white,
+        backgroundColor: isDark ? Wallet.darkGround : Colors.white,
         elevation: 0,
-        surfaceTintColor: isDark ? const Color(0xFF060B16) : Colors.white,
+        surfaceTintColor: isDark ? Wallet.darkGround : Colors.white,
         iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black87),
-        actions: [
-          ThemeToggleButton(color: isDark ? Colors.white : Colors.black87),
-        ],
       ),
       body: Stack(
         children: [

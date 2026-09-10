@@ -1,17 +1,18 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../theme/app_theme.dart';
 
 import '../../providers/auth/auth_provider.dart';
 import '../../providers/card/card_provider.dart';
 import '../theme/app_colors.dart';
-import '../theme/theme_provider.dart';
 import '../../data/vos/business_card_model.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/loading_view.dart';
 import '../widgets/card_item.dart';
+import '../widgets/image_source_sheet.dart';
 import '../widgets/my_qr_panel.dart';
 import '../widgets/app_primary_button.dart';
 import '../../utils/user_drawer.dart';
@@ -19,6 +20,7 @@ import 'add_card_page.dart';
 import 'scan_page.dart'; // Added import
 import 'search_page.dart'; // Added import
 import 'friend_requests_page.dart';
+import '../theme/wallet_tokens.dart';
 
 class CardPage extends ConsumerStatefulWidget {
   const CardPage({super.key});
@@ -62,11 +64,10 @@ class _CardPageState extends ConsumerState<CardPage>
       CurvedAnimation(parent: _bellController, curve: Curves.easeOut),
     );
 
-    Future.microtask(() {
-      if (!mounted) return;
-      ref.read(cardProvider.notifier).fetchCards();
-      ref.read(cardProvider.notifier).fetchFriendRequests();
-    });
+    // No fetch here: watching cardProvider in build() runs its `build`, which
+    // loads cards and friend requests together. Fetching again in parallel
+    // races that future, and the value it returns wins — which is what made
+    // the list show up only after a pull-to-refresh.
   }
 
   void _initTabController() {
@@ -140,13 +141,13 @@ class _CardPageState extends ConsumerState<CardPage>
               decoration: BoxDecoration(
                 color: hasFilter
                     ? AppColors.primary
-                    : (isDark ? const Color(0xFF0D1426) : Colors.white),
+                    : (isDark ? Wallet.darkSurface : Colors.white),
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(
                   color: hasFilter
                       ? AppColors.primary
                       : (isDark
-                          ? const Color(0xFF1F2A44)
+                          ? Wallet.darkLine
                           : Colors.grey.withOpacity(.18)),
                 ),
                 boxShadow: hasFilter
@@ -168,7 +169,7 @@ class _CardPageState extends ConsumerState<CardPage>
                     color: hasFilter
                         ? Colors.white
                         : (isDark
-                            ? const Color(0xFF98A7C2)
+                            ? Wallet.darkMuted
                             : Colors.grey.shade600),
                   ),
                   const SizedBox(width: 6),
@@ -180,7 +181,7 @@ class _CardPageState extends ConsumerState<CardPage>
                       color: hasFilter
                           ? Colors.white
                           : (isDark
-                              ? const Color(0xFF98A7C2)
+                              ? Wallet.darkMuted
                               : Colors.grey.shade600),
                     ),
                     maxLines: 1,
@@ -224,9 +225,10 @@ class _CardPageState extends ConsumerState<CardPage>
           builder: (ctx, setSheetState) {
             return Container(
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF0B1220) : Colors.white,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(24)),
+                color: Wallet.surfaceOf(isDark),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(Wallet.radiusPanel),
+                ),
               ),
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
               child: Column(
@@ -239,7 +241,7 @@ class _CardPageState extends ConsumerState<CardPage>
                       height: 4,
                       decoration: BoxDecoration(
                         color: isDark
-                            ? const Color(0xFF2A3550)
+                            ? Wallet.darkLine
                             : Colors.grey.shade300,
                         borderRadius: BorderRadius.circular(999),
                       ),
@@ -255,8 +257,8 @@ class _CardPageState extends ConsumerState<CardPage>
                           fontSize: 17,
                           fontWeight: FontWeight.w800,
                           color: isDark
-                              ? const Color(0xFFEAF1FF)
-                              : const Color(0xFF0B1220),
+                              ? Wallet.darkInk
+                              : Wallet.ink,
                         )),
                       ),
                       if (_selectedCompanyFilter != null)
@@ -285,7 +287,7 @@ class _CardPageState extends ConsumerState<CardPage>
                           'No companies available',
                           style: AppTheme.withFontStack(TextStyle(
                             color: isDark
-                                ? const Color(0xFF6B7A99)
+                                ? Wallet.darkFaint
                                 : Colors.grey.shade400,
                           )),
                         ),
@@ -312,14 +314,14 @@ class _CardPageState extends ConsumerState<CardPage>
                               color: isSelected
                                   ? AppColors.primary
                                   : (isDark
-                                      ? const Color(0xFF0D1426)
+                                      ? Wallet.darkSurface
                                       : const Color(0xFFF4F7FB)),
                               borderRadius: BorderRadius.circular(999),
                               border: Border.all(
                                 color: isSelected
                                     ? AppColors.primary
                                     : (isDark
-                                        ? const Color(0xFF1F2A44)
+                                        ? Wallet.darkLine
                                         : Colors.grey.withOpacity(.18)),
                               ),
                               boxShadow: isSelected
@@ -349,7 +351,7 @@ class _CardPageState extends ConsumerState<CardPage>
                                     color: isSelected
                                         ? Colors.white
                                         : (isDark
-                                            ? const Color(0xFF98A7C2)
+                                            ? Wallet.darkMuted
                                             : Colors.grey.shade700),
                                   ),
                                 ),
@@ -432,7 +434,7 @@ class _CardPageState extends ConsumerState<CardPage>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: isDark
-                      ? const Color(0xFF0D1426)
+                      ? Wallet.darkSurface
                       : AppColors.primary.withOpacity(.07),
                 ),
                 child: Icon(
@@ -448,8 +450,8 @@ class _CardPageState extends ConsumerState<CardPage>
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                   color: isDark
-                      ? const Color(0xFFEAF1FF)
-                      : const Color(0xFF1F2937),
+                      ? Wallet.darkInk
+                      : Wallet.ink,
                 ),
               ),
               const SizedBox(height: 6),
@@ -457,7 +459,7 @@ class _CardPageState extends ConsumerState<CardPage>
                 subtitle,
                 style: TextStyle(
                   fontSize: 13,
-                  color: isDark ? const Color(0xFF6B7A99) : Colors.black38,
+                  color: isDark ? Wallet.darkFaint : Colors.black38,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -479,10 +481,8 @@ class _CardPageState extends ConsumerState<CardPage>
 
     return RefreshIndicator(
       onRefresh: () async {
-        await Future.wait([
-          ref.read(cardProvider.notifier).fetchCards(),
-          ref.read(cardProvider.notifier).fetchFriendRequests(),
-        ]);
+        ref.invalidate(cardProvider);
+        await ref.read(cardProvider.future);
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -508,7 +508,7 @@ class _CardPageState extends ConsumerState<CardPage>
             return Container(
               decoration: BoxDecoration(
                 color:
-                    isDark ? const Color(0xFF060B16) : const Color(0xFFF4F7FB),
+                    isDark ? Wallet.darkGround : const Color(0xFFF4F7FB),
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(28)),
               ),
@@ -522,7 +522,7 @@ class _CardPageState extends ConsumerState<CardPage>
                       height: 5,
                       decoration: BoxDecoration(
                         color: isDark
-                            ? const Color(0xFF2A3550)
+                            ? Wallet.darkLine
                             : const Color(0xFFD5DDEA),
                         borderRadius: BorderRadius.circular(999),
                       ),
@@ -536,8 +536,8 @@ class _CardPageState extends ConsumerState<CardPage>
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
                       color: isDark
-                          ? const Color(0xFFEAF1FF)
-                          : const Color(0xFF0B1220),
+                          ? Wallet.darkInk
+                          : Wallet.ink,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -546,7 +546,7 @@ class _CardPageState extends ConsumerState<CardPage>
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13.5,
-                      color: isDark ? const Color(0xFF98A7C2) : Colors.black54,
+                      color: isDark ? Wallet.darkMuted : Colors.black54,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -594,11 +594,361 @@ class _CardPageState extends ConsumerState<CardPage>
     );
   }
 
+  /// Entry point for a new saved card. Scanning is offered first and styled as
+  /// the primary path — photographing a card someone just handed over beats
+  /// retyping it, and the manual form is still one tap away.
+  void _showNewCardOptions() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDark ? Wallet.darkSurface : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: isDark ? Wallet.darkLine : Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Add a card',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: isDark
+                          ? Wallet.darkInk
+                          : Wallet.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Snap the card or pick a photo — we fill in the details.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark
+                          ? Wallet.darkMuted
+                          : Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _startCardScan();
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.document_scanner_outlined,
+                          color: Colors.white),
+                      SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Scan a business card',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Fastest — reads front and back for you',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_ios,
+                          size: 14, color: Colors.white),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            ListTile(
+              leading: Icon(
+                Icons.edit_note,
+                color: isDark ? Wallet.darkMuted : Colors.grey[600],
+              ),
+              title: const Text('Enter details manually'),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                _openAddCard();
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Gets the card's photos — shot now or picked from the gallery — then opens
+  /// the form, which reads both sides.
+  ///
+  /// The back is asked for right after the front rather than left to the form:
+  /// it routinely carries the address, extra numbers, and social links, and the
+  /// user is still holding the card at this exact moment. Skipping is one tap,
+  /// and the form can still add a back photo later either way.
+  Future<void> _startCardScan() async {
+    final front = await _captureCardSide(
+      title: 'Scan the front',
+      subtitle: 'Step 1 of 2 — we read the card and fill in the details for you.',
+    );
+    if (front == null || !mounted) return;
+
+    XFile? back;
+    if (await _askForCardBack()) {
+      if (!mounted) return;
+      back = await _captureCardSide(
+        title: 'Scan the back',
+        subtitle: 'Step 2 of 2 — whatever we find here joins the same card.',
+      );
+    }
+    if (!mounted) return;
+
+    _openAddCard(frontImageFile: front, backImageFile: back);
+  }
+
+  /// Asks where one side's photo should come from and returns it, or null when
+  /// the user backs out or the picker could not be opened.
+  Future<XFile?> _captureCardSide({
+    required String title,
+    required String subtitle,
+  }) async {
+    final source = await showImageSourceSheet(
+      context,
+      title: title,
+      subtitle: subtitle,
+    );
+    if (source == null || !mounted) return null;
+
+    try {
+      return await ImagePicker().pickImage(source: source);
+    } catch (e) {
+      if (!mounted) return null;
+      AppToast.show(
+        context,
+        'Could not open the '
+        '${source == ImageSource.camera ? 'camera' : 'gallery'}. '
+        'You can still enter the card manually.',
+        type: AppToastType.error,
+      );
+      return null;
+    }
+  }
+
+  /// Offers the back of the card between the two capture steps. Adding it is
+  /// the recommended path; dismissing the sheet counts as skipping, because a
+  /// front-only card is a perfectly good result.
+  Future<bool> _askForCardBack() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final wantsBack = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: isDark ? Wallet.darkSurface : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: isDark ? Wallet.darkLine : Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.check_circle,
+                          size: 16, color: AppColors.primary),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Front captured',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.3,
+                          color: isDark
+                              ? Wallet.darkMuted
+                              : Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Add the back?',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: isDark
+                          ? Wallet.darkInk
+                          : Wallet.ink,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'The back usually carries the address, extra numbers, and '
+                    'social links the front leaves off.',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: isDark
+                          ? Wallet.darkMuted
+                          : Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(14),
+                onTap: () => Navigator.of(sheetContext).pop(true),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.flip_to_back, color: Colors.white),
+                      SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Scan the back too',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Recommended — catches what the front misses',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_ios,
+                          size: 14, color: Colors.white),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 6),
+            ListTile(
+              leading: Icon(
+                Icons.skip_next_outlined,
+                color: isDark ? Wallet.darkMuted : Colors.grey[600],
+              ),
+              title: const Text('Skip — front only'),
+              onTap: () => Navigator.of(sheetContext).pop(false),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+
+    return wantsBack ?? false;
+  }
+
+  /// Opens the add-card form and refreshes the Saved Cards tab on success.
+  void _openAddCard({XFile? frontImageFile, XFile? backImageFile}) {
+    Navigator.of(context)
+        .push(MaterialPageRoute(
+          builder: (_) => AddCardPage(
+            frontImageFile: frontImageFile,
+            backImageFile: backImageFile,
+          ),
+        ))
+        .then((created) {
+      if (created != true) return;
+      if (!mounted) return;
+
+      // Clear any active search/company filter so the new + existing saved cards are visible
+      _query = "";
+      _searchController.clear();
+      _searchFocusNode.unfocus();
+      _selectedCompanyFilter = null;
+
+      // Make sure we are on the Saved Cards tab (in case navigation context changed)
+      _tabController?.animateTo(1);
+
+      ref.read(cardProvider.notifier).fetchCards();
+
+      // Slight delay to ensure navigation and rebuild complete before toast
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (!mounted) return;
+        AppToast.show(
+          context,
+          'Business card created successfully',
+          type: AppToastType.success,
+        );
+      });
+    });
+  }
+
   void _showAddOptions(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDark ? const Color(0xFF0D1426) : Colors.white,
+      backgroundColor: isDark ? Wallet.darkSurface : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -613,14 +963,14 @@ class _CardPageState extends ConsumerState<CardPage>
                   'Scan QR Code',
                   style: TextStyle(
                     color: isDark
-                        ? const Color(0xFFEAF1FF)
-                        : const Color(0xFF0B1220),
+                        ? Wallet.darkInk
+                        : Wallet.ink,
                   ),
                 ),
                 subtitle: Text(
                   'Add friend by scanning their QR code',
                   style: TextStyle(
-                    color: isDark ? const Color(0xFF98A7C2) : Colors.black54,
+                    color: isDark ? Wallet.darkMuted : Colors.black54,
                   ),
                 ),
                 onTap: () {
@@ -637,14 +987,14 @@ class _CardPageState extends ConsumerState<CardPage>
                   'Search Users',
                   style: TextStyle(
                     color: isDark
-                        ? const Color(0xFFEAF1FF)
-                        : const Color(0xFF0B1220),
+                        ? Wallet.darkInk
+                        : Wallet.ink,
                   ),
                 ),
                 subtitle: Text(
                   'Find users by name or company',
                   style: TextStyle(
-                    color: isDark ? const Color(0xFF98A7C2) : Colors.black54,
+                    color: isDark ? Wallet.darkMuted : Colors.black54,
                   ),
                 ),
                 onTap: () {
@@ -794,10 +1144,10 @@ class _CardPageState extends ConsumerState<CardPage>
     }
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF060B16) : AppColors.surface,
+      backgroundColor: isDark ? Wallet.darkGround : AppColors.surface,
       drawer: const UserDrawer(),
       appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF060B16) : Colors.white,
+        backgroundColor: isDark ? Wallet.darkGround : Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
         iconTheme: IconThemeData(
@@ -809,7 +1159,7 @@ class _CardPageState extends ConsumerState<CardPage>
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : const Color(0xFF1F2937),
+              color: isDark ? Colors.white : Wallet.ink,
             ),
             children: const [
               TextSpan(
@@ -836,7 +1186,7 @@ class _CardPageState extends ConsumerState<CardPage>
               isScrollable: true,
               labelColor: AppColors.primary,
               unselectedLabelColor:
-                  isDark ? const Color(0xFF6B7A99) : Colors.grey,
+                  isDark ? Wallet.darkFaint : Colors.grey,
               labelStyle: const TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 13.5,
@@ -912,7 +1262,7 @@ class _CardPageState extends ConsumerState<CardPage>
                         borderRadius: BorderRadius.circular(999),
                         border: Border.all(
                           color:
-                              isDark ? const Color(0xFF060B16) : Colors.white,
+                              isDark ? Wallet.darkGround : Colors.white,
                           width: 1.5,
                         ),
                       ),
@@ -943,13 +1293,13 @@ class _CardPageState extends ConsumerState<CardPage>
               duration: const Duration(milliseconds: 200),
               height: 48,
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF0D1426) : Colors.white,
+                color: isDark ? Wallet.darkSurface : Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: _isSearchFocused
                       ? AppColors.primary.withOpacity(.5)
                       : (isDark
-                          ? const Color(0xFF1F2A44)
+                          ? Wallet.darkLine
                           : Colors.grey.withOpacity(.12)),
                   width: _isSearchFocused ? 1.5 : 1,
                 ),
@@ -977,7 +1327,7 @@ class _CardPageState extends ConsumerState<CardPage>
                       color: _isSearchFocused
                           ? AppColors.primary
                           : (isDark
-                              ? const Color(0xFF6B7A99)
+                              ? Wallet.darkFaint
                               : Colors.grey.shade400),
                     ),
                   ),
@@ -990,15 +1340,15 @@ class _CardPageState extends ConsumerState<CardPage>
                       style: TextStyle(
                         fontSize: 14.5,
                         color: isDark
-                            ? const Color(0xFFEAF1FF)
-                            : const Color(0xFF0B1220),
+                            ? Wallet.darkInk
+                            : Wallet.ink,
                         fontWeight: FontWeight.w500,
                       ),
                       decoration: InputDecoration(
                         hintText: "Search cards...",
                         hintStyle: TextStyle(
                           color: isDark
-                              ? const Color(0xFF6B7A99)
+                              ? Wallet.darkFaint
                               : Colors.grey.shade400,
                           fontSize: 14.5,
                         ),
@@ -1023,14 +1373,14 @@ class _CardPageState extends ConsumerState<CardPage>
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: isDark
-                                ? const Color(0xFF2A3550)
+                                ? Wallet.darkLine
                                 : Colors.grey.shade200,
                           ),
                           child: Icon(
                             Icons.close,
                             size: 13,
                             color: isDark
-                                ? const Color(0xFF98A7C2)
+                                ? Wallet.darkMuted
                                 : Colors.grey.shade600,
                           ),
                         ),
@@ -1080,35 +1430,7 @@ class _CardPageState extends ConsumerState<CardPage>
           if (_tabController?.index == 0) {
             _showAddOptions(context);
           } else {
-            Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const AddCardPage()))
-                .then((created) {
-              if (created == true) {
-                if (!context.mounted) return;
-
-                // Clear any active search/company filter so the new + existing saved cards are visible
-                _query = "";
-                _searchController.clear();
-                _searchFocusNode.unfocus();
-                _selectedCompanyFilter = null;
-
-                // Make sure we are on the Saved Cards tab (in case navigation context changed)
-                _tabController?.animateTo(1);
-
-                ref.read(cardProvider.notifier).fetchCards();
-
-                // Slight delay to ensure navigation and rebuild complete before toast
-                Future.delayed(const Duration(milliseconds: 300), () {
-                  if (context.mounted) {
-                    AppToast.show(
-                      context,
-                      'Business card created successfully',
-                      type: AppToastType.success,
-                    );
-                  }
-                });
-              }
-            });
+            _showNewCardOptions();
           }
         },
       ),

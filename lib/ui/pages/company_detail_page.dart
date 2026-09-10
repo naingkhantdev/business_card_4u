@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
-import '../widgets/theme_toggle_button.dart';
 import '../../data/vos/company_model.dart';
+import '../theme/wallet_tokens.dart';
 
 class CompanyDetailPage extends StatelessWidget {
   final CompanyModel company;
@@ -13,7 +13,7 @@ class CompanyDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF060B16) : const Color(0xFFF8FAFD),
+      backgroundColor: isDark ? Wallet.darkGround : const Color(0xFFF8FAFD),
       body: CustomScrollView(
         slivers: [
           _buildAppBar(context, isDark),
@@ -50,14 +50,11 @@ class CompanyDetailPage extends StatelessWidget {
     return SliverAppBar(
       expandedHeight: 180,
       pinned: true,
-      backgroundColor: isDark ? const Color(0xFF060B16) : const Color(0xFF1E3C72),
+      backgroundColor: isDark ? Wallet.darkGround : const Color(0xFF1E3C72),
       leading: IconButton(
         icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
         onPressed: () => Navigator.pop(context),
       ),
-      actions: const [
-        ThemeToggleButton(color: Colors.white),
-      ],
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: BoxDecoration(
@@ -104,10 +101,10 @@ class CompanyDetailPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0D1426) : Colors.white,
+        color: isDark ? Wallet.darkSurface : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? const Color(0xFF1F2A44) : Colors.transparent,
+          color: isDark ? Wallet.darkLine : Colors.transparent,
         ),
         boxShadow: [
           BoxShadow(
@@ -132,13 +129,13 @@ class CompanyDetailPage extends StatelessWidget {
     return Expanded(
       child: Column(
         children: [
-          Icon(icon, color: isDark ? const Color(0xFF8FB6FF) : AppColors.primary, size: 24),
+          Icon(icon, color: isDark ? Wallet.accentDark : AppColors.primary, size: 24),
           const SizedBox(height: 8),
           Text(
             text,
             style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: isDark ? const Color(0xFFEAF1FF) : const Color(0xFF1F2937),
+              color: isDark ? Wallet.darkInk : Wallet.ink,
             ),
             textAlign: TextAlign.center,
           ),
@@ -156,7 +153,7 @@ class CompanyDetailPage extends StatelessWidget {
         style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.bold,
-          color: isDark ? const Color(0xFFEAF1FF) : const Color(0xFF1F2937),
+          color: isDark ? Wallet.darkInk : Wallet.ink,
         ),
       ),
     );
@@ -167,10 +164,10 @@ class CompanyDetailPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0D1426) : Colors.white,
+        color: isDark ? Wallet.darkSurface : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? const Color(0xFF1F2A44) : Colors.transparent,
+          color: isDark ? Wallet.darkLine : Colors.transparent,
         ),
       ),
       child: Column(
@@ -216,13 +213,13 @@ class CompanyDetailPage extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           children: [
-            Icon(icon, color: isDark ? const Color(0xFF8FB6FF) : Colors.blueGrey, size: 20),
+            Icon(icon, color: isDark ? Wallet.accentDark : Colors.blueGrey, size: 20),
             const SizedBox(width: 16),
             Expanded(
               child: Text(
                 text,
                 style: TextStyle(
-                  color: isDark ? const Color(0xFFEAF1FF) : Colors.black87,
+                  color: isDark ? Wallet.darkInk : Colors.black87,
                   fontSize: 14,
                 ),
               ),
@@ -239,16 +236,16 @@ class CompanyDetailPage extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0D1426) : Colors.white,
+        color: isDark ? Wallet.darkSurface : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? const Color(0xFF1F2A44) : Colors.transparent,
+          color: isDark ? Wallet.darkLine : Colors.transparent,
         ),
       ),
       child: Text(
         company.description!,
         style: TextStyle(
-          color: isDark ? const Color(0xFF98A7C2) : Colors.black54,
+          color: isDark ? Wallet.darkMuted : Colors.black54,
           height: 1.5,
         ),
       ),
@@ -260,10 +257,10 @@ class CompanyDetailPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0D1426) : Colors.white,
+        color: isDark ? Wallet.darkSurface : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark ? const Color(0xFF1F2A44) : Colors.transparent,
+          color: isDark ? Wallet.darkLine : Colors.transparent,
         ),
       ),
       child: Wrap(
@@ -281,18 +278,18 @@ class CompanyDetailPage extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark
             ? const Color(0xFF131D31)
-            : const Color(0xFF2563EB).withOpacity(0.08),
+            : Wallet.accentLight.withOpacity(0.08),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isDark
-              ? const Color(0xFF24304B)
-              : const Color(0xFF2563EB).withOpacity(0.1),
+              ? Wallet.darkLine
+              : Wallet.accentLight.withOpacity(0.1),
         ),
       ),
       child: Text(
         platform,
         style: TextStyle(
-          color: isDark ? const Color(0xFFD8E4FF) : const Color(0xFF2563EB),
+          color: isDark ? const Color(0xFFD8E4FF) : Wallet.accentLight,
           fontWeight: FontWeight.bold,
           fontSize: 12,
         ),

@@ -48,6 +48,8 @@ dependencies:
   intl: ^0.19.0
   image_picker: ^1.1.2
   mobile_scanner: ^5.2.3
+  # On-device OCR for scanning a physical business card into form fields.
+  google_mlkit_text_recognition: ^0.13.0
   qr_flutter: ^4.1.0
   flutter_dotenv: ^5.1.0
   google_fonts: ^6.2.1

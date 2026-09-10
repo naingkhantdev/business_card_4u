@@ -5,8 +5,14 @@ import '../../providers/card/card_provider.dart';
 import '../../data/vos/business_card_model.dart';
 import 'app_toast.dart';
 import '../pages/card_detail_page.dart';
-import '../theme/app_theme.dart';
+import '../theme/app_typography.dart';
+import '../theme/wallet_tokens.dart';
 
+/// A card in the list: who it is, then what you can reach them on.
+///
+/// The printed card photo deliberately does not appear here — it belongs to
+/// the detail page, where it can be shown whole rather than cropped into a
+/// thumbnail.
 class CardItem extends ConsumerStatefulWidget {
   final BusinessCardModel card;
   const CardItem({super.key, required this.card});
@@ -46,320 +52,284 @@ class _CardItemState extends ConsumerState<CardItem> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isSaved = widget.card.cardType == 'saved_card';
-    final canSendRequest = widget.card.cardType == 'user_card' &&
+    final card = widget.card;
+    final isSaved = card.cardType == 'saved_card';
+
+    final canSendRequest = card.cardType == 'user_card' &&
         !_isFriend &&
         (_friendRequestStatus == 'none' || _friendRequestStatus == 'rejected');
-    final isPending = _friendRequestStatus == 'pending' || _friendRequestStatus == 'pending_sent';
+    final isPending = _friendRequestStatus == 'pending' ||
+        _friendRequestStatus == 'pending_sent';
     final isPendingReceived = _friendRequestStatus == 'pending_received';
 
-    final hasImage = widget.card.profileImage?.isNotEmpty == true;
-    final avatarUrl =
-        hasImage ? ImageUrl.resolve(widget.card.profileImage!) : null;
-    final firstLetter = widget.card.fullName.isNotEmpty
-        ? widget.card.fullName[0].toUpperCase()
-        : '?';
+    final company = card.company?.name;
 
-    final Color accent =
-        isSaved ? const Color(0xFF7C3AED) : const Color(0xFF2563EB);
-    final Color accentSoft =
-        isSaved ? const Color(0xFFEDE9FE) : const Color(0xFFEFF6FF);
-    final Color accentEnd =
-        isSaved ? const Color(0xFFA78BFA) : const Color(0xFF60A5FA);
+    // Company, phone and email each get a line. This is what carried the
+    // card's height before, and it is the information people scan a list for.
+    final infoRows = <Widget>[
+      if (company != null && company.isNotEmpty)
+        _InfoRow(
+            icon: Icons.business_rounded, text: company, isDark: isDark),
+      if (card.phones.isNotEmpty)
+        _InfoRow(
+            icon: Icons.call_rounded,
+            text: card.phones.first,
+            isDark: isDark),
+      if (card.emails.isNotEmpty)
+        _InfoRow(
+            icon: Icons.alternate_email_rounded,
+            text: card.emails.first,
+            isDark: isDark),
+    ];
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 7),
+      margin: const EdgeInsets.symmetric(vertical: 5),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: isDark ? const Color(0xFF111827) : Colors.white,
-        border: Border.all(
-          color: isDark ? accent.withOpacity(.2) : accent.withOpacity(.1),
-        ),
-        boxShadow: isDark
-            ? [
-                BoxShadow(
-                  color: Colors.black.withOpacity(.28),
-                  blurRadius: 18,
-                  offset: const Offset(0, 6),
-                ),
-                BoxShadow(
-                  color: accent.withOpacity(.1),
-                  blurRadius: 22,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : [
-                BoxShadow(
-                  color: accent.withOpacity(.07),
-                  blurRadius: 20,
-                  offset: const Offset(0, 6),
-                ),
-                BoxShadow(
-                  color: Colors.black.withOpacity(.04),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+        borderRadius: BorderRadius.circular(Wallet.radiusCard),
+        color: Wallet.surfaceOf(isDark),
+        border: Wallet.borderOf(isDark),
+        boxShadow: Wallet.shadowOf(isDark),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          splashColor: accent.withOpacity(.05),
-          highlightColor: accent.withOpacity(.03),
+          borderRadius: BorderRadius.circular(Wallet.radiusCard),
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (_) => CardDetailPage(card: widget.card)),
+            MaterialPageRoute(builder: (_) => CardDetailPage(card: card)),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                height: 3,
-                decoration: BoxDecoration(
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(20)),
-                  gradient: LinearGradient(colors: [accent, accentEnd]),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+
+                // ── who it belongs to ──────────────────────────
+                Row(
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Hero(
-                          tag:
-                              'avatar_${widget.card.id}_${widget.card.fullName}',
-                          child: Container(
-                            width: 52,
-                            height: 52,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                  color: accent.withOpacity(.25), width: 2),
-                            ),
-                            child: ClipOval(
-                              child: avatarUrl != null
-                                  ? Image.network(avatarUrl,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) =>
-                                          _CardFallback(
-                                            letter: firstLetter,
-                                            accent: accent,
-                                            soft: accentSoft,
-                                            isDark: isDark,
-                                          ))
-                                  : _CardFallback(
-                                      letter: firstLetter,
-                                      accent: accent,
-                                      soft: accentSoft,
-                                      isDark: isDark,
-                                    ),
-                            ),
+                    // A person's card shows their portrait. A saved card has
+                    // none — the printed photo lives on the detail page — so it
+                    // takes a monogram, keeping every row the same shape.
+                    _Avatar(card: card, isSaved: isSaved, isDark: isDark),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            card.fullName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.primary(TextStyle(
+                              color: Wallet.inkOf(isDark),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              height: 1.2,
+                            )),
                           ),
-                        ),
-                        const SizedBox(width: 13),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                widget.card.fullName,
-                                style: AppTheme.withFontStack(TextStyle(
-                                  color: isDark
-                                      ? Colors.white
-                                      : const Color(0xFF0F172A),
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: .2,
-                                  height: 1.2,
-                                )),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                          if (card.position.isNotEmpty) ...[
+                            const SizedBox(height: 5),
+                            // The role labels the name above it rather than
+                            // adding a second line of content. Tracked caps
+                            // say so without spending another colour on it.
+                            Text(
+                              card.position.toUpperCase(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.eyebrow(
+                                color: Wallet.faintOf(isDark),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
                               ),
-                              const SizedBox(height: 3),
-                              Text(
-                                widget.card.position.isEmpty
-                                    ? 'Professional'
-                                    : widget.card.position,
-                                style: AppTheme.withFontStack(TextStyle(
-                                  color: isDark
-                                      ? Colors.white.withOpacity(.45)
-                                      : const Color(0xFF64748B),
-                                  fontSize: 12.5,
-                                )),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              if (isSaved && widget.card.user != null) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Created by: ${widget.card.user!.name}',
-                                  style: AppTheme.withFontStack(TextStyle(
-                                    color: isDark
-                                        ? Colors.white.withOpacity(.35)
-                                        : const Color(0xFF94A3B8),
-                                    fontSize: 11,
-                                  )),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        if (isPendingReceived)
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              _isProcessing
-                                  ? SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                        valueColor: AlwaysStoppedAnimation<Color>(accent),
-                                      ),
-                                    )
-                                  : Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        GestureDetector(
-                                          onTap: () async {
-                                            setState(() => _isProcessing = true);
-                                            final result = await ref
-                                                .read(cardProvider.notifier)
-                                                .rejectFriendRequest(widget.card.id);
-                                            if (!mounted) return;
-                                            setState(() {
-                                              _isProcessing = false;
-                                              if (result.isSuccess) {
-                                                _friendRequestStatus = 'none';
-                                                _isFriend = false;
-                                              }
-                                            });
-                                            if (result.isSuccess) {
-                                              _showToast('Friend request declined');
-                                            } else {
-                                              _showToast(result.message ?? 'Failed to decline request', isError: true);
-                                            }
-                                          },
-                                          child: Container(
-                                            width: 32,
-                                            height: 32,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              color: Colors.red.withOpacity(isDark ? .2 : .08),
-                                              border: Border.all(color: Colors.red.withOpacity(.35)),
-                                            ),
-                                            child: const Icon(Icons.close_rounded, size: 15, color: Colors.red),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        GestureDetector(
-                                          onTap: () async {
-                                            setState(() => _isProcessing = true);
-                                            final result = await ref
-                                                .read(cardProvider.notifier)
-                                                .acceptFriendRequest(widget.card.id);
-                                            if (!mounted) return;
-                                            setState(() {
-                                              _isProcessing = false;
-                                              if (result.isSuccess) {
-                                                _friendRequestStatus = 'accepted';
-                                                _isFriend = true;
-                                              }
-                                            });
-                                            if (result.isSuccess) {
-                                              _showToast('Friend request accepted');
-                                            } else {
-                                              _showToast(result.message ?? 'Failed to accept request', isError: true);
-                                            }
-                                          },
-                                          child: Container(
-                                            width: 32,
-                                            height: 32,
-                                            decoration: BoxDecoration(
-                                              shape: BoxShape.circle,
-                                              color: Colors.green.withOpacity(isDark ? .2 : .08),
-                                              border: Border.all(color: Colors.green.withOpacity(.35)),
-                                            ),
-                                            child: const Icon(Icons.check_rounded, size: 15, color: Colors.green),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                            ],
-                          )
-                        else if (canSendRequest)
-                          _CardAddBtn(
-                            accent: accent,
-                            isDark: isDark,
-                            onTap: () async {
-                              final result = await ref
-                                  .read(cardProvider.notifier)
-                                  .addFriend(widget.card.id);
-                              if (!mounted) return;
-                              if (result.isSuccess) {
-                                setState(
-                                    () => _friendRequestStatus = 'pending_sent');
-                                _showToast('Friend request sent');
-                              }
-                            },
-                          )
-                        else
-                          _CardPill(
-                            isFriend: _isFriend,
-                            isPending: isPending,
-                            isSaved: isSaved,
-                            accent: accent,
-                            isDark: isDark,
-                          ),
-                      ],
-                    ),
-                    if (widget.card.company != null ||
-                        widget.card.phones.isNotEmpty ||
-                        widget.card.emails.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Divider(
-                        height: 1,
-                        color: isDark
-                            ? Colors.white.withOpacity(.07)
-                            : const Color(0xFFF1F5F9),
+                            ),
+                          ],
+                        ],
                       ),
-                      const SizedBox(height: 10),
-                      if (widget.card.company != null)
-                        _CardInfoRow(
-                          icon: Icons.business_rounded,
-                          text: widget.card.company!.name,
-                          accent: accent,
-                          isDark: isDark,
-                        ),
-                      if (widget.card.phones.isNotEmpty)
-                        _CardInfoRow(
-                          icon: Icons.phone_rounded,
-                          text: widget.card.phones.first,
-                          accent: accent,
-                          isDark: isDark,
-                        ),
-                      if (widget.card.emails.isNotEmpty)
-                        _CardInfoRow(
-                          icon: Icons.alternate_email_rounded,
-                          text: widget.card.emails.first,
-                          accent: accent,
-                          isDark: isDark,
-                          last: true,
-                        ),
-                    ],
+                    ),
+                    const SizedBox(width: 10),
+                    if (isPendingReceived)
+                      _RequestActions(
+                        isProcessing: _isProcessing,
+                        isDark: isDark,
+                        onAccept: _accept,
+                        onDecline: _decline,
+                      )
+                    else if (canSendRequest)
+                      _AddButton(isDark: isDark, onTap: _sendRequest)
+                    else
+                      _StatusChip(
+                        isFriend: _isFriend,
+                        isPending: isPending,
+                        isSaved: isSaved,
+                        isDark: isDark,
+                      ),
                   ],
                 ),
-              ),
-            ],
+
+                if (infoRows.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Divider(
+                    height: Wallet.hairline,
+                    thickness: Wallet.hairline,
+                    color: Wallet.lineOf(isDark),
+                  ),
+                  const SizedBox(height: 14),
+                  for (var i = 0; i < infoRows.length; i++) ...[
+                    if (i > 0) const SizedBox(height: 9),
+                    infoRows[i],
+                  ],
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _sendRequest() async {
+    final result =
+        await ref.read(cardProvider.notifier).addFriend(widget.card.id);
+    if (!mounted) return;
+    if (result.isSuccess) {
+      setState(() => _friendRequestStatus = 'pending_sent');
+      _showToast('Friend request sent');
+    } else {
+      _showToast(result.message ?? 'Failed to send request', isError: true);
+    }
+  }
+
+  Future<void> _accept() async {
+    setState(() => _isProcessing = true);
+    final result = await ref
+        .read(cardProvider.notifier)
+        .acceptFriendRequest(widget.card.id);
+    if (!mounted) return;
+    setState(() {
+      _isProcessing = false;
+      if (result.isSuccess) {
+        _friendRequestStatus = 'accepted';
+        _isFriend = true;
+      }
+    });
+    _showToast(
+      result.isSuccess
+          ? 'Friend request accepted'
+          : (result.message ?? 'Failed to accept request'),
+      isError: !result.isSuccess,
+    );
+  }
+
+  Future<void> _decline() async {
+    setState(() => _isProcessing = true);
+    final result = await ref
+        .read(cardProvider.notifier)
+        .rejectFriendRequest(widget.card.id);
+    if (!mounted) return;
+    setState(() {
+      _isProcessing = false;
+      if (result.isSuccess) {
+        _friendRequestStatus = 'none';
+        _isFriend = false;
+      }
+    });
+    _showToast(
+      result.isSuccess
+          ? 'Friend request declined'
+          : (result.message ?? 'Failed to decline request'),
+      isError: !result.isSuccess,
+    );
+  }
+}
+
+class _Avatar extends StatelessWidget {
+  final BusinessCardModel card;
+  final bool isSaved;
+  final bool isDark;
+
+  const _Avatar({
+    required this.card,
+    required this.isSaved,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // A saved card carries no portrait of its own, so it never looks one up.
+    final url = isSaved ? null : ImageUrl.resolve(card.profileImage);
+    final letter =
+        card.fullName.isNotEmpty ? card.fullName[0].toUpperCase() : '?';
+
+    return Hero(
+      tag: 'avatar_${card.id}_${card.fullName}',
+      child: Container(
+        width: 50,
+        height: 50,
+        decoration: BoxDecoration(
+          // Square. The circular crop is the friendly-app convention; the
+          // grid wants the portrait to align with the type block beside it,
+          // and a disc gives it no edge to align to.
+          borderRadius: BorderRadius.circular(Wallet.radiusTile),
+          color: Wallet.tintOf(isDark),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: url != null
+            ? Image(
+                image: ResizeImage(NetworkImage(url),
+                    width: 160, allowUpscaling: false),
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) =>
+                    _Monogram(letter: letter, isDark: isDark),
+              )
+            : _Monogram(letter: letter, isDark: isDark),
+      ),
+    );
+  }
+}
+
+class _Monogram extends StatelessWidget {
+  final String letter;
+  final bool isDark;
+
+  const _Monogram({required this.letter, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        color: Wallet.tintOf(isDark),
+        alignment: Alignment.center,
+        child: Text(
+          letter,
+          style: AppTypography.primary(TextStyle(
+            color: Wallet.accentOf(isDark),
+            fontSize: 19,
+            fontWeight: FontWeight.w600,
+          )),
+        ),
+      );
+}
+
+class _AddButton extends StatelessWidget {
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _AddButton({required this.isDark, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final shape = BorderRadius.circular(Wallet.radiusControl);
+    return Material(
+      color: Wallet.accentOf(isDark),
+      borderRadius: shape,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: shape,
+        child: SizedBox(
+          width: 38,
+          height: 38,
+          child: Icon(
+            Icons.person_add_alt_1_rounded,
+            size: 18,
+            color: Wallet.onAccentOf(isDark),
           ),
         ),
       ),
@@ -367,151 +337,206 @@ class _CardItemState extends ConsumerState<CardItem> {
   }
 }
 
-
-class _CardFallback extends StatelessWidget {
-  final String letter;
-  final Color accent;
-  final Color soft;
+class _RequestActions extends StatelessWidget {
+  final bool isProcessing;
   final bool isDark;
-  const _CardFallback(
-      {required this.letter,
-      required this.accent,
-      required this.soft,
-      required this.isDark});
+  final VoidCallback onAccept;
+  final VoidCallback onDecline;
+
+  const _RequestActions({
+    required this.isProcessing,
+    required this.isDark,
+    required this.onAccept,
+    required this.onDecline,
+  });
 
   @override
-  Widget build(BuildContext context) => Container(
-        color: isDark ? accent.withOpacity(.15) : soft,
+  Widget build(BuildContext context) {
+    if (isProcessing) {
+      return SizedBox(
+        width: 38,
+        height: 38,
         child: Center(
-          child: Text(letter,
-              style: AppTheme.withFontStack(TextStyle(
-                  color: isDark ? soft : accent,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800))),
+          child: SizedBox(
+            width: 18,
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.2,
+              valueColor: AlwaysStoppedAnimation(Wallet.accentOf(isDark)),
+            ),
+          ),
         ),
       );
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _RoundAction(
+          icon: Icons.close_rounded,
+          color: Wallet.danger,
+          filled: false,
+          isDark: isDark,
+          onTap: onDecline,
+        ),
+        const SizedBox(width: 8),
+        _RoundAction(
+          icon: Icons.check_rounded,
+          color: Wallet.success,
+          filled: true,
+          isDark: isDark,
+          onTap: onAccept,
+        ),
+      ],
+    );
+  }
 }
 
-class _CardAddBtn extends StatelessWidget {
-  final Color accent;
+class _RoundAction extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final bool filled;
   final bool isDark;
   final VoidCallback onTap;
-  const _CardAddBtn(
-      {required this.accent, required this.isDark, required this.onTap});
+
+  const _RoundAction({
+    required this.icon,
+    required this.color,
+    required this.filled,
+    required this.isDark,
+    required this.onTap,
+  });
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) {
+    final shape = BorderRadius.circular(Wallet.radiusControl);
+    return Material(
+      color: filled ? color : Colors.transparent,
+      borderRadius: shape,
+      child: InkWell(
         onTap: onTap,
+        borderRadius: shape,
         child: Container(
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: accent.withOpacity(isDark ? .15 : .08),
-            border: Border.all(color: accent.withOpacity(.35)),
+            borderRadius: shape,
+            // Decline is outlined, accept is filled: only the action being
+            // recommended gets to spend a solid block of colour.
+            border: filled
+                ? null
+                : Border.all(
+                    color: color.withOpacity(.45),
+                    width: Wallet.hairline,
+                  ),
           ),
-          child:
-              Icon(Icons.person_add_alt_1_rounded, size: 16, color: accent),
+          child: Icon(icon, size: 17, color: filled ? Colors.white : color),
         ),
-      );
+      ),
+    );
+  }
 }
 
-class _CardPill extends StatelessWidget {
+class _StatusChip extends StatelessWidget {
   final bool isFriend;
   final bool isPending;
   final bool isSaved;
-  final Color accent;
   final bool isDark;
-  const _CardPill(
-      {required this.isFriend,
-      required this.isPending,
-      required this.isSaved,
-      required this.accent,
-      required this.isDark});
+
+  const _StatusChip({
+    required this.isFriend,
+    required this.isPending,
+    required this.isSaved,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final Color c;
     final IconData ic;
     final String label;
+    final Color tone;
 
     if (isPending) {
-      c = const Color(0xFFF59E0B);
+      tone = Wallet.pending;
       ic = Icons.schedule_rounded;
       label = 'Pending';
     } else if (isFriend) {
-      c = const Color(0xFF10B981);
+      tone = Wallet.success;
       ic = Icons.check_rounded;
       label = 'Friend';
     } else if (isSaved) {
-      c = accent;
+      tone = Wallet.accentOf(isDark);
       ic = Icons.bookmark_rounded;
       label = 'Saved';
     } else {
-      c = accent;
+      tone = Wallet.accentOf(isDark);
       ic = Icons.person_rounded;
       label = 'Profile';
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        color: c.withOpacity(isDark ? .15 : .08),
-        border: Border.all(color: c.withOpacity(.3)),
+        borderRadius: BorderRadius.circular(Wallet.radiusTile),
+        border: Border.all(
+          color: tone.withOpacity(.35),
+          width: Wallet.hairline,
+        ),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(ic, size: 11, color: c),
-        const SizedBox(width: 4),
-        Text(label,
-            style: AppTheme.withFontStack(TextStyle(
-                color: c, fontSize: 11, fontWeight: FontWeight.w700))),
+        Icon(ic, size: 11, color: tone),
+        const SizedBox(width: 5),
+        Text(
+          label.toUpperCase(),
+          style: AppTypography.eyebrow(
+            color: tone,
+            fontSize: 9.5,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ]),
     );
   }
 }
 
-class _CardInfoRow extends StatelessWidget {
+/// One line of contact detail, with a tinted tile so the icons form a column
+/// the eye can run down.
+class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String text;
-  final Color accent;
   final bool isDark;
-  final bool last;
-  const _CardInfoRow(
-      {required this.icon,
-      required this.text,
-      required this.accent,
-      required this.isDark,
-      this.last = false});
+
+  const _InfoRow({
+    required this.icon,
+    required this.text,
+    required this.isDark,
+  });
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.only(bottom: last ? 0 : 7),
-        child: Row(children: [
+  Widget build(BuildContext context) => Row(
+        children: [
           Container(
-            width: 28,
-            height: 28,
+            width: 26,
+            height: 26,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              color: accent.withOpacity(isDark ? .12 : .07),
+              borderRadius: BorderRadius.circular(Wallet.radiusTile),
+              color: Wallet.tintOf(isDark),
             ),
-            child: Icon(icon, size: 14, color: accent.withOpacity(.8)),
+            child: Icon(icon, size: 13, color: Wallet.accentOf(isDark)),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               text,
-              style: AppTheme.withFontStack(TextStyle(
-                color: isDark
-                    ? Colors.white.withOpacity(.6)
-                    : const Color(0xFF475569),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.secondary(TextStyle(
+                color: Wallet.mutedOf(isDark),
                 fontSize: 12.5,
                 fontWeight: FontWeight.w500,
               )),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
-        ]),
+        ],
       );
 }

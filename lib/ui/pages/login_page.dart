@@ -9,6 +9,7 @@ import '../widgets/app_primary_button.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/loading_view.dart';
 import 'register_page.dart';
+import '../theme/wallet_tokens.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   final String? initialMessage;
@@ -86,11 +87,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         colorScheme: Theme.of(context).colorScheme.copyWith(
               brightness: Brightness.light,
               surface: Colors.white,
-              onSurface: const Color(0xFF0B1220),
+              onSurface: Wallet.ink,
             ),
         textTheme: Theme.of(context).textTheme.apply(
-              bodyColor: const Color(0xFF0B1220),
-              displayColor: const Color(0xFF0B1220),
+              bodyColor: Wallet.ink,
+              displayColor: Wallet.ink,
             ),
       ),
       child: Scaffold(
@@ -123,7 +124,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                   const TextStyle(
                                     fontSize: 28,
                                     fontWeight: FontWeight.w600,
-                                    color: Color(0xFF0B1220),
+                                    color: Wallet.ink,
                                   ),
                                 ),
                                 children: const [
@@ -284,7 +285,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       obscureText: obscure,
       style: AppTypography.secondary(
         const TextStyle(
-          color: Color(0xFF0B1220),
+          color: Wallet.ink,
           fontWeight: FontWeight.w400,
         ),
       ),

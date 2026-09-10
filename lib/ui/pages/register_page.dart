@@ -6,6 +6,7 @@ import '../theme/app_colors.dart';
 import '../widgets/app_primary_button.dart';
 import '../widgets/app_toast.dart';
 import 'otp_page.dart';
+import '../theme/wallet_tokens.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
@@ -60,7 +61,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         );
 
     const bg = AppColors.surfaceSoft;
-    const text = Color(0xFF0B1220);
+    const text = Wallet.ink;
     const muted = Color(0xFF5B6473);
     const border = Color(0xFFE7EAF3);
 

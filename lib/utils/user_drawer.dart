@@ -5,11 +5,11 @@ import '../providers/auth/auth_provider.dart';
 import '../providers/card/card_provider.dart';
 import '../network/image_url.dart';
 import '../ui/theme/app_colors.dart';
-import '../ui/theme/theme_provider.dart';
 import '../data/vos/business_card_model.dart';
 import '../data/vos/user_model.dart';
 import '../ui/pages/card_detail_page.dart';
 import '../ui/pages/company_select_page.dart';
+import '../ui/theme/wallet_tokens.dart';
 
 class UserDrawer extends ConsumerWidget {
   const UserDrawer({super.key});
@@ -17,8 +17,6 @@ class UserDrawer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final themeMode = ref.watch(themeProvider).valueOrNull ?? ThemeMode.system;
-    final isThemeDark = themeMode == ThemeMode.dark;
     final authState = ref.watch(authProvider).valueOrNull ?? AuthState();
     final currentUser = authState.currentUser;
     final cardState = ref.watch(cardProvider).valueOrNull ?? CardState();
@@ -106,42 +104,6 @@ class UserDrawer extends ConsumerWidget {
                     },
                     isDark: isDark,
                   ),
-                  const SizedBox(height: 6),
-                  // Theme toggle — styled nicely
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.darkCard.withOpacity(0.65) : AppColors.surfaceSoft,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: SwitchListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                      secondary: Icon(
-                        Icons.palette_outlined,
-                        color: AppColors.primary,
-                      ),
-                      title: Text(
-                        'Theme',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? const Color(0xFFEAF1FF) : const Color(0xFF1F2937),
-                        ),
-                      ),
-                      subtitle: Text(
-                        isThemeDark ? 'Dark mode' : 'Light mode',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: isDark ? const Color(0xFF98A7C2) : Colors.black54,
-                        ),
-                      ),
-                      value: isThemeDark,
-                      activeColor: AppColors.primary,
-                      onChanged: (_) {
-                        ref.read(themeProvider.notifier).toggle();
-                      },
-                    ),
-                  ),
                   const SizedBox(height: 16),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -228,7 +190,7 @@ class UserDrawer extends ConsumerWidget {
                     style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
-                      color: isDark ? const Color(0xFFF8FBFF) : const Color(0xFF1F2937),
+                      color: isDark ? const Color(0xFFF8FBFF) : Wallet.ink,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -270,7 +232,7 @@ class UserDrawer extends ConsumerWidget {
     final iconColor = destructive ? Colors.redAccent : AppColors.primary;
     final textColor = destructive
         ? Colors.redAccent
-        : (isDark ? const Color(0xFFEAF1FF) : const Color(0xFF1F2937));
+        : (isDark ? Wallet.darkInk : Wallet.ink);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),

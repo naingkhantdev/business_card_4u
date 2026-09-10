@@ -5,7 +5,7 @@ import '../theme/app_colors.dart';
 import '../../data/vos/business_card_model.dart';
 import '../widgets/card_item.dart';
 import '../widgets/loading_view.dart';
-import '../widgets/theme_toggle_button.dart';
+import '../theme/wallet_tokens.dart';
 
 class SearchPage extends ConsumerStatefulWidget {
   const SearchPage({super.key});
@@ -102,21 +102,18 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
     return Scaffold(
       backgroundColor:
-          isDark ? const Color(0xFF060B16) : const Color(0xFFF8FAFD),
+          isDark ? Wallet.darkGround : const Color(0xFFF8FAFD),
       appBar: AppBar(
         title: Text(
           'Search Users',
           style: TextStyle(
             fontWeight: FontWeight.w600,
-            color: isDark ? Colors.white : const Color(0xFF0B1220),
+            color: isDark ? Colors.white : Wallet.ink,
           ),
         ),
-        backgroundColor: isDark ? const Color(0xFF060B16) : Colors.white,
+        backgroundColor: isDark ? Wallet.darkGround : Colors.white,
         elevation: 0,
-        surfaceTintColor: isDark ? const Color(0xFF060B16) : Colors.white,
-        actions: [
-          ThemeToggleButton(color: isDark ? Colors.white : Colors.black87),
-        ],
+        surfaceTintColor: isDark ? Wallet.darkGround : Colors.white,
       ),
       body: Column(
         children: [
@@ -136,7 +133,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                       ),
                       filled: true,
                       fillColor:
-                          isDark ? const Color(0xFF0D1426) : Colors.white,
+                          isDark ? Wallet.darkSurface : Colors.white,
                     ),
                   ),
                 ),
@@ -164,14 +161,14 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     style: IconButton.styleFrom(
                       backgroundColor: _hasActiveFilters
                           ? AppColors.primary.withOpacity(0.12)
-                          : (isDark ? const Color(0xFF0D1426) : Colors.white),
+                          : (isDark ? Wallet.darkSurface : Colors.white),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                         side: BorderSide(
                           color: _hasActiveFilters
                               ? AppColors.primary
                               : (isDark
-                                  ? const Color(0xFF1F2A44)
+                                  ? Wallet.darkLine
                                   : Colors.grey[300]!),
                         ),
                       ),
@@ -342,7 +339,7 @@ class _AddressFilterSheetState extends State<_AddressFilterSheet> {
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : const Color(0xFF0B1220),
+              color: isDark ? Colors.white : Wallet.ink,
             ),
           ),
           const SizedBox(height: 16),

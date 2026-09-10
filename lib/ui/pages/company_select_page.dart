@@ -7,9 +7,9 @@ import '../theme/app_colors.dart';
 import '../../data/vos/company_model.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/loading_view.dart';
-import '../widgets/theme_toggle_button.dart';
 import 'company_detail_page.dart'; // Uncommented
 import 'company_form_page.dart';
+import '../theme/wallet_tokens.dart';
 
 class CompanySelectPage extends ConsumerStatefulWidget {
   final bool isSelectionMode;
@@ -28,10 +28,8 @@ class _CompanySelectPageState extends ConsumerState<CompanySelectPage> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      if (!mounted) return;
-      ref.read(companyProvider.notifier).fetchCompanies();
-    });
+    // No fetch here: watching companyProvider runs its `build`, which loads the
+    // list. A parallel fetch races that future and loses to its return value.
   }
 
   Future<void> _addCompany() async {
@@ -75,19 +73,19 @@ class _CompanySelectPageState extends ConsumerState<CompanySelectPage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: isDark ? const Color(0xFF0D1426) : Colors.white,
-        surfaceTintColor: isDark ? const Color(0xFF0D1426) : Colors.white,
+        backgroundColor: isDark ? Wallet.darkSurface : Colors.white,
+        surfaceTintColor: isDark ? Wallet.darkSurface : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           'Delete Company',
           style: TextStyle(
-            color: isDark ? const Color(0xFFEAF1FF) : const Color(0xFF0B1220),
+            color: isDark ? Wallet.darkInk : Wallet.ink,
           ),
         ),
         content: Text(
           'Are you sure you want to delete ${company.name}?',
           style: TextStyle(
-            color: isDark ? const Color(0xFF98A7C2) : Colors.black87,
+            color: isDark ? Wallet.darkMuted : Colors.black87,
           ),
         ),
         actions: [
@@ -96,7 +94,7 @@ class _CompanySelectPageState extends ConsumerState<CompanySelectPage> {
             child: Text(
               'Cancel',
               style: TextStyle(
-                color: isDark ? const Color(0xFF98A7C2) : Colors.grey,
+                color: isDark ? Wallet.darkMuted : Colors.grey,
               ),
             ),
           ),
@@ -144,15 +142,15 @@ class _CompanySelectPageState extends ConsumerState<CompanySelectPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF060B16) : AppColors.surface,
+      backgroundColor: isDark ? Wallet.darkGround : AppColors.surface,
       appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF060B16) : Colors.white,
+        backgroundColor: isDark ? Wallet.darkGround : Colors.white,
         elevation: 0,
         centerTitle: true,
         title: Text(
           'Manage Companies',
           style: TextStyle(
-            color: isDark ? Colors.white : const Color(0xFF1F2937),
+            color: isDark ? Colors.white : Wallet.ink,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -162,7 +160,6 @@ class _CompanySelectPageState extends ConsumerState<CompanySelectPage> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          ThemeToggleButton(color: isDark ? Colors.white : Colors.black87),
           IconButton(
             icon: const Icon(Icons.add_circle_outline,
                 color: AppColors.primary, size: 28),
@@ -214,13 +211,13 @@ class _CompanySelectPageState extends ConsumerState<CompanySelectPage> {
             style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: isDark ? const Color(0xFFEAF1FF) : Colors.black54),
+                color: isDark ? Wallet.darkInk : Colors.black54),
           ),
           const SizedBox(height: 8),
           Text(
             "Add your first company to get started",
             style: TextStyle(
-              color: isDark ? const Color(0xFF98A7C2) : Colors.black38,
+              color: isDark ? Wallet.darkMuted : Colors.black38,
             ),
           ),
         ],
@@ -237,11 +234,11 @@ class _CompanySelectPageState extends ConsumerState<CompanySelectPage> {
 
     final cardWidget = Container(
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF0D1426) : Colors.white,
+            color: isDark ? Wallet.darkSurface : Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: isDark
-                  ? const Color(0xFF1F2A44)
+                  ? Wallet.darkLine
                   : Colors.black.withOpacity(0.05),
             ),
             boxShadow: [
@@ -279,14 +276,14 @@ class _CompanySelectPageState extends ConsumerState<CompanySelectPage> {
                       height: 50,
                       decoration: BoxDecoration(
                         color: isDark
-                            ? const Color(0xFF18243E)
+                            ? Wallet.darkLine
                             : const Color(0xFFEFF6FF),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         Icons.business,
                         color: isDark
-                            ? const Color(0xFF8FB6FF)
+                            ? Wallet.accentDark
                             : AppColors.primary,
                         size: 28,
                       ),
@@ -302,8 +299,8 @@ class _CompanySelectPageState extends ConsumerState<CompanySelectPage> {
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: isDark
-                                  ? const Color(0xFFEAF1FF)
-                                  : const Color(0xFF1F2937),
+                                  ? Wallet.darkInk
+                                  : Wallet.ink,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -312,7 +309,7 @@ class _CompanySelectPageState extends ConsumerState<CompanySelectPage> {
                             style: TextStyle(
                               fontSize: 13,
                               color: isDark
-                                  ? const Color(0xFF98A7C2)
+                                  ? Wallet.darkMuted
                                   : Colors.black54,
                             ),
                           ),
@@ -321,13 +318,13 @@ class _CompanySelectPageState extends ConsumerState<CompanySelectPage> {
                     ),
                     if (isCreator)
                       PopupMenuButton<String>(
-                        color: isDark ? const Color(0xFF121A2C) : Colors.white,
+                        color: isDark ? Wallet.darkSurface : Colors.white,
                         surfaceTintColor:
-                            isDark ? const Color(0xFF121A2C) : Colors.white,
+                            isDark ? Wallet.darkSurface : Colors.white,
                         icon: Icon(
                           Icons.more_vert,
                           color: isDark
-                              ? const Color(0xFF98A7C2)
+                              ? Wallet.darkMuted
                               : Colors.grey,
                         ),
                         onSelected: (value) {
@@ -348,8 +345,8 @@ class _CompanySelectPageState extends ConsumerState<CompanySelectPage> {
                                   'Edit',
                                   style: TextStyle(
                                     color: isDark
-                                        ? const Color(0xFFEAF1FF)
-                                        : const Color(0xFF0B1220),
+                                        ? Wallet.darkInk
+                                        : Wallet.ink,
                                   ),
                                 ),
                               ],
@@ -365,8 +362,8 @@ class _CompanySelectPageState extends ConsumerState<CompanySelectPage> {
                                   'Delete',
                                   style: TextStyle(
                                     color: isDark
-                                        ? const Color(0xFFEAF1FF)
-                                        : const Color(0xFF0B1220),
+                                        ? Wallet.darkInk
+                                        : Wallet.ink,
                                   ),
                                 ),
                               ],

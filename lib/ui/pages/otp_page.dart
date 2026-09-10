@@ -11,6 +11,7 @@ import '../widgets/app_primary_button.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/loading_view.dart';
 import 'complete_register_page.dart';
+import '../theme/wallet_tokens.dart';
 
 class OtpPage extends ConsumerStatefulWidget {
   final String email;
@@ -177,7 +178,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                         fontSize: 30,
                         height: 1.1,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF0B1220),
+                        color: Wallet.ink,
                       ),
                     ),
 
@@ -198,7 +199,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                       style: const TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
-                        color: Color(0xFF0B1220),
+                        color: Wallet.ink,
                       ),
                     ),
 
@@ -208,20 +209,10 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 4),
 
-                          const Text(
-                            "Enter OTP",
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF0B1220),
-                            ),
-                          ),
-
-                          const SizedBox(height: 14),
-
-                          // 6-digit PIN style input
+                          // No "Enter OTP" label: the heading above already
+                          // says it, and six empty boxes need no caption.
                           _OtpPinField(
                             controller: _otpController,
                             focusNode: _otpFocus,
@@ -313,7 +304,7 @@ class _PremiumBackground extends StatelessWidget {
     return Stack(
       children: [
         // Base
-        Container(color: const Color(0xFFE9EDF4)),
+        Container(color: Wallet.ground),
 
         // Gradient blobs
         Positioned(
@@ -419,7 +410,7 @@ class _CircleIconButton extends StatelessWidget {
             ),
           ],
         ),
-        child: Icon(icon, color: const Color(0xFF0B1220)),
+        child: Icon(icon, color: Wallet.ink),
       ),
     );
   }
@@ -607,7 +598,7 @@ class _OtpPinFieldState extends State<_OtpPinField> {
                     fontWeight: FontWeight.w500,
                     color: char.isEmpty
                         ? Colors.black.withOpacity(.18)
-                        : const Color(0xFF0B1220),
+                        : Wallet.ink,
                   ),
                 ),
               );

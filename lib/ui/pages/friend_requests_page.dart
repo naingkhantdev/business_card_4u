@@ -6,7 +6,7 @@ import '../../network/image_url.dart';
 import '../../data/vos/business_card_model.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/loading_view.dart';
-import '../widgets/theme_toggle_button.dart';
+import '../theme/wallet_tokens.dart';
 
 class FriendRequestsPage extends ConsumerStatefulWidget {
   const FriendRequestsPage({super.key});
@@ -93,21 +93,18 @@ class _FriendRequestsPageState extends ConsumerState<FriendRequestsPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF060B16) : const Color(0xFFF8FAFD),
+      backgroundColor: isDark ? Wallet.darkGround : const Color(0xFFF8FAFD),
       appBar: AppBar(
         title: Text(
           'Friend Requests',
           style: TextStyle(
             fontWeight: FontWeight.w800,
-            color: isDark ? Colors.white : const Color(0xFF0B1220),
+            color: isDark ? Colors.white : Wallet.ink,
           ),
         ),
-        backgroundColor: isDark ? const Color(0xFF060B16) : Colors.white,
+        backgroundColor: isDark ? Wallet.darkGround : Colors.white,
         elevation: 0,
-        surfaceTintColor: isDark ? const Color(0xFF060B16) : Colors.white,
-        actions: [
-          ThemeToggleButton(color: isDark ? Colors.white : Colors.black87),
-        ],
+        surfaceTintColor: isDark ? Wallet.darkGround : Colors.white,
       ),
       body: _isLoading
           ? const Center(child: LoadingView(size: 90))
@@ -118,7 +115,7 @@ class _FriendRequestsPageState extends ConsumerState<FriendRequestsPage> {
                     style: TextStyle(
                       fontSize: 15,
                       color: isDark
-                          ? const Color(0xFF98A7C2)
+                          ? Wallet.darkMuted
                           : Colors.black.withOpacity(.55),
                       fontWeight: FontWeight.w600,
                     ),
@@ -200,7 +197,7 @@ class _FriendRequestCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0D1426) : Colors.white,
+        color: isDark ? Wallet.darkSurface : Colors.white,
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
@@ -211,7 +208,7 @@ class _FriendRequestCard extends StatelessWidget {
         ],
         border: Border.all(
           color: isDark
-              ? const Color(0xFF1F2A44)
+              ? Wallet.darkLine
               : Colors.black.withOpacity(.06),
         ),
       ),
@@ -222,14 +219,14 @@ class _FriendRequestCard extends StatelessWidget {
               CircleAvatar(
                 radius: 24,
                 backgroundColor:
-                    isDark ? const Color(0xFF18243E) : const Color(0xFFE9EDF4),
+                    isDark ? Wallet.darkLine : Wallet.ground,
                 backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
                 child: avatarUrl == null
                     ? Text(
                         card.fullName.isNotEmpty ? card.fullName[0].toUpperCase() : '',
                         style: TextStyle(
                           fontWeight: FontWeight.w900,
-                          color: isDark ? Colors.white : const Color(0xFF0B1220),
+                          color: isDark ? Colors.white : Wallet.ink,
                         ),
                       )
                     : null,
@@ -244,7 +241,7 @@ class _FriendRequestCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
-                        color: isDark ? const Color(0xFFEAF1FF) : const Color(0xFF0B1220),
+                        color: isDark ? Wallet.darkInk : Wallet.ink,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -252,7 +249,7 @@ class _FriendRequestCard extends StatelessWidget {
                       card.position.isEmpty ? 'Requested to add you' : card.position,
                       style: TextStyle(
                         color: isDark
-                            ? const Color(0xFF98A7C2)
+                            ? Wallet.darkMuted
                             : Colors.black.withOpacity(.55),
                         fontWeight: FontWeight.w600,
                       ),
@@ -304,7 +301,7 @@ class _FriendRequestCard extends StatelessWidget {
                     onPressed: isBusy ? null : onReject,
                     style: OutlinedButton.styleFrom(
                       foregroundColor:
-                          isDark ? Colors.white : const Color(0xFF0B1220),
+                          isDark ? Colors.white : Wallet.ink,
                       side: BorderSide(
                         color: isDark
                             ? const Color(0xFF2A3652)

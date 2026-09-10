@@ -145,6 +145,8 @@ class BcaDataAgentImpl implements BcaDataAgent {
   Future<BusinessCardModel?> createCard(
     Map<String, dynamic> data, {
     XFile? imageFile,
+    XFile? frontImageFile,
+    XFile? backImageFile,
   }) async {
     final formDataMap = Map<String, dynamic>.from(data);
 
@@ -152,13 +154,10 @@ class BcaDataAgentImpl implements BcaDataAgent {
     // See comment in bca_api.dart.
     _prepareListFieldsForMultipart(formDataMap);
 
-    // Add image file if present
-    if (imageFile != null) {
-      formDataMap['profile_image'] = MultipartFile.fromBytes(
-        await imageFile.readAsBytes(),
-        filename: imageFile.name,
-      );
-    }
+    // Add image files if present
+    await _attachImage(formDataMap, 'profile_image', imageFile);
+    await _attachImage(formDataMap, 'front_image', frontImageFile);
+    await _attachImage(formDataMap, 'back_image', backImageFile);
 
     final response = await _guard(() => _bcaApi.createCard(formDataMap));
     return response?.data;
@@ -169,6 +168,8 @@ class BcaDataAgentImpl implements BcaDataAgent {
     int id,
     Map<String, dynamic> data, {
     XFile? imageFile,
+    XFile? frontImageFile,
+    XFile? backImageFile,
   }) async {
     final formDataMap = Map<String, dynamic>.from(data);
 
@@ -178,16 +179,29 @@ class BcaDataAgentImpl implements BcaDataAgent {
     // Required for Laravel to route POST as PUT for multipart (see bca_api.dart comments)
     formDataMap['_method'] = 'PUT';
 
-    // Add image file if present
-    if (imageFile != null) {
-      formDataMap['profile_image'] = MultipartFile.fromBytes(
-        await imageFile.readAsBytes(),
-        filename: imageFile.name,
-      );
-    }
+    // Add image files if present
+    await _attachImage(formDataMap, 'profile_image', imageFile);
+    await _attachImage(formDataMap, 'front_image', frontImageFile);
+    await _attachImage(formDataMap, 'back_image', backImageFile);
 
     final response = await _guard(() => _bcaApi.updateCard(id, formDataMap));
     return response?.data;
+  }
+
+  /// Puts [file] on the multipart map under [key], replacing whatever string
+  /// value the request VO serialized there. Leaving the string in place would
+  /// send a path where the API expects a file; a null [file] leaves the map
+  /// untouched so the existing image is kept server-side.
+  Future<void> _attachImage(
+    Map<String, dynamic> formDataMap,
+    String key,
+    XFile? file,
+  ) async {
+    if (file == null) return;
+    formDataMap[key] = MultipartFile.fromBytes(
+      await file.readAsBytes(),
+      filename: file.name,
+    );
   }
 
   @override

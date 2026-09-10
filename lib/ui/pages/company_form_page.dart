@@ -7,7 +7,7 @@ import '../../data/vos/company_model.dart';
 import '../widgets/app_primary_button.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/loading_view.dart';
-import '../widgets/theme_toggle_button.dart';
+import '../theme/wallet_tokens.dart';
 
 class CompanyFormPage extends ConsumerStatefulWidget {
   final CompanyModel? company;
@@ -122,16 +122,16 @@ class _CompanyFormPageState extends ConsumerState<CompanyFormPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: const Color(0xFF2563EB), size: 22),
+      prefixIcon: Icon(icon, color: Wallet.accentLight, size: 22),
       labelStyle: TextStyle(
-        color: isDark ? const Color(0xFF98A7C2) : Colors.black54,
+        color: isDark ? Wallet.darkMuted : Colors.black54,
         fontSize: 14,
       ),
       floatingLabelStyle: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(
-          color: isDark ? const Color(0xFF1F2A44) : Colors.grey.withOpacity(0.2),
+          color: isDark ? Wallet.darkLine : Colors.grey.withOpacity(0.2),
         ),
       ),
       focusedBorder: OutlineInputBorder(
@@ -147,7 +147,7 @@ class _CompanyFormPageState extends ConsumerState<CompanyFormPage> {
         borderSide: const BorderSide(color: Colors.redAccent, width: 1.5),
       ),
       filled: true,
-      fillColor: isDark ? const Color(0xFF0D1426) : Colors.white,
+      fillColor: isDark ? Wallet.darkSurface : Colors.white,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
     );
   }
@@ -158,15 +158,15 @@ class _CompanyFormPageState extends ConsumerState<CompanyFormPage> {
     final isEdit = widget.company != null;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF060B16) : AppColors.surface,
+      backgroundColor: isDark ? Wallet.darkGround : AppColors.surface,
       appBar: AppBar(
-        backgroundColor: isDark ? const Color(0xFF060B16) : Colors.white,
+        backgroundColor: isDark ? Wallet.darkGround : Colors.white,
         elevation: 0,
         centerTitle: true,
         title: Text(
           isEdit ? 'Edit Company' : 'New Company',
           style: TextStyle(
-            color: isDark ? Colors.white : const Color(0xFF1F2937),
+            color: isDark ? Colors.white : Wallet.ink,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -174,9 +174,6 @@ class _CompanyFormPageState extends ConsumerState<CompanyFormPage> {
           icon: Icon(Icons.close, color: isDark ? Colors.white : Colors.black87),
           onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          ThemeToggleButton(color: isDark ? Colors.white : Colors.black87),
-        ],
       ),
       body: Stack(
         children: [
@@ -192,14 +189,14 @@ class _CompanyFormPageState extends ConsumerState<CompanyFormPage> {
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? const Color(0xFFEAF1FF) : const Color(0xFF1F2937),
+                      color: isDark ? Wallet.darkInk : Wallet.ink,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     "Fill in the details below to create a premium business profile.",
                     style: TextStyle(
-                      color: isDark ? const Color(0xFF98A7C2) : Colors.black54,
+                      color: isDark ? Wallet.darkMuted : Colors.black54,
                       fontSize: 13,
                     ),
                   ),
@@ -241,7 +238,7 @@ class _CompanyFormPageState extends ConsumerState<CompanyFormPage> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: isDark ? const Color(0xFFEAF1FF) : const Color(0xFF1F2937),
+                      color: isDark ? Wallet.darkInk : Wallet.ink,
                     ),
                   ),
                   const SizedBox(height: 16),

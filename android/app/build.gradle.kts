@@ -15,10 +15,14 @@ android {
 
     defaultConfig {
         applicationId = "com.example.business_card_app"
-        minSdk = flutter.minSdkVersion // Updated to 23 as required by mobile_scanner
+        // 23 for mobile_scanner; google_mlkit_text_recognition needs at least 21,
+        // so pin it rather than inheriting whatever flutter.minSdkVersion becomes.
+        minSdk = maxOf(flutter.minSdkVersion, 23)
         targetSdk = flutter.targetSdkVersion
-       versionCode = flutter.versionCode
-versionName = flutter.versionName
+        // On this Flutter version these two are methods on FlutterExtension,
+        // not fields like minSdkVersion/targetSdkVersion above.
+        versionCode = flutter.versionCode()
+        versionName = flutter.versionName()
     }
 
     buildTypes {

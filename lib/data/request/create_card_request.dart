@@ -16,6 +16,10 @@ class CreateCardRequest {
   final String? bio;
   @JsonKey(name: 'profile_image')
   final String? profileImage;
+  @JsonKey(name: 'front_image')
+  final String? frontImage;
+  @JsonKey(name: 'back_image')
+  final String? backImage;
   @JsonKey(name: 'card_type')
   final String? cardType;
 
@@ -28,6 +32,8 @@ class CreateCardRequest {
     this.addresses,
     this.bio,
     this.profileImage,
+    this.frontImage,
+    this.backImage,
     this.cardType,
   });
 

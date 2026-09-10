@@ -50,27 +50,48 @@ class CardNotifier extends AsyncNotifier<CardState> {
   @override
   Future<CardState> build() async {
     _dataAgent = ref.read(bcaDataAgentProvider);
-    return fetchCards();
+
+    // Both lists are loaded here rather than by the pages. Riverpod assigns
+    // this future's value to `state` wholesale when it resolves, so anything a
+    // page fetched in parallel during the first build would be overwritten.
+    // Keep `build` pure: it must not call the methods that write `state`.
+    final results = await Future.wait([
+      _loadCards(),
+      _loadFriendRequests(),
+    ]);
+
+    return CardState(
+      cards: results[0],
+      friendRequests: results[1],
+    );
+  }
+
+  Future<List<BusinessCardModel>> _loadCards() async {
+    try {
+      final res = await _dataAgent.getCards();
+      return res?.cards ?? [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<BusinessCardModel>> _loadFriendRequests() async {
+    try {
+      return (await _dataAgent.getFriendRequests()) ?? [];
+    } catch (e) {
+      return [];
+    }
   }
 
   Future<CardState> fetchCards() async {
     state = const AsyncLoading();
-    try {
-      final res = await _dataAgent.getCards();
-      final newState = CardState(
-        cards: res?.cards ?? [],
-        friendRequests: state.value?.friendRequests ?? [],
-      );
-      state = AsyncData(newState);
-      return newState;
-    } catch (e) {
-      final newState = CardState(
-        cards: state.value?.cards ?? [],
-        friendRequests: state.value?.friendRequests ?? [],
-      );
-      state = AsyncData(newState);
-      return newState;
-    }
+    final cards = await _loadCards();
+    final newState = CardState(
+      cards: cards,
+      friendRequests: state.value?.friendRequests ?? [],
+    );
+    state = AsyncData(newState);
+    return newState;
   }
 
   Future<AppResult> createCard({
@@ -82,7 +103,11 @@ class CardNotifier extends AsyncNotifier<CardState> {
     List<AddressModel>? addresses,
     String? bio,
     String? profileImage,
+    String? frontImage,
+    String? backImage,
     XFile? imageFile,
+    XFile? frontImageFile,
+    XFile? backImageFile,
     String? cardType,
   }) async {
     state = AsyncData(
@@ -97,11 +122,17 @@ class CardNotifier extends AsyncNotifier<CardState> {
         addresses: addresses,
         bio: bio,
         profileImage: profileImage,
+        frontImage: frontImage,
+        backImage: backImage,
         cardType: cardType,
       );
 
-      final createdCard =
-          await _dataAgent.createCard(request.toJson(), imageFile: imageFile);
+      final createdCard = await _dataAgent.createCard(
+        request.toJson(),
+        imageFile: imageFile,
+        frontImageFile: frontImageFile,
+        backImageFile: backImageFile,
+      );
 
       if (createdCard != null) {
         final updatedCards = [createdCard, ...?state.value?.cards];
@@ -134,7 +165,11 @@ class CardNotifier extends AsyncNotifier<CardState> {
     List<AddressModel>? addresses,
     String? bio,
     String? profileImage,
+    String? frontImage,
+    String? backImage,
     XFile? imageFile,
+    XFile? frontImageFile,
+    XFile? backImageFile,
     String? cardType,
   }) async {
     state = AsyncData(
@@ -149,14 +184,21 @@ class CardNotifier extends AsyncNotifier<CardState> {
         addresses: addresses,
         bio: bio,
         profileImage: profileImage,
+        frontImage: frontImage,
+        backImage: backImage,
         // Must be echoed back on update. A null here is serialized as an empty
         // string by Dio's multipart encoder, which the API then writes over the
         // stored card_type — see the guard in BusinessCardController::update.
         cardType: cardType,
       );
 
-      final updatedCard = await _dataAgent.updateCard(id, request.toJson(),
-          imageFile: imageFile);
+      final updatedCard = await _dataAgent.updateCard(
+        id,
+        request.toJson(),
+        imageFile: imageFile,
+        frontImageFile: frontImageFile,
+        backImageFile: backImageFile,
+      );
 
       if (updatedCard != null) {
         final updatedCards = state.value?.cards.map((card) {
@@ -243,14 +285,9 @@ class CardNotifier extends AsyncNotifier<CardState> {
   }
 
   Future<void> fetchFriendRequests() async {
-    try {
-      final requests = await _dataAgent.getFriendRequests();
-      state = AsyncData(state.value?.copyWith(friendRequests: requests ?? []) ??
-          CardState(friendRequests: []));
-    } catch (e) {
-      state =
-          AsyncData(state.value?.copyWith(friendRequests: []) ?? CardState());
-    }
+    final requests = await _loadFriendRequests();
+    state = AsyncData(state.value?.copyWith(friendRequests: requests) ??
+        CardState(friendRequests: requests));
   }
 
   Future<AppResult> acceptFriendRequest(int cardId) async {

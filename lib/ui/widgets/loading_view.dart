@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/glass.dart';
+
 class LoadingView extends StatefulWidget {
   const LoadingView({
     super.key,
@@ -8,6 +10,10 @@ class LoadingView extends StatefulWidget {
   });
 
   final double size;
+
+  /// Covers the page behind a frosted scrim. The plain black wash it used to
+  /// paint flattened everything underneath; blurring instead keeps the layout
+  /// legible as context while making it plainly out of reach.
   final bool showBackground;
 
   @override
@@ -58,10 +64,6 @@ class _LoadingViewState extends State<LoadingView>
       return loader;
     }
 
-    return Container(
-      color: Colors.black.withOpacity(0.15),
-      alignment: Alignment.center,
-      child: loader,
-    );
+    return GlassScrim(child: loader);
   }
 }

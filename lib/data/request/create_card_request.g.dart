@@ -20,6 +20,8 @@ CreateCardRequest _$CreateCardRequestFromJson(Map<String, dynamic> json) =>
           .toList(),
       bio: json['bio'] as String?,
       profileImage: json['profile_image'] as String?,
+      frontImage: json['front_image'] as String?,
+      backImage: json['back_image'] as String?,
       cardType: json['card_type'] as String?,
     );
 
@@ -33,5 +35,7 @@ Map<String, dynamic> _$CreateCardRequestToJson(CreateCardRequest instance) =>
       'addresses': instance.addresses?.map((e) => e.toJson()).toList(),
       'bio': instance.bio,
       'profile_image': instance.profileImage,
+      'front_image': instance.frontImage,
+      'back_image': instance.backImage,
       'card_type': instance.cardType,
     };

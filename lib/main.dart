@@ -9,7 +9,6 @@ import 'fcm/push_notification_service.dart';
 import 'firebase_options.dart';
 import 'network/consts.dart';
 import 'ui/theme/app_theme.dart';
-import 'ui/theme/theme_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,22 +57,18 @@ Future<void> _initializeFirebase() async {
   }
 }
 
-class MyApp extends ConsumerWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeProvider).when(
-          data: (mode) => mode,
-          loading: () => ThemeMode.system,
-          error: (_, __) => ThemeMode.system,
-        );
-
+  Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      themeMode: themeMode,
+      // The OS is the only control. There is no in-app override, so the app
+      // follows the phone appearance setting and switches with it live.
+      themeMode: ThemeMode.system,
       home: const AuthGate(),
       builder: (context, child) {
         // Force font stack on all raw TextStyle across the app
