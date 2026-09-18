@@ -10,12 +10,22 @@ class CompanyState {
   final bool isLoading;
   final bool isSaving;
   final String? errorMessage;
+  // Pagination: which page the list currently ends on, whether the server
+  // has more beyond it, and whether a "load more" fetch is in flight (kept
+  // separate from `isLoading` so it doesn't blank the whole list with a
+  // full-page spinner while the user is scrolling).
+  final int currentPage;
+  final bool hasMore;
+  final bool isLoadingMore;
 
   CompanyState({
     this.companies = const [],
     this.isLoading = false,
     this.isSaving = false,
     this.errorMessage,
+    this.currentPage = 1,
+    this.hasMore = false,
+    this.isLoadingMore = false,
   });
 
   CompanyState copyWith({
@@ -23,15 +33,23 @@ class CompanyState {
     bool? isLoading,
     bool? isSaving,
     String? errorMessage,
+    int? currentPage,
+    bool? hasMore,
+    bool? isLoadingMore,
   }) {
     return CompanyState(
       companies: companies ?? this.companies,
       isLoading: isLoading ?? this.isLoading,
       isSaving: isSaving ?? this.isSaving,
       errorMessage: errorMessage ?? this.errorMessage,
+      currentPage: currentPage ?? this.currentPage,
+      hasMore: hasMore ?? this.hasMore,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     );
   }
 }
+
+const _kCompanyPageSize = 20;
 
 final companyProvider =
     AsyncNotifierProvider<CompanyNotifier, CompanyState>(CompanyNotifier.new);
@@ -51,8 +69,13 @@ class CompanyNotifier extends AsyncNotifier<CompanyState> {
 
   Future<CompanyState> _loadCompanies() async {
     try {
-      final companies = await _dataAgent.getCompanies();
-      return CompanyState(companies: companies ?? []);
+      final page = await _dataAgent.getCompanies(
+          page: 1, perPage: _kCompanyPageSize);
+      return CompanyState(
+        companies: page.companies,
+        currentPage: 1,
+        hasMore: page.hasMore,
+      );
     } catch (e) {
       return CompanyState(
         companies: [],
@@ -66,6 +89,34 @@ class CompanyNotifier extends AsyncNotifier<CompanyState> {
     final newState = await _loadCompanies();
     state = AsyncData(newState);
     return newState;
+  }
+
+  /// Fetches the next page and appends it to the current list. Called as the
+  /// user nears the bottom of the Manage Companies list; a no-op while
+  /// already loading or once the server reports no more pages.
+  Future<void> loadMoreCompanies() async {
+    final current = state.value;
+    if (current == null || current.isLoadingMore || !current.hasMore) return;
+
+    state = AsyncData(current.copyWith(isLoadingMore: true));
+    final nextPage = current.currentPage + 1;
+    try {
+      final page = await _dataAgent.getCompanies(
+          page: nextPage, perPage: _kCompanyPageSize);
+      final latest = state.value ?? current;
+      state = AsyncData(latest.copyWith(
+        companies: [...latest.companies, ...page.companies],
+        currentPage: nextPage,
+        hasMore: page.hasMore,
+        isLoadingMore: false,
+      ));
+    } catch (e) {
+      final latest = state.value ?? current;
+      state = AsyncData(latest.copyWith(
+        isLoadingMore: false,
+        errorMessage: friendlyErrorMessage(e),
+      ));
+    }
   }
 
   Future<AppResult> createCompany(Map<String, dynamic> data) async {
@@ -158,6 +209,24 @@ class CompanyNotifier extends AsyncNotifier<CompanyState> {
   /// caller to fall back on the manual picker.
   Future<({CompanyModel company, bool created})?> resolveByName(
       String name) async {
+    final match = await findByName(name);
+    if (match != null) return (company: match, created: false);
+
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return null;
+
+    final created = await createMinimal(trimmed);
+    if (created == null) return null;
+    return (company: created, created: true);
+  }
+
+  /// Looks for a company already on file whose name matches, without
+  /// creating one when it isn't found. Pages through the whole list — not
+  /// just what's currently loaded for the Manage Companies screen — so a
+  /// match further down never gets missed.
+  ///
+  /// Returns null for a blank name or when nothing matches.
+  Future<CompanyModel?> findByName(String name) async {
     final trimmed = name.trim();
     if (trimmed.isEmpty) return null;
 
@@ -170,9 +239,31 @@ class CompanyNotifier extends AsyncNotifier<CompanyState> {
     final key = _nameKey(trimmed);
     for (final company in companies) {
       if (_nameKey(company.name) == key) {
-        return (company: company, created: false);
+        return company;
       }
     }
+
+    // The loaded companies are now just the first page or two, not
+    // necessarily the whole list — check the rest of the pages before
+    // concluding there is no match, or a caller would create a duplicate of
+    // one that's simply further down the list.
+    if (state.value?.hasMore ?? false) {
+      final rest = await _fetchRemainingCompanies();
+      for (final company in rest) {
+        if (_nameKey(company.name) == key) {
+          return company;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /// Creates a company carrying only a name — everything else on the profile
+  /// can be filled in later from the Companies tab. Returns null on failure.
+  Future<CompanyModel?> createMinimal(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return null;
 
     state = AsyncData(
         state.value?.copyWith(isSaving: true) ?? CompanyState(isSaving: true));
@@ -189,7 +280,7 @@ class CompanyNotifier extends AsyncNotifier<CompanyState> {
         isSaving: false,
         errorMessage: null,
       ));
-      return (company: created, created: true);
+      return created;
     } catch (e) {
       state = AsyncData(state.value?.copyWith(
             isSaving: false,
@@ -198,6 +289,21 @@ class CompanyNotifier extends AsyncNotifier<CompanyState> {
           CompanyState());
       return null;
     }
+  }
+
+  /// Pages through everything past what's already loaded, without touching
+  /// `state` — used only for the duplicate check in [resolveByName], which
+  /// must not clobber the list the Manage Companies page is scrolling.
+  Future<List<CompanyModel>> _fetchRemainingCompanies() async {
+    final all = <CompanyModel>[];
+    var page = (state.value?.currentPage ?? 1) + 1;
+    while (true) {
+      final result = await _dataAgent.getCompanies(page: page, perPage: 100);
+      all.addAll(result.companies);
+      if (!result.hasMore) break;
+      page++;
+    }
+    return all;
   }
 
   /// Collapses the differences OCR introduces — capitalisation that follows the

@@ -86,6 +86,10 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
 
   bool _isResolvingCompany = false;
 
+  /// Scanned company name the user said not to file as a new company, so a
+  /// rescan (e.g. reading the back of the same card) doesn't ask again.
+  String? _companyCreationDeclinedFor;
+
   /// Field keys that were filled by OCR rather than typed, so the form can
   /// mark them as needing a glance.
   final Set<String> _scannedFields = {};
@@ -337,40 +341,123 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         // scan's own note about it should stop being shown.
         _scannedCompanyName = null;
         _companyCreatedByScan = null;
+        _companyCreationDeclinedFor = null;
       });
     }
   }
 
-  /// Links the card to the company OCR read off it, creating that company when
-  /// it is not on file yet.
+  /// Links the card to the company OCR read off it when one already on file
+  /// matches. When none does, asks before filing a new one — unlike a
+  /// straight name match, creating a record is a real decision, and a scan
+  /// occasionally misreads a name badly enough that it shouldn't happen
+  /// unasked.
   ///
-  /// The card in the user's hand is the evidence that the company exists, so
-  /// filing it under its name is better than dropping the one detail the scan
-  /// did find. Cards carry little more than a name, so that is all the new
-  /// record gets; the profile can be completed from the Companies tab later.
+  /// Declining leaves the scan unresolved rather than trying again: the hint
+  /// keeps pointing at the picker, and a rescan of the same card won't ask a
+  /// second time for the same name.
   ///
   /// Failures stay quiet — the hint falls back to pointing at the picker, so a
   /// card can still be saved by hand.
   Future<void> _resolveScannedCompany() async {
     final name = _scannedCompanyName;
-    if (name == null || _selectedCompanyId != null || _isResolvingCompany) {
+    if (name == null ||
+        _selectedCompanyId != null ||
+        _isResolvingCompany ||
+        _companyCreationDeclinedFor == name) {
+      return;
+    }
+
+    setState(() => _isResolvingCompany = true);
+    CompanyModel? match;
+    try {
+      match =
+          await ref.read(companyProvider.notifier).findByName(name);
+    } catch (_) {
+      match = null;
+    }
+    if (!mounted) return;
+
+    if (match != null) {
+      final matched = match;
+      setState(() {
+        _selectedCompanyId = matched.id;
+        _selectedCompanyName = matched.name;
+        _companyCreatedByScan = false;
+        _isResolvingCompany = false;
+      });
+      return;
+    }
+
+    // Nothing matched — ask before creating one. The dialog closes the
+    // "resolving" state itself; the field a scan produced may have already
+    // been overridden or re-scanned by the time the user answers.
+    setState(() => _isResolvingCompany = false);
+    final shouldCreate = await _confirmCreateCompany(name);
+    if (!mounted || _scannedCompanyName != name || _selectedCompanyId != null) {
+      return;
+    }
+    if (!shouldCreate) {
+      setState(() => _companyCreationDeclinedFor = name);
       return;
     }
 
     setState(() => _isResolvingCompany = true);
     try {
-      final resolved =
-          await ref.read(companyProvider.notifier).resolveByName(name);
-      if (!mounted || resolved == null) return;
-
+      final created =
+          await ref.read(companyProvider.notifier).createMinimal(name);
+      if (!mounted || created == null) return;
       setState(() {
-        _selectedCompanyId = resolved.company.id;
-        _selectedCompanyName = resolved.company.name;
-        _companyCreatedByScan = resolved.created;
+        _selectedCompanyId = created.id;
+        _selectedCompanyName = created.name;
+        _companyCreatedByScan = true;
       });
     } finally {
       if (mounted) setState(() => _isResolvingCompany = false);
     }
+  }
+
+  /// Asks whether the scanned name should be filed as a new company. Styled
+  /// like the other confirmation dialogs in the app (Manage Companies'
+  /// delete prompt) so it doesn't look like a stray system dialog.
+  Future<bool> _confirmCreateCompany(String name) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        scrollable: true,
+        backgroundColor: isDark ? Wallet.darkSurface : Colors.white,
+        surfaceTintColor: isDark ? Wallet.darkSurface : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Add new company?',
+          style: TextStyle(color: isDark ? Wallet.darkInk : Wallet.ink),
+        ),
+        content: Text(
+          'No company named "$name" is on file yet. '
+          'Add it as a new company?',
+          style: TextStyle(
+            color: isDark ? Wallet.darkMuted : Colors.black87,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Not now',
+              style: TextStyle(
+                color: isDark ? Wallet.darkMuted : Colors.grey,
+              ),
+            ),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Add company'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 
   List<String> _splitToList(String input) {
@@ -975,31 +1062,37 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
   }
 
   Widget _buildCardPhotoPlaceholder(String label, bool isDark) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(
-          Icons.add_a_photo_outlined,
-          size: 22,
-          color: isDark ? Wallet.accentDark : AppColors.primary,
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: isDark ? Wallet.darkInk : Wallet.ink,
+    // The tile is a 1.7 aspect box, so on a narrow screen it is short enough
+    // for this stack to run past it. Scaling down beats clipping.
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.add_a_photo_outlined,
+            size: 22,
+            color: isDark ? Wallet.accentDark : AppColors.primary,
           ),
-        ),
-        Text(
-          label == 'Back' ? 'Optional' : 'Required to scan',
-          style: TextStyle(
-            fontSize: 11,
-            color: isDark ? Wallet.darkMuted : Colors.grey[600],
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Wallet.darkInk : Wallet.ink,
+            ),
           ),
-        ),
-      ],
+          Text(
+            label == 'Back' ? 'Optional' : 'Required to scan',
+            style: TextStyle(
+              fontSize: 11,
+              color: isDark ? Wallet.darkMuted : Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../providers/auth/auth_provider.dart';
 import '../../providers/card/card_provider.dart';
 import '../../network/image_url.dart';
+import '../../data/vos/address_model.dart';
 import '../../data/vos/business_card_model.dart';
 import '../../data/vos/company_model.dart';
 import '../../utils/full_image_viewer.dart';
@@ -12,7 +14,28 @@ import '../widgets/app_toast.dart';
 import '../theme/wallet_tokens.dart';
 import '../widgets/my_qr_panel.dart';
 import 'add_card_page.dart';
+import 'company_detail_page.dart';
 import 'deactivate_account_page.dart';
+
+/// Opens a tel:/mailto:/https: link in whatever app handles it, swallowing
+/// failures — every launcher call on this page (quick actions, detail rows,
+/// company links) goes through this one place.
+Future<void> _openLink(String url) async {
+  try {
+    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  } catch (_) {}
+}
+
+/// A website often comes back bare ("acme.com"), which `Uri.parse` treats as
+/// a relative path rather than something a browser can open — it needs a
+/// scheme first.
+String _normalizeUrl(String url) {
+  final trimmed = url.trim();
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+  return 'https://$trimmed';
+}
 
 class CardDetailPage extends ConsumerStatefulWidget {
   final BusinessCardModel card;
@@ -135,6 +158,9 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return AlertDialog(
+      // Landscape leaves a dialog only a couple of hundred points of height,
+      // and AlertDialog does not scroll its content on its own.
+      scrollable: true,
       backgroundColor: isDark ? CardDetailPage._darkSurface : Colors.white,
       surfaceTintColor: isDark ? CardDetailPage._darkSurface : Colors.white,
       shape: RoundedRectangleBorder(
@@ -622,17 +648,12 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                       const SizedBox(height: 30),
                     ],
 
-                    // ===== CONTACT =====
-                    _ContactSection(card: card, isDark: isDark),
-
-                    // ===== SOCIAL LINKS =====
-                    _SocialSection(
-                        socialLinks: card.socialLinks, isDark: isDark),
-
-                    // ===== COMPANY =====
-                    if (card.company != null)
-                      _CompanySection(
-                          company: card.company!, isDark: isDark),
+                    // ===== COMPANY / CONTACT / SOCIAL =====
+                    // One surface, not three — a card per few rows of text
+                    // read as clutter before it read as organization. The
+                    // groups still separate cleanly by their own caption and
+                    // the hairline `_GroupCard` already draws between rows.
+                    _DetailsCard(card: card, isDark: isDark),
 
                     // ===== THE PRINTED CARD =====
                     // Last, as reference. Tapping opens it full screen, which
@@ -661,10 +682,19 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
       }
 }
 
-/// The identity: avatar, name, role, and a status chip, on one lifted surface.
+/// The identity: a large centered avatar, name, role, and a status chip, on
+/// one quiet surface with a single accent line across its top.
 ///
-/// A surface rather than loose text — the block is a thing you look at, and it
-/// gives the page something to open on besides a heading.
+/// A gradient cover was tried here and reverted — it read as "premium" in
+/// isolation, but every other screen in this app (Cards, Search, Manage
+/// Companies) is a neutral surface with one accent spent sparingly, per the
+/// design notes on [Wallet] itself: "a coloured shadow is decoration, and it
+/// dirties a neutral ground." A colour banner on just this one page broke
+/// that — it stopped looking like part of the app and started looking like a
+/// different app's mockup pasted in. What reads as premium *in this system*
+/// is what already works on its other screens: restraint, generous
+/// whitespace, and the accent spent on a couple of precise details instead
+/// of a wash of color.
 class _PremiumHero extends StatelessWidget {
   final BusinessCardModel card;
   final String? avatarUrl;
@@ -673,7 +703,8 @@ class _PremiumHero extends StatelessWidget {
   final String cardTypeLabel;
   final bool isFriend;
 
-  /// Only a person's own card carries a portrait; see the call site.
+  /// Only a person's own card carries a portrait; a saved card gets a
+  /// neutral card icon in the same spot instead — see the call site.
   final bool showAvatar;
 
   const _PremiumHero({
@@ -701,74 +732,205 @@ class _PremiumHero extends StatelessWidget {
         : isFriend
             ? 'Connected'
             : cardTypeLabel;
+    final tag = (card.tag ?? '').trim();
+    final createdAt = card.createdAt;
+    AddressModel? firstAddress;
+    for (final a in card.addresses) {
+      if (!a.isEmpty) {
+        firstAddress = a;
+        break;
+      }
+    }
+    final website = card.company?.website;
+
+    final mapAddress = firstAddress;
+    final companyWebsite = website;
+
+    final quickActions = <_QuickAction>[
+      if (card.phones.isNotEmpty)
+        _QuickAction(Icons.call_rounded, 'Call',
+            () => _openLink('tel:${card.phones.first}')),
+      if (card.emails.isNotEmpty)
+        _QuickAction(Icons.mail_rounded, 'Email',
+            () => _openLink('mailto:${card.emails.first}')),
+      if (mapAddress != null)
+        _QuickAction(
+            Icons.map_rounded,
+            'Map',
+            () => _openLink(
+                'https://maps.google.com/?q=${Uri.encodeComponent(mapAddress.displayText)}')),
+      if (companyWebsite != null && companyWebsite.isNotEmpty)
+        _QuickAction(Icons.language_rounded, 'Website',
+            () => _openLink(_normalizeUrl(companyWebsite))),
+    ];
+
+    const avatarSize = 88.0;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: CardDetailPage.surface(isDark),
-        borderRadius: BorderRadius.circular(20),
-        border: isDark
-            ? Border.all(color: CardDetailPage._darkBorder)
-            : null,
+        borderRadius: BorderRadius.circular(24),
+        border:
+            isDark ? Border.all(color: CardDetailPage._darkBorder) : null,
         boxShadow: CardDetailPage.surfaceShadow(isDark),
       ),
-      child: Row(
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          if (showAvatar) ...[
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isDark
-                    ? CardDetailPage._accentDark.withOpacity(.16)
-                    : CardDetailPage._accentSoft,
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: avatarUrl != null
-                  ? Image.network(
-                      avatarUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          _AvatarFallback(letter: firstLetter, isDark: isDark),
-                    )
-                  : _AvatarFallback(letter: firstLetter, isDark: isDark),
-            ),
-            const SizedBox(width: 14),
-          ],
-          Expanded(
+          // The one line of colour on the page — a signature, not a banner.
+          Container(height: 3, color: CardDetailPage.accent(isDark)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
               children: [
+                Container(
+                  width: avatarSize,
+                  height: avatarSize,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isDark
+                        ? CardDetailPage._accentDark.withOpacity(.16)
+                        : CardDetailPage._accentSoft,
+                    border: Border.all(
+                      color: CardDetailPage.accent(isDark).withOpacity(.25),
+                      width: 1.5,
+                    ),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: showAvatar
+                      ? (avatarUrl != null
+                          ? Image.network(
+                              avatarUrl!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _AvatarFallback(
+                                  letter: firstLetter, isDark: isDark),
+                            )
+                          : _AvatarFallback(letter: firstLetter, isDark: isDark))
+                      : _AvatarFallback(
+                          icon: Icons.badge_rounded, isDark: isDark),
+                ),
+                const SizedBox(height: 18),
                 Text(
                   card.fullName,
+                  textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
                     letterSpacing: -0.55,
                     height: 1.15,
                     color: CardDetailPage.ink(isDark),
                   ),
                 ),
                 if (subtitle.isNotEmpty) ...[
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
                     subtitle,
+                    textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 13,
+                      fontSize: 13.5,
                       height: 1.35,
+                      fontWeight: FontWeight.w500,
                       color: CardDetailPage.muted(isDark),
                     ),
                   ),
                 ],
-                const SizedBox(height: 9),
-                _Chip(label: chip, isDark: isDark),
+                const SizedBox(height: 14),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    _Chip(label: chip, isDark: isDark),
+                    if (tag.isNotEmpty) _Chip(label: tag, isDark: isDark),
+                  ],
+                ),
+                if (quickActions.isNotEmpty) ...[
+                  const SizedBox(height: 20),
+                  Divider(height: 1, color: CardDetailPage.line(isDark)),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      for (final action in quickActions)
+                        _QuickActionButton(action: action, isDark: isDark),
+                    ],
+                  ),
+                ],
+                if (createdAt != null) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'Added ${_formatDate(createdAt)}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark ? Wallet.darkFaint : Colors.grey.shade400,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) => DateFormat('MMM d, yyyy').format(date);
+}
+
+class _QuickAction {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _QuickAction(this.icon, this.label, this.onTap);
+}
+
+/// One of the hero's quick actions — a filled circular icon with its label
+/// underneath, the pattern contact-card apps use for "the handful of things
+/// you'd actually do with this person right now" (call, email, find them,
+/// visit their site), pulled up out of the detail rows below so they don't
+/// need a scroll and a squint at a label to find.
+class _QuickActionButton extends StatelessWidget {
+  final _QuickAction action;
+  final bool isDark;
+
+  const _QuickActionButton({required this.action, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: action.onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: CardDetailPage.accent(isDark),
+                ),
+                child: Icon(action.icon,
+                    size: 19, color: Wallet.onAccentOf(isDark)),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                action.label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: CardDetailPage.muted(isDark),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -777,6 +939,7 @@ class _PremiumHero extends StatelessWidget {
 class _Chip extends StatelessWidget {
   final String label;
   final bool isDark;
+
   const _Chip({required this.label, required this.isDark});
 
   @override
@@ -801,9 +964,11 @@ class _Chip extends StatelessWidget {
 }
 
 class _AvatarFallback extends StatelessWidget {
-  final String letter;
+  final String? letter;
+  final IconData? icon;
   final bool isDark;
-  const _AvatarFallback({required this.letter, required this.isDark});
+  const _AvatarFallback({this.letter, this.icon, required this.isDark})
+      : assert(letter != null || icon != null);
 
   @override
   Widget build(BuildContext context) => Container(
@@ -811,14 +976,16 @@ class _AvatarFallback extends StatelessWidget {
         color: isDark
             ? CardDetailPage._accentDark.withOpacity(.16)
             : CardDetailPage._accentSoft,
-        child: Text(
-          letter,
-          style: TextStyle(
-            fontSize: 19,
-            fontWeight: FontWeight.w700,
-            color: CardDetailPage.accent(isDark),
-          ),
-        ),
+        child: icon != null
+            ? Icon(icon, size: 26, color: CardDetailPage.accent(isDark))
+            : Text(
+                letter!,
+                style: TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w700,
+                  color: CardDetailPage.accent(isDark),
+                ),
+              ),
       );
 }
 
@@ -878,7 +1045,11 @@ class _GroupCard extends StatelessWidget {
               Divider(
                 height: 1,
                 thickness: 1,
-                indent: 58,
+                // Full-width where the next row starts a new labelled group
+                // (a section break, not just the next field) — indented to
+                // clear the icon tile everywhere else, so it reads as
+                // continuing the same group rather than ending it.
+                indent: children[i] is _InlineHeader ? 0 : 58,
                 color: CardDetailPage.line(isDark),
               ),
             children[i],
@@ -1012,13 +1183,17 @@ class _PrimaryButton extends StatelessWidget {
                       size: 18,
                       color: Wallet.onAccentOf(isDark)),
                   const SizedBox(width: 9),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.2,
-                      color: Wallet.onAccentOf(isDark),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.2,
+                        color: Wallet.onAccentOf(isDark),
+                      ),
                     ),
                   ),
                 ],
@@ -1075,13 +1250,17 @@ class _SecondaryButton extends StatelessWidget {
                 children: [
                   Icon(icon, size: 17, color: color),
                   const SizedBox(width: 8),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -0.2,
-                      color: color,
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.2,
+                        color: color,
+                      ),
                     ),
                   ),
                 ],
@@ -1183,112 +1362,20 @@ class _ActionList extends StatelessWidget {
   }
 }
 
-class _ContactSection extends StatelessWidget {
+/// Company, contact, and social — merged onto one surface instead of three
+/// separate elevated cards stacked with gaps between them. Splitting them by
+/// data type made sense when the model was written but not when it's on
+/// screen: three shadows and three borders for a handful of rows each reads
+/// as fragments of a page, not as a page. Each group still gets its own
+/// caption and the hairline `_GroupCard` already draws between every row, so
+/// nothing about telling them apart is lost — only the repeated framing is.
+class _DetailsCard extends StatelessWidget {
   final BusinessCardModel card;
   final bool isDark;
 
-  const _ContactSection({required this.card, required this.isDark});
+  const _DetailsCard({required this.card, required this.isDark});
 
-  @override
-  Widget build(BuildContext context) {
-    final rows = <Widget>[];
-    for (final p in card.phones) {
-      rows.add(_DetailRow(
-          icon: Icons.call_rounded,
-          label: 'Phone',
-          value: p,
-          onTap: () => _launch('tel:$p'),
-          isDark: isDark));
-    }
-    for (final e in card.emails) {
-      rows.add(_DetailRow(
-          icon: Icons.mail_outline_rounded,
-          label: 'Email',
-          value: e,
-          onTap: () => _launch('mailto:$e'),
-          isDark: isDark));
-    }
-    for (final a in card.addresses) {
-      // The API always emits all five keys, so an entry with nothing filled in
-      // still arrives as an object. Rendering it would give a row with an icon
-      // and no text.
-      if (a.isEmpty) continue;
-      final text = a.displayText;
-      rows.add(_DetailRow(
-          icon: Icons.place_outlined,
-          label: 'Address',
-          value: text,
-          onTap: () => _launch(
-              'https://maps.google.com/?q=${Uri.encodeComponent(text)}'),
-          isDark: isDark));
-    }
-
-    if (rows.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 26),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _SectionLabel('Contact', isDark: isDark),
-          _GroupCard(isDark: isDark, children: rows),
-        ],
-      ),
-    );
-  }
-
-  void _launch(String u) async {
-    try {
-      await launchUrl(Uri.parse(u), mode: LaunchMode.externalApplication);
-    } catch (_) {}
-  }
-}
-
-class _SocialSection extends StatelessWidget {
-  final List<dynamic>? socialLinks;
-  final bool isDark;
-
-  const _SocialSection({this.socialLinks, required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    if (socialLinks == null || socialLinks!.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    final rows = <Widget>[];
-    for (final s in socialLinks!) {
-      final m = s is Map ? Map<String, dynamic>.from(s) : <String, dynamic>{};
-      final platform = (m['platform'] ?? 'Link').toString();
-      final url = m['url']?.toString() ?? '';
-      rows.add(_DetailRow(
-        icon: _iconFor(platform),
-        label: platform,
-        value: url.isEmpty ? platform : url,
-        onTap: () async {
-          if (url.isEmpty) return;
-          try {
-            await launchUrl(Uri.parse(url),
-                mode: LaunchMode.externalApplication);
-          } catch (_) {}
-        },
-        isDark: isDark,
-      ));
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 26),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _SectionLabel('Social', isDark: isDark),
-          _GroupCard(isDark: isDark, children: rows),
-        ],
-      ),
-    );
-  }
-
-  IconData _iconFor(String platform) {
+  IconData _socialIconFor(String platform) {
     switch (platform.toLowerCase()) {
       case 'telegram':
       case 'viber':
@@ -1304,113 +1391,254 @@ class _SocialSection extends StatelessWidget {
         return Icons.public_rounded;
     }
   }
+
+  @override
+  Widget build(BuildContext context) {
+    final children = <Widget>[];
+
+    final company = card.company;
+    if (company != null) {
+      children.add(_InlineHeader('Company', isDark: isDark, isFirst: true));
+      children.add(_CompanyHeaderRow(company: company, isDark: isDark));
+      if ((company.description ?? '').trim().isNotEmpty) {
+        children.add(_InlineTextRow(company.description!.trim(), isDark: isDark));
+      }
+      // Same row shape as the Contact section below, not a quieter,
+      // non-tappable readout of the same kind of data — a phone number
+      // should look and behave the same whether it's the company's or the
+      // person's.
+      if ((company.address ?? '').isNotEmpty) {
+        children.add(_DetailRow(
+          icon: Icons.place_outlined,
+          label: 'Address',
+          value: company.address!,
+          onTap: () => _openLink(
+              'https://maps.google.com/?q=${Uri.encodeComponent(company.address!)}'),
+          isDark: isDark,
+        ));
+      }
+      if ((company.website ?? '').isNotEmpty) {
+        children.add(_DetailRow(
+          icon: Icons.language_rounded,
+          label: 'Website',
+          value: company.website!,
+          onTap: () => _openLink(_normalizeUrl(company.website!)),
+          isDark: isDark,
+        ));
+      }
+      if ((company.phone ?? '').isNotEmpty) {
+        children.add(_DetailRow(
+          icon: Icons.call_rounded,
+          label: 'Phone',
+          value: company.phone!,
+          onTap: () => _openLink('tel:${company.phone}'),
+          isDark: isDark,
+        ));
+      }
+      if ((company.email ?? '').isNotEmpty) {
+        children.add(_DetailRow(
+          icon: Icons.mail_outline_rounded,
+          label: 'Email',
+          value: company.email!,
+          onTap: () => _openLink('mailto:${company.email}'),
+          isDark: isDark,
+        ));
+      }
+      // The company's own social links — separate from the card's own
+      // `socialLinks` below, which belong to the person, not the business.
+      for (final s in company.socials) {
+        children.add(_DetailRow(
+          icon: _socialIconFor(s.platform),
+          label: s.platform,
+          value: s.url,
+          onTap: () => _openLink(s.url),
+          isDark: isDark,
+        ));
+      }
+    }
+
+    final contactRows = <Widget>[
+      for (final p in card.phones)
+        _DetailRow(
+            icon: Icons.call_rounded,
+            label: 'Phone',
+            value: p,
+            onTap: () => _openLink('tel:$p'),
+            isDark: isDark),
+      for (final e in card.emails)
+        _DetailRow(
+            icon: Icons.mail_outline_rounded,
+            label: 'Email',
+            value: e,
+            onTap: () => _openLink('mailto:$e'),
+            isDark: isDark),
+      // The API always emits all five address keys, so an entry with nothing
+      // filled in still arrives as an object — rendering it would give a row
+      // with an icon and no text.
+      for (final a in card.addresses)
+        if (!a.isEmpty)
+          _DetailRow(
+              icon: Icons.place_outlined,
+              label: 'Address',
+              value: a.displayText,
+              onTap: () => _openLink(
+                  'https://maps.google.com/?q=${Uri.encodeComponent(a.displayText)}'),
+              isDark: isDark),
+    ];
+    if (contactRows.isNotEmpty) {
+      children.add(_InlineHeader('Contact',
+          isDark: isDark, isFirst: children.isEmpty));
+      children.addAll(contactRows);
+    }
+
+    final socialRows = <Widget>[];
+    for (final s in card.socialLinks ?? const []) {
+      final m = s is Map ? Map<String, dynamic>.from(s) : <String, dynamic>{};
+      final platform = (m['platform'] ?? 'Link').toString();
+      final url = m['url']?.toString() ?? '';
+      socialRows.add(_DetailRow(
+        icon: _socialIconFor(platform),
+        label: platform,
+        value: url.isEmpty ? platform : url,
+        onTap: url.isEmpty ? () {} : () => _openLink(url),
+        isDark: isDark,
+      ));
+    }
+    if (socialRows.isNotEmpty) {
+      children.add(_InlineHeader('Social',
+          isDark: isDark, isFirst: children.isEmpty));
+      children.addAll(socialRows);
+    }
+
+    if (children.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 26),
+      child: _GroupCard(isDark: isDark, children: children),
+    );
+  }
 }
 
-class _CompanySection extends StatelessWidget {
+/// A small caption row inside [_GroupCard], marking where one group of
+/// fields ends and the next begins without needing a card of its own.
+class _InlineHeader extends StatelessWidget {
+  final String title;
+  final bool isDark;
+
+  /// True when this is the very first row in the card — it gets less top
+  /// padding, since there's no row above it to breathe away from.
+  final bool isFirst;
+
+  const _InlineHeader(this.title,
+      {required this.isDark, this.isFirst = false});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: EdgeInsets.fromLTRB(14, isFirst ? 14 : 16, 14, 6),
+        child: Text(
+          title.toUpperCase(),
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.1,
+            color: CardDetailPage.faint(isDark),
+          ),
+        ),
+      );
+}
+
+/// A plain paragraph inside [_GroupCard] — for the company's description,
+/// which doesn't fit the icon/label/value shape every other row here uses.
+class _InlineTextRow extends StatelessWidget {
+  final String text;
+  final bool isDark;
+
+  const _InlineTextRow(this.text, {required this.isDark});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 13.5,
+            height: 1.5,
+            color: CardDetailPage.muted(isDark),
+          ),
+        ),
+      );
+}
+
+/// The company's identity — same icon-tile/value/chevron shape as
+/// [_DetailRow] (not a bigger avatar-style block of its own), so it lines up
+/// with the contact and social rows under it instead of reading as a
+/// different kind of thing wedged into the same card. Taps through to the
+/// company's own page, which is what the chevron implies everywhere else.
+class _CompanyHeaderRow extends StatelessWidget {
   final CompanyModel company;
   final bool isDark;
 
-  const _CompanySection({required this.company, required this.isDark});
+  const _CompanyHeaderRow({required this.company, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
     final meta = [company.industry, company.businessType]
         .where((e) => e != null && e.isNotEmpty)
         .join('  ·  ');
-    final initial =
-        company.name.isNotEmpty ? company.name[0].toUpperCase() : '#';
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 26),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _SectionLabel('Company', isDark: isDark),
-          _GroupCard(
-            isDark: isDark,
-            padding: const EdgeInsets.all(14),
-            children: [
-              Row(
+    return InkWell(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => CompanyDetailPage(company: company)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: isDark
+                    ? CardDetailPage._accentDark.withOpacity(.13)
+                    : CardDetailPage._iconSoft,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(Icons.apartment_rounded,
+                  size: 16, color: CardDetailPage.accent(isDark)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      color: isDark
-                          ? CardDetailPage._accentDark.withOpacity(.13)
-                          : CardDetailPage._iconSoft,
+                  Text(
+                    company.name,
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.2,
+                      height: 1.3,
+                      color: CardDetailPage.ink(isDark),
                     ),
-                    child: Text(
-                      initial,
+                  ),
+                  if (meta.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      meta,
                       style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                        color: CardDetailPage.accent(isDark),
+                        fontSize: 12,
+                        color: CardDetailPage.muted(isDark),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          company.name,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.3,
-                            color: CardDetailPage.ink(isDark),
-                          ),
-                        ),
-                        if (meta.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            meta,
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              color: CardDetailPage.muted(isDark),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
+                  ],
                 ],
               ),
-              for (final line in [
-                if ((company.website ?? '').isNotEmpty)
-                  (Icons.language_rounded, company.website!),
-                if ((company.phone ?? '').isNotEmpty)
-                  (Icons.call_rounded, company.phone!),
-                if ((company.email ?? '').isNotEmpty)
-                  (Icons.mail_outline_rounded, company.email!),
-              ])
-                Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: Row(
-                    children: [
-                      Icon(line.$1,
-                          size: 15, color: CardDetailPage.faint(isDark)),
-                      const SizedBox(width: 9),
-                      Expanded(
-                        child: Text(
-                          line.$2,
-                          style: TextStyle(
-                            fontSize: 13.5,
-                            height: 1.35,
-                            color: CardDetailPage.muted(isDark),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-        ],
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.chevron_right_rounded,
+                size: 18, color: CardDetailPage.faint(isDark)),
+          ],
+        ),
       ),
     );
   }
@@ -1561,11 +1789,15 @@ class _CardCarouselState extends State<_CardCarousel> {
                   ),
                 ),
               const Spacer(),
-              Text(
-                '${entries[_index].key} · tap to enlarge',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: CardDetailPage.faint(isDark),
+              Flexible(
+                child: Text(
+                  '${entries[_index].key} · tap to enlarge',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: CardDetailPage.faint(isDark),
+                  ),
                 ),
               ),
             ],

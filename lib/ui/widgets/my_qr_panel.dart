@@ -28,7 +28,13 @@ class MyQrPanel extends StatelessWidget {
     final qrData = profileCard?.qrCodeData?.trim() ?? '';
     final hasProfile = profileCard != null;
     final hasQr = qrData.isNotEmpty;
-    final qrSize = compact ? 104.0 : 216.0;
+    // A 216pt plate plus its quiet zone needs more width than a narrow phone
+    // has left after the sheet and panel padding, so the plate takes what the
+    // panel can actually give it.
+    final panelWidth = MediaQuery.of(context).size.width;
+    final qrSize = compact
+        ? 104.0
+        : ((panelWidth - 2 * Wallet.margin - 2 * 24 - 28).clamp(140.0, 216.0));
 
     final eyebrow = Text(
       compact ? 'SHARE' : 'MY QR CODE',

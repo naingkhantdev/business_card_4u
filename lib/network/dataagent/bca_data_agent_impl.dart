@@ -83,14 +83,10 @@ class BcaDataAgentImpl implements BcaDataAgent {
 
   // ================= COMPANIES =================
   @override
-  Future<List<CompanyModel>?> getCompanies() async {
-    final response = await _guard(() => _bcaApi.getCompanies());
-    if (response is Map<String, dynamic> && response['data'] is List) {
-      return (response['data'] as List)
-          .map((item) => CompanyModel.fromJson(Map<String, dynamic>.from(item)))
-          .toList();
-    }
-    return [];
+  Future<CompanyPage> getCompanies({int page = 1, int perPage = 20}) async {
+    final response = await _guard(
+        () => _bcaApi.getCompanies(page: page, perPage: perPage));
+    return CompanyPage.fromResponse(response);
   }
 
   @override

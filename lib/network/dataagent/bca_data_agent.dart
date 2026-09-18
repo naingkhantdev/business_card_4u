@@ -28,7 +28,7 @@ abstract class BcaDataAgent {
   Future<String?> deactivateAccount(String password);
 
   // ================= COMPANIES =================
-  Future<List<CompanyModel>?> getCompanies();
+  Future<CompanyPage> getCompanies({int page = 1, int perPage = 20});
 
   Future<CompanyModel?> createCompany(Map<String, dynamic> data);
 

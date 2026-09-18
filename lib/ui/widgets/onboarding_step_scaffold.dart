@@ -78,64 +78,74 @@ class OnboardingStepScaffold extends StatelessWidget {
         children: [
           const Positioned.fill(child: GlassBackdrop()),
           SafeArea(
-            child: Column(
-              children: [
-                _Header(
-                  step: step,
-                  totalSteps: totalSteps,
-                  label: label,
-                  completed: completed,
-                  exitIcon: exitIcon,
-                  onExit: onExit,
-                  isDark: isDark,
-                ),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => FocusScope.of(context).unfocus(),
-                    behavior: HitTestBehavior.opaque,
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(
-                        Wallet.margin,
-                        20,
-                        Wallet.margin,
-                        28,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Text(
-                            headline,
-                            style: AppTypography.primary(TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.w700,
-                              height: 1.05,
-                              color: Wallet.inkOf(isDark),
-                            )),
-                          ),
-                          if (subhead != null) ...[
-                            const SizedBox(height: 10),
+            child: LayoutBuilder(builder: (context, constraints) {
+              // Header, scroller and footer are a fixed-plus-flexible stack, so
+              // once the header and footer alone are taller than the viewport
+              // the column overflows. That happens for real in landscape with
+              // the keyboard up, and the header is the part the user can spare
+              // while typing.
+              final tight = constraints.maxHeight < 300;
+
+              return Column(
+                children: [
+                  if (!tight)
+                    _Header(
+                      step: step,
+                      totalSteps: totalSteps,
+                      label: label,
+                      completed: completed,
+                      exitIcon: exitIcon,
+                      onExit: onExit,
+                      isDark: isDark,
+                    ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => FocusScope.of(context).unfocus(),
+                      behavior: HitTestBehavior.opaque,
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(
+                          Wallet.margin,
+                          20,
+                          Wallet.margin,
+                          28,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
                             Text(
-                              subhead!,
-                              style: AppTypography.secondary(TextStyle(
-                                fontSize: 14.5,
-                                height: 1.5,
-                                color: Wallet.mutedOf(isDark),
+                              headline,
+                              style: AppTypography.primary(TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.w700,
+                                height: 1.05,
+                                color: Wallet.inkOf(isDark),
                               )),
                             ),
+                            if (subhead != null) ...[
+                              const SizedBox(height: 10),
+                              Text(
+                                subhead!,
+                                style: AppTypography.secondary(TextStyle(
+                                  fontSize: 14.5,
+                                  height: 1.5,
+                                  color: Wallet.mutedOf(isDark),
+                                )),
+                              ),
+                            ],
+                            const SizedBox(height: 24),
+                            ...children,
                           ],
-                          const SizedBox(height: 24),
-                          ...children,
-                        ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                _Footer(
-                  action: action,
-                  secondaryAction: secondaryAction,
-                ),
-              ],
-            ),
+                  _Footer(
+                    action: action,
+                    secondaryAction: secondaryAction,
+                  ),
+                ],
+              );
+            }),
           ),
           if (busy)
             const Positioned.fill(

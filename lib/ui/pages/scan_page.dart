@@ -67,6 +67,10 @@ class _ScanPageState extends ConsumerState<ScanPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    // In landscape the viewport is shorter than a fixed 250pt reticle plus the
+    // app bar, so the frame is sized off the shorter side of the screen.
+    final screen = MediaQuery.of(context).size;
+    final frameSize = (screen.shortestSide * .62).clamp(160.0, 250.0);
     return Scaffold(
       backgroundColor: isDark ? Wallet.darkGround : Colors.black,
       appBar: AppBar(
@@ -90,8 +94,8 @@ class _ScanPageState extends ConsumerState<ScanPage> {
           ),
           Center(
             child: Container(
-              width: 250,
-              height: 250,
+              width: frameSize,
+              height: frameSize,
               decoration: BoxDecoration(
                 border: Border.all(
                   color: isDark ? Colors.white : const Color(0xFFDBE4F5),

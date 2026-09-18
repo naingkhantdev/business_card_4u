@@ -29,77 +29,82 @@ Future<ImageSource?> showImageSourceSheet(
         top: Radius.circular(Wallet.radiusPanel),
       ),
     ),
+    // Title, subtitle and two rows are taller than the default sheet cap in
+    // landscape, so the sheet sizes itself and scrolls instead of clipping.
+    isScrollControlled: true,
     builder: (context) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: 10),
-          Center(
-            child: Container(
-              width: 32,
-              height: 3,
-              color: Wallet.lineOf(isDark),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 10),
+            Center(
+              child: Container(
+                width: 32,
+                height: 3,
+                color: Wallet.lineOf(isDark),
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Wallet.margin),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  style: AppTypography.primary(TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w600,
-                    height: 1.15,
-                    color: Wallet.inkOf(isDark),
-                  )),
-                ),
-                if (subtitle != null) ...[
-                  const SizedBox(height: 6),
+            const SizedBox(height: 20),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Wallet.margin),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
                   Text(
-                    subtitle,
-                    style: AppTypography.secondary(TextStyle(
-                      fontSize: 13,
-                      height: 1.45,
-                      color: Wallet.mutedOf(isDark),
+                    title,
+                    style: AppTypography.primary(TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w600,
+                      height: 1.15,
+                      color: Wallet.inkOf(isDark),
                     )),
                   ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      subtitle,
+                      style: AppTypography.secondary(TextStyle(
+                        fontSize: 13,
+                        height: 1.45,
+                        color: Wallet.mutedOf(isDark),
+                      )),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          Divider(
-            height: Wallet.hairline,
-            thickness: Wallet.hairline,
-            color: Wallet.lineOf(isDark),
-          ),
-          _SourceRow(
-            icon: Icons.photo_camera_outlined,
-            label: 'Take a photo',
-            // Named as the expected path so the choice is not two equal
-            // options with nothing to separate them.
-            hint: 'Recommended',
-            isDark: isDark,
-            onTap: () => Navigator.of(context).pop(ImageSource.camera),
-          ),
-          Divider(
-            height: Wallet.hairline,
-            thickness: Wallet.hairline,
-            color: Wallet.lineOf(isDark),
-          ),
-          _SourceRow(
-            icon: Icons.photo_library_outlined,
-            label: 'Choose from gallery',
-            isDark: isDark,
-            onTap: () => Navigator.of(context).pop(ImageSource.gallery),
-          ),
-          const SizedBox(height: 8),
-        ],
+            const SizedBox(height: 20),
+            Divider(
+              height: Wallet.hairline,
+              thickness: Wallet.hairline,
+              color: Wallet.lineOf(isDark),
+            ),
+            _SourceRow(
+              icon: Icons.photo_camera_outlined,
+              label: 'Take a photo',
+              // Named as the expected path so the choice is not two equal
+              // options with nothing to separate them.
+              hint: 'Recommended',
+              isDark: isDark,
+              onTap: () => Navigator.of(context).pop(ImageSource.camera),
+            ),
+            Divider(
+              height: Wallet.hairline,
+              thickness: Wallet.hairline,
+              color: Wallet.lineOf(isDark),
+            ),
+            _SourceRow(
+              icon: Icons.photo_library_outlined,
+              label: 'Choose from gallery',
+              isDark: isDark,
+              onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     ),
   );

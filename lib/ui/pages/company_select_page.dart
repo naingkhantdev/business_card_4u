@@ -25,11 +25,31 @@ class CompanySelectPage extends ConsumerStatefulWidget {
 }
 
 class _CompanySelectPageState extends ConsumerState<CompanySelectPage> {
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
     // No fetch here: watching companyProvider runs its `build`, which loads the
     // list. A parallel fetch races that future and loses to its return value.
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  // Fetch the next page once the user is within a screen's-worth of the
+  // bottom, rather than waiting for them to hit the exact end — that would
+  // leave them staring at a loading footer they had to scroll to see.
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (position.pixels < position.maxScrollExtent - 400) return;
+    ref.read(companyProvider.notifier).loadMoreCompanies();
   }
 
   Future<void> _addCompany() async {
@@ -73,6 +93,9 @@ class _CompanySelectPageState extends ConsumerState<CompanySelectPage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
+        // A dialog in landscape is short; let the body scroll rather than
+        // overflow when the company name runs long.
+        scrollable: true,
         backgroundColor: isDark ? Wallet.darkSurface : Colors.white,
         surfaceTintColor: isDark ? Wallet.darkSurface : Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -185,10 +208,15 @@ class _CompanySelectPageState extends ConsumerState<CompanySelectPage> {
                       child: _buildEmptyState(),
                     )
                   : ListView.builder(
+                    controller: _scrollController,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 12),
-                    itemCount: companyState.companies.length,
+                    itemCount: companyState.companies.length +
+                        (companyState.hasMore ? 1 : 0),
                     itemBuilder: (_, i) {
+                      if (i >= companyState.companies.length) {
+                        return _buildLoadMoreFooter();
+                      }
                       final c = companyState.companies[i];
                       return _buildCompanyCard(c);
                     },
@@ -221,6 +249,24 @@ class _CompanySelectPageState extends ConsumerState<CompanySelectPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildLoadMoreFooter() {
+    final companyState = ref.watch(companyProvider).valueOrNull ?? CompanyState();
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: Center(
+        child: companyState.isLoadingMore
+            ? const SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(strokeWidth: 2.5),
+              )
+            // Reserve the same footer space when idle so reaching this row
+            // doesn't jump the scroll offset once loading finishes.
+            : const SizedBox(height: 28),
       ),
     );
   }

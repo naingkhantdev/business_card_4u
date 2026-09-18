@@ -100,22 +100,39 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         body: Stack(
           children: [
             /// ================= MAIN CONTENT =================
-            Builder(builder: (context) {
+            LayoutBuilder(builder: (context, constraints) {
               final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
               final isKeyboardOpen = keyboardHeight > 100;
+
+              // Everything above the form is sized from the height actually
+              // available, not from portrait constants. Landscape leaves about
+              // 360dp in total, and a fixed 200 + 200 hero stack overflowed it
+              // before the form got a single pixel.
+              final available = constraints.maxHeight;
+              final heroHeight =
+                  isKeyboardOpen ? 80.0 : (available * .27).clamp(96.0, 200.0);
+              // The illustration is the first thing to go: it is decoration,
+              // and the fields below it are not. It only appears once the form
+              // has kept the room it needs.
+              const formRoom = 300.0;
+              final artHeight =
+                  (available - heroHeight - formRoom).clamp(0.0, 200.0);
+              final showArt = !isKeyboardOpen && artHeight >= 96;
+
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   /// ================= HERO SECTION =================
                   SizedBox(
-                    height: isKeyboardOpen ? 80 : 200,
+                    height: heroHeight,
                     width: double.infinity,
                     child: CustomPaint(
                       painter: PremiumHeroPainter(),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const SizedBox(height: 40),
+                          SizedBox(height: heroHeight >= 160 ? 40 : 12),
                           if (!isKeyboardOpen)
                             RichText(
                               text: TextSpan(
@@ -143,10 +160,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   ),
 
                   /// ================= FULL WIDTH IMAGE =================
-                  if (!isKeyboardOpen)
+                  if (showArt)
                     Image.asset(
                       'assets/images/login.png',
-                      height: 200,
+                      height: artHeight,
                       fit: BoxFit.contain,
                     ),
 

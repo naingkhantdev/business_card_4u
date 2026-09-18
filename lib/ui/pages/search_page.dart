@@ -5,6 +5,7 @@ import '../theme/app_colors.dart';
 import '../../data/vos/business_card_model.dart';
 import '../widgets/card_item.dart';
 import '../widgets/loading_view.dart';
+import '../widgets/search_icon_button.dart';
 import '../theme/wallet_tokens.dart';
 
 class SearchPage extends ConsumerStatefulWidget {
@@ -16,6 +17,8 @@ class SearchPage extends ConsumerStatefulWidget {
 
 class _SearchPageState extends ConsumerState<SearchPage> {
   final TextEditingController _searchCtrl = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  bool _isSearchFocused = false;
   bool _hasSearched = false;
   bool _isLoading = false;
   List<BusinessCardModel> _results = [];
@@ -27,6 +30,14 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
   bool get _hasActiveFilters =>
       _cityFilter != null || _stateFilter != null || _countryFilter != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchFocusNode.addListener(() {
+      setState(() => _isSearchFocused = _searchFocusNode.hasFocus);
+    });
+  }
 
   void _onSearch() async {
     final query = _searchCtrl.text.trim();
@@ -93,6 +104,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -118,68 +130,136 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: _searchCtrl,
-                    onSubmitted: (_) => _onSearch(),
-                    decoration: InputDecoration(
-                      hintText: "Enter name or email...",
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: isDark ? Wallet.darkSurface : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: _isSearchFocused
+                            ? AppColors.primary.withOpacity(.5)
+                            : (isDark
+                                ? Wallet.darkLine
+                                : Colors.grey.withOpacity(.12)),
+                        width: _isSearchFocused ? 1.5 : 1,
                       ),
-                      filled: true,
-                      fillColor:
-                          isDark ? Wallet.darkSurface : Colors.white,
+                      boxShadow: [
+                        BoxShadow(
+                          color: _isSearchFocused
+                              ? AppColors.primary.withOpacity(.08)
+                              : Colors.black.withOpacity(isDark ? .18 : .05),
+                          blurRadius: _isSearchFocused ? 20 : 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 14),
+                        Icon(
+                          Icons.search_rounded,
+                          size: 20,
+                          color: _isSearchFocused
+                              ? AppColors.primary
+                              : (isDark
+                                  ? Wallet.darkFaint
+                                  : Colors.grey.shade400),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextField(
+                            controller: _searchCtrl,
+                            focusNode: _searchFocusNode,
+                            onSubmitted: (_) => _onSearch(),
+                            textInputAction: TextInputAction.search,
+                            onChanged: (_) => setState(() {}),
+                            style: TextStyle(
+                              fontSize: 14.5,
+                              color: isDark ? Wallet.darkInk : Wallet.ink,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: "Enter name or email...",
+                              hintStyle: TextStyle(
+                                color: isDark
+                                    ? Wallet.darkFaint
+                                    : Colors.grey.shade400,
+                                fontSize: 14.5,
+                              ),
+                              // See card_page's search field: the app-wide
+                              // InputDecorationTheme draws its own
+                              // enabled/focused border on every field unless
+                              // each variant is zeroed out here too, or it
+                              // shows up as a second border inside this
+                              // container's own pill border.
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                              filled: false,
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ),
+                        if (_searchCtrl.text.isNotEmpty)
+                          GestureDetector(
+                            onTap: () {
+                              _searchCtrl.clear();
+                              setState(() {});
+                            },
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 10),
+                              child: Container(
+                                width: 20,
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isDark
+                                      ? Wallet.darkLine
+                                      : Colors.grey.shade200,
+                                ),
+                                child: Icon(
+                                  Icons.close,
+                                  size: 13,
+                                  color: isDark
+                                      ? Wallet.darkMuted
+                                      : Colors.grey.shade600,
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          const SizedBox(width: 14),
+                      ],
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _onSearch,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 16),
-                  ),
-                  child: const Text("Search"),
+                SearchIconButton(
+                  onTap: _onSearch,
+                  isDark: isDark,
+                  tooltip: 'Search',
+                  filled: true,
+                  icon: Icons.search_rounded,
                 ),
                 const SizedBox(width: 8),
                 Badge(
                   isLabelVisible: _hasActiveFilters,
                   smallSize: 10,
-                  child: IconButton(
-                    onPressed: _openFilterSheet,
+                  child: SearchIconButton(
+                    onTap: _openFilterSheet,
+                    isDark: isDark,
                     tooltip: 'Filter by location',
-                    style: IconButton.styleFrom(
-                      backgroundColor: _hasActiveFilters
-                          ? AppColors.primary.withOpacity(0.12)
-                          : (isDark ? Wallet.darkSurface : Colors.white),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: BorderSide(
-                          color: _hasActiveFilters
-                              ? AppColors.primary
-                              : (isDark
-                                  ? Wallet.darkLine
-                                  : Colors.grey[300]!),
-                        ),
-                      ),
-                      padding: const EdgeInsets.all(14),
-                    ),
-                    icon: Icon(
-                      Icons.tune_rounded,
-                      color: _hasActiveFilters
-                          ? AppColors.primary
-                          : (isDark ? Colors.white : Colors.black54),
-                    ),
+                    active: _hasActiveFilters,
+                    icon: Icons.tune_rounded,
                   ),
                 ),
               ],
@@ -328,7 +408,10 @@ class _AddressFilterSheetState extends State<_AddressFilterSheet> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
-    return Padding(
+    // The sheet is opened scroll-controlled, so on a short screen (landscape,
+    // or portrait with the keyboard up) it has to scroll rather than run past
+    // the bottom of the window.
+    return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomInset),
       child: Column(
         mainAxisSize: MainAxisSize.min,

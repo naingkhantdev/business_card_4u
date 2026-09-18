@@ -390,9 +390,13 @@ class _BcaApi implements BcaApi {
   }
 
   @override
-  Future<Object?> getCompanies() async {
+  Future<Object?> getCompanies({int? page, int? perPage}) async {
     final _extra = <String, dynamic>{};
-    final queryParameters = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{
+      r'page': page,
+      r'per_page': perPage,
+    };
+    queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
     final _options = _setStreamType<Object>(Options(

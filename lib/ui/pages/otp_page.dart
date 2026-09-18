@@ -562,48 +562,58 @@ class _OtpPinFieldState extends State<_OtpPinField> {
             ),
           ),
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(6, (i) {
-              final char = i < value.length ? value[i] : '';
-              final isActive =
-                  widget.focusNode.hasFocus && i == value.length.clamp(0, 5);
+          // Six fixed 46pt boxes need 276pt of width, which a narrow phone
+          // does not have once the page and card padding are taken out. The
+          // boxes divide what is actually there instead.
+          LayoutBuilder(builder: (context, constraints) {
+            const gap = 8.0;
+            final boxWidth =
+                ((constraints.maxWidth - gap * 5) / 6).clamp(32.0, 46.0);
+            final boxHeight = (boxWidth * 54 / 46).clamp(40.0, 54.0);
 
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 140),
-                width: 46,
-                height: 54,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(.85),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isActive
-                        ? AppColors.secondary
-                        : Colors.black.withOpacity(.10),
-                    width: isActive ? 1.6 : 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(.06),
-                      blurRadius: 14,
-                      offset: const Offset(0, 10),
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: List.generate(6, (i) {
+                final char = i < value.length ? value[i] : '';
+                final isActive =
+                    widget.focusNode.hasFocus && i == value.length.clamp(0, 5);
+
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 140),
+                  width: boxWidth,
+                  height: boxHeight,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(.85),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isActive
+                          ? AppColors.secondary
+                          : Colors.black.withOpacity(.10),
+                      width: isActive ? 1.6 : 1,
                     ),
-                  ],
-                ),
-                child: Text(
-                  char.isEmpty ? "•" : char,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                    color: char.isEmpty
-                        ? Colors.black.withOpacity(.18)
-                        : Wallet.ink,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(.06),
+                        blurRadius: 14,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
                   ),
-                ),
-              );
-            }),
-          ),
+                  child: Text(
+                    char.isEmpty ? "•" : char,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                      color: char.isEmpty
+                          ? Colors.black.withOpacity(.18)
+                          : Wallet.ink,
+                    ),
+                  ),
+                );
+              }),
+            );
+          }),
         ],
       ),
     );

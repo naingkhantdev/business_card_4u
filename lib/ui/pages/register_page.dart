@@ -85,141 +85,155 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       child: Scaffold(
         backgroundColor: bg,
         body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      height: 40,
-                      width: 40,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(14),
-                        gradient: const LinearGradient(colors: [deep, blue]),
-                      ),
-                      child: const Icon(
-                        Icons.badge_outlined,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'businessCard4U',
-                      style: TextStyle(
-                        color: text,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Create your account',
-                  style: TextStyle(
-                    color: text,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 28,
-                    height: 1.1,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  'Enter your email to receive a verification code.',
-                  style: TextStyle(
-                    color: muted,
-                    fontSize: 14,
-                    height: 1.45,
-                  ),
-                ),
-                const SizedBox(height: 22),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: border),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(.06),
-                        blurRadius: 18,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Email',
-                        style: TextStyle(
-                          color: text,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF7F8FC),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: border),
-                        ),
-                        child: TextField(
-                          controller: _emailController,
-                          enabled: !authState.isLoading,
-                          keyboardType: TextInputType.emailAddress,
-                          textInputAction: TextInputAction.done,
-                          onSubmitted: (_) =>
-                              authState.isLoading ? null : _submit(),
-                          decoration: const InputDecoration(
-                            hintText: 'example@gmail.com',
-                            hintStyle: TextStyle(color: muted),
-                            prefixIcon: Icon(
-                              Icons.alternate_email_rounded,
-                              color: blue,
+          // Landscape (and any short screen with the keyboard up) leaves less
+          // room than this page needs, so it scrolls instead of overflowing.
+          // The IntrinsicHeight keeps the Spacer below meaningful: on a tall
+          // screen the footer still sits on the bottom edge.
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              height: 40,
+                              width: 40,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(14),
+                                gradient: const LinearGradient(colors: [deep, blue]),
+                              ),
+                              child: const Icon(
+                                Icons.badge_outlined,
+                                color: Colors.white,
+                                size: 20,
+                              ),
                             ),
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 14,
+                            const SizedBox(width: 12),
+                            const Text(
+                              'businessCard4U',
+                              style: TextStyle(
+                                color: text,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        const Text(
+                          'Create your account',
+                          style: TextStyle(
+                            color: text,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 28,
+                            height: 1.1,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          'Enter your email to receive a verification code.',
+                          style: TextStyle(
+                            color: muted,
+                            fontSize: 14,
+                            height: 1.45,
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(color: border),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(.06),
+                                blurRadius: 18,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Email',
+                                style: TextStyle(
+                                  color: text,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF7F8FC),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(color: border),
+                                ),
+                                child: TextField(
+                                  controller: _emailController,
+                                  enabled: !authState.isLoading,
+                                  keyboardType: TextInputType.emailAddress,
+                                  textInputAction: TextInputAction.done,
+                                  onSubmitted: (_) =>
+                                      authState.isLoading ? null : _submit(),
+                                  decoration: const InputDecoration(
+                                    hintText: 'example@gmail.com',
+                                    hintStyle: TextStyle(color: muted),
+                                    prefixIcon: Icon(
+                                      Icons.alternate_email_rounded,
+                                      color: blue,
+                                    ),
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 14,
+                                    ),
+                                  ),
+                                  style: const TextStyle(color: text),
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              AppPrimaryButton(
+                                text: 'Send code',
+                                loading: authState.isLoading,
+                                onPressed: authState.isLoading ? null : _submit,
+                                height: 50,
+                              ),
+                              const SizedBox(height: 10),
+                              const Text(
+                                'Code expires in 5 minutes.',
+                                style: TextStyle(
+                                  color: muted,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        const Spacer(),
+                        Center(
+                          child: Text(
+                            'businessCard4U ${DateTime.now().year}',
+                            style: const TextStyle(
+                              color: muted,
+                              fontSize: 12,
                             ),
                           ),
-                          style: const TextStyle(color: text),
                         ),
-                      ),
-                      const SizedBox(height: 14),
-                      AppPrimaryButton(
-                        text: 'Send code',
-                        loading: authState.isLoading,
-                        onPressed: authState.isLoading ? null : _submit,
-                        height: 50,
-                      ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'Code expires in 5 minutes.',
-                        style: TextStyle(
-                          color: muted,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Spacer(),
-                Center(
-                  child: Text(
-                    'businessCard4U ${DateTime.now().year}',
-                    style: const TextStyle(
-                      color: muted,
-                      fontSize: 12,
+                      ],
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ),

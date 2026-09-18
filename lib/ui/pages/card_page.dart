@@ -15,6 +15,7 @@ import '../widgets/card_item.dart';
 import '../widgets/image_source_sheet.dart';
 import '../widgets/my_qr_panel.dart';
 import '../widgets/app_primary_button.dart';
+import '../widgets/search_icon_button.dart';
 import '../../utils/user_drawer.dart';
 import 'add_card_page.dart';
 import 'scan_page.dart'; // Added import
@@ -113,268 +114,90 @@ class _CardPageState extends ConsumerState<CardPage>
         .toList();
   }
 
-  Widget _buildCompanyFilter(List<BusinessCardModel> cards) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final companies = cards
+  /// Company names on the given tab, for the filter sheet's chip list.
+  List<String> _companyNamesFor(List<BusinessCardModel> cards) {
+    return cards
         .where((c) => c.company != null)
         .map((c) => c.company!.name)
         .toSet()
         .toList()
       ..sort();
+  }
 
-    final hasFilter = _selectedCompanyFilter != null;
-
-    // Hide filter control when no companies on this tab and nothing is filtered
-    if (companies.isEmpty && !hasFilter) {
-      return const SizedBox.shrink();
-    }
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () => _showCompanyFilterSheet(companies),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: hasFilter
-                    ? AppColors.primary
-                    : (isDark ? Wallet.darkSurface : Colors.white),
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: hasFilter
-                      ? AppColors.primary
-                      : (isDark
-                          ? Wallet.darkLine
-                          : Colors.grey.withOpacity(.18)),
+  /// States which company the list is filtered to, since the search bar's
+  /// filter icon only shows *that* something is filtered (a badge dot), not
+  /// *what*. Tapping the pill itself reopens the sheet to change it; the ✕
+  /// clears it without a trip through the sheet.
+  Widget _buildActiveCompanyFilterPill(
+      bool isDark, List<BusinessCardModel> currentTabCards) {
+    final name = _selectedCompanyFilter!;
+    return GestureDetector(
+      onTap: () => _showCompanyFilterSheet(_companyNamesFor(currentTabCards)),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(10, 6, 6, 6),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withOpacity(isDark ? .16 : .08),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: AppColors.primary.withOpacity(.35)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.apartment_rounded,
+                size: 13, color: AppColors.primary),
+            const SizedBox(width: 6),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 160),
+              child: Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? Colors.white : AppColors.primary,
                 ),
-                boxShadow: hasFilter
-                    ? [
-                        BoxShadow(
-                          color: AppColors.primary.withOpacity(.28),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
-                        )
-                      ]
-                    : [],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    hasFilter ? Icons.business_rounded : Icons.tune_rounded,
-                    size: 15,
-                    color: hasFilter
-                        ? Colors.white
-                        : (isDark
-                            ? Wallet.darkMuted
-                            : Colors.grey.shade600),
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    hasFilter ? _selectedCompanyFilter! : 'Filter',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: hasFilter
-                          ? Colors.white
-                          : (isDark
-                              ? Wallet.darkMuted
-                              : Colors.grey.shade600),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
               ),
             ),
-          ),
-          if (hasFilter) ...[
             const SizedBox(width: 6),
             GestureDetector(
               onTap: () => setState(() => _selectedCompanyFilter = null),
               child: Container(
-                padding: const EdgeInsets.all(6),
+                padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(.12),
+                  color: AppColors.primary.withOpacity(.18),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.close_rounded,
-                  size: 16,
-                  color: AppColors.primary,
-                ),
+                child: const Icon(Icons.close_rounded,
+                    size: 11, color: AppColors.primary),
               ),
             ),
           ],
-        ],
+        ),
       ),
     );
   }
 
-  void _showCompanyFilterSheet(List<String> companies) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    showModalBottomSheet(
+  Future<void> _showCompanyFilterSheet(List<String> companies) async {
+    final result = await showModalBottomSheet<_CompanyFilterResult>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setSheetState) {
-            return Container(
-              decoration: BoxDecoration(
-                color: Wallet.surfaceOf(isDark),
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(Wallet.radiusPanel),
-                ),
-              ),
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? Wallet.darkLine
-                            : Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Filter by Company',
-                        style: AppTheme.withFontStack(TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                          color: isDark
-                              ? Wallet.darkInk
-                              : Wallet.ink,
-                        )),
-                      ),
-                      if (_selectedCompanyFilter != null)
-                        GestureDetector(
-                          onTap: () {
-                            setState(() => _selectedCompanyFilter = null);
-                            Navigator.pop(ctx);
-                          },
-                          child: Text(
-                            'Clear',
-                            style: AppTheme.withFontStack(TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.primary,
-                            )),
-                          ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  if (companies.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24),
-                      child: Center(
-                        child: Text(
-                          'No companies available',
-                          style: AppTheme.withFontStack(TextStyle(
-                            color: isDark
-                                ? Wallet.darkFaint
-                                : Colors.grey.shade400,
-                          )),
-                        ),
-                      ),
-                    )
-                  else
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: companies.map((company) {
-                        final isSelected = _selectedCompanyFilter == company;
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() => _selectedCompanyFilter =
-                                isSelected ? null : company);
-                            setSheetState(() {});
-                            Navigator.pop(ctx);
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 150),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 9),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? AppColors.primary
-                                  : (isDark
-                                      ? Wallet.darkSurface
-                                      : const Color(0xFFF4F7FB)),
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: isSelected
-                                    ? AppColors.primary
-                                    : (isDark
-                                        ? Wallet.darkLine
-                                        : Colors.grey.withOpacity(.18)),
-                              ),
-                              boxShadow: isSelected
-                                  ? [
-                                      BoxShadow(
-                                        color:
-                                            AppColors.primary.withOpacity(.25),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 3),
-                                      )
-                                    ]
-                                  : [],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (isSelected) ...[
-                                  const Icon(Icons.check_rounded,
-                                      size: 13, color: Colors.white),
-                                  const SizedBox(width: 5),
-                                ],
-                                Text(
-                                  company,
-                                  style: TextStyle(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: isSelected
-                                        ? Colors.white
-                                        : (isDark
-                                            ? Wallet.darkMuted
-                                            : Colors.grey.shade700),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+      builder: (_) => _CompanyFilterSheet(
+        companies: companies,
+        selected: _selectedCompanyFilter,
+      ),
     );
+    // Dismissing without picking a row (tap outside, swipe down) returns
+    // null and should leave the filter exactly as it was.
+    if (result == null || !mounted) return;
+    setState(() => _selectedCompanyFilter = result.company);
   }
 
   Widget _buildCardList(
     List<BusinessCardModel> cards,
-    bool isLoading, {
-    Widget? header,
-  }) {
+    bool isLoading,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     if (isLoading) {
       return const Center(
@@ -399,19 +222,7 @@ class _CardPageState extends ConsumerState<CardPage>
       });
     }
 
-    // The vertical scrollable content now includes the header (company filter)
-    // so vertical pull-to-refresh works even when starting the gesture over
-    // the horizontal scrolling filter area.
     final scrollChildren = <Widget>[];
-
-    if (header != null) {
-      scrollChildren.add(
-        Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: header,
-        ),
-      );
-    }
 
     if (filtered.isEmpty) {
       final hasActiveFilter = _query.isNotEmpty || _selectedCompanyFilter != null;
@@ -605,112 +416,117 @@ class _CardPageState extends ConsumerState<CardPage>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      // Scroll-controlled, or the default 9/16-of-the-screen cap cuts this off
+      // in landscape.
+      isScrollControlled: true,
       builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: isDark ? Wallet.darkLine : Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? Wallet.darkLine : Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            const SizedBox(height: 18),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Add a card',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: isDark
-                          ? Wallet.darkInk
-                          : Wallet.ink,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Snap the card or pick a photo — we fill in the details.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isDark
-                          ? Wallet.darkMuted
-                          : Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(14),
-                onTap: () {
-                  Navigator.of(sheetContext).pop();
-                  _startCardScan();
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.document_scanner_outlined,
-                          color: Colors.white),
-                      SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Scan a business card',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            SizedBox(height: 2),
-                            Text(
-                              'Fastest — reads front and back for you',
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
+              const SizedBox(height: 18),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Add a card',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: isDark
+                            ? Wallet.darkInk
+                            : Wallet.ink,
                       ),
-                      Icon(Icons.arrow_forward_ios,
-                          size: 14, color: Colors.white),
-                    ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Snap the card or pick a photo — we fill in the details.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark
+                            ? Wallet.darkMuted
+                            : Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    _startCardScan();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.document_scanner_outlined,
+                            color: Colors.white),
+                        SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Scan a business card',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'Fastest — reads front and back for you',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.arrow_forward_ios,
+                            size: 14, color: Colors.white),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 6),
-            ListTile(
-              leading: Icon(
-                Icons.edit_note,
-                color: isDark ? Wallet.darkMuted : Colors.grey[600],
+              const SizedBox(height: 6),
+              ListTile(
+                leading: Icon(
+                  Icons.edit_note,
+                  color: isDark ? Wallet.darkMuted : Colors.grey[600],
+                ),
+                title: const Text('Enter details manually'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _openAddCard();
+                },
               ),
-              title: const Text('Enter details manually'),
-              onTap: () {
-                Navigator.of(sheetContext).pop();
-                _openAddCard();
-              },
-            ),
-            const SizedBox(height: 8),
-          ],
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );
@@ -782,125 +598,129 @@ class _CardPageState extends ConsumerState<CardPage>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      // See above: the default sheet cap is too short for this in landscape.
+      isScrollControlled: true,
       builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: isDark ? Wallet.darkLine : Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? Wallet.darkLine : Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            const SizedBox(height: 18),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.check_circle,
-                          size: 16, color: AppColors.primary),
-                      const SizedBox(width: 6),
-                      Text(
-                        'Front captured',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.3,
-                          color: isDark
-                              ? Wallet.darkMuted
-                              : Colors.grey[600],
+              const SizedBox(height: 18),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.check_circle,
+                            size: 16, color: AppColors.primary),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Front captured',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.3,
+                            color: isDark
+                                ? Wallet.darkMuted
+                                : Colors.grey[600],
+                          ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'Add the back?',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: isDark
+                            ? Wallet.darkInk
+                            : Wallet.ink,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Add the back?',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: isDark
-                          ? Wallet.darkInk
-                          : Wallet.ink,
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'The back usually carries the address, extra numbers, and '
-                    'social links the front leaves off.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isDark
-                          ? Wallet.darkMuted
-                          : Colors.grey[600],
+                    const SizedBox(height: 4),
+                    Text(
+                      'The back usually carries the address, extra numbers, and '
+                      'social links the front leaves off.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark
+                            ? Wallet.darkMuted
+                            : Colors.grey[600],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(14),
-                onTap: () => Navigator.of(sheetContext).pop(true),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(Icons.flip_to_back, color: Colors.white),
-                      SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Scan the back too',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () => Navigator.of(sheetContext).pop(true),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.flip_to_back, color: Colors.white),
+                        SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Scan the back too',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
-                            ),
-                            SizedBox(height: 2),
-                            Text(
-                              'Recommended — catches what the front misses',
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 12,
+                              SizedBox(height: 2),
+                              Text(
+                                'Recommended — catches what the front misses',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      Icon(Icons.arrow_forward_ios,
-                          size: 14, color: Colors.white),
-                    ],
+                        Icon(Icons.arrow_forward_ios,
+                            size: 14, color: Colors.white),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 6),
-            ListTile(
-              leading: Icon(
-                Icons.skip_next_outlined,
-                color: isDark ? Wallet.darkMuted : Colors.grey[600],
+              const SizedBox(height: 6),
+              ListTile(
+                leading: Icon(
+                  Icons.skip_next_outlined,
+                  color: isDark ? Wallet.darkMuted : Colors.grey[600],
+                ),
+                title: const Text('Skip — front only'),
+                onTap: () => Navigator.of(sheetContext).pop(false),
               ),
-              title: const Text('Skip — front only'),
-              onTap: () => Navigator.of(sheetContext).pop(false),
-            ),
-            const SizedBox(height: 8),
-          ],
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );
@@ -952,60 +772,65 @@ class _CardPageState extends ConsumerState<CardPage>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      // Two tiles with subtitles are taller than the default sheet cap allows
+      // in landscape.
+      isScrollControlled: true,
       builder: (ctx) {
         return SafeArea(
-          child: Wrap(
-            children: [
-              ListTile(
-                leading:
-                    const Icon(Icons.qr_code_scanner, color: AppColors.primary),
-                title: Text(
-                  'Scan QR Code',
-                  style: TextStyle(
-                    color: isDark
-                        ? Wallet.darkInk
-                        : Wallet.ink,
+          child: SingleChildScrollView(
+            child: Wrap(
+              children: [
+                ListTile(
+                  leading:
+                      const Icon(Icons.qr_code_scanner, color: AppColors.primary),
+                  title: Text(
+                    'Scan QR Code',
+                    style: TextStyle(
+                      color: isDark
+                          ? Wallet.darkInk
+                          : Wallet.ink,
+                    ),
                   ),
-                ),
-                subtitle: Text(
-                  'Add friend by scanning their QR code',
-                  style: TextStyle(
-                    color: isDark ? Wallet.darkMuted : Colors.black54,
+                  subtitle: Text(
+                    'Add friend by scanning their QR code',
+                    style: TextStyle(
+                      color: isDark ? Wallet.darkMuted : Colors.black54,
+                    ),
                   ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ScanPage()),
+                    );
+                  },
                 ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ScanPage()),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.search, color: AppColors.primary),
-                title: Text(
-                  'Search Users',
-                  style: TextStyle(
-                    color: isDark
-                        ? Wallet.darkInk
-                        : Wallet.ink,
+                ListTile(
+                  leading: const Icon(Icons.search, color: AppColors.primary),
+                  title: Text(
+                    'Search Users',
+                    style: TextStyle(
+                      color: isDark
+                          ? Wallet.darkInk
+                          : Wallet.ink,
+                    ),
                   ),
-                ),
-                subtitle: Text(
-                  'Find users by name or company',
-                  style: TextStyle(
-                    color: isDark ? Wallet.darkMuted : Colors.black54,
+                  subtitle: Text(
+                    'Find users by name or company',
+                    style: TextStyle(
+                      color: isDark ? Wallet.darkMuted : Colors.black54,
+                    ),
                   ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SearchPage()),
+                    );
+                  },
                 ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SearchPage()),
-                  );
-                },
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -1289,125 +1114,156 @@ class _CardPageState extends ConsumerState<CardPage>
           /// ================= SEARCH =================
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              height: 48,
-              decoration: BoxDecoration(
-                color: isDark ? Wallet.darkSurface : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: _isSearchFocused
-                      ? AppColors.primary.withOpacity(.5)
-                      : (isDark
-                          ? Wallet.darkLine
-                          : Colors.grey.withOpacity(.12)),
-                  width: _isSearchFocused ? 1.5 : 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: _isSearchFocused
-                        ? AppColors.primary.withOpacity(.08)
-                        : Colors.black.withOpacity(isDark ? .18 : .05),
-                    blurRadius: _isSearchFocused ? 20 : 16,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  const SizedBox(width: 14),
-                  AnimatedSwitcher(
+            child: Row(
+              children: [
+                Expanded(
+                  child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    child: Icon(
-                      _isSearchFocused
-                          ? Icons.search_rounded
-                          : Icons.search_rounded,
-                      key: ValueKey(_isSearchFocused),
-                      size: 20,
-                      color: _isSearchFocused
-                          ? AppColors.primary
-                          : (isDark
-                              ? Wallet.darkFaint
-                              : Colors.grey.shade400),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: TextField(
-                      controller: _searchController,
-                      focusNode: _searchFocusNode,
-                      onChanged: (val) => setState(() => _query = val),
-                      style: TextStyle(
-                        fontSize: 14.5,
-                        color: isDark
-                            ? Wallet.darkInk
-                            : Wallet.ink,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: "Search cards...",
-                        hintStyle: TextStyle(
-                          color: isDark
-                              ? Wallet.darkFaint
-                              : Colors.grey.shade400,
-                          fontSize: 14.5,
-                        ),
-                        border: InputBorder.none,
-                        isDense: true,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                  ),
-                  if (_query.isNotEmpty)
-                    GestureDetector(
-                      onTap: () {
-                        _searchController.clear();
-                        setState(() => _query = "");
-                        _searchFocusNode.unfocus();
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: Container(
-                          width: 20,
-                          height: 20,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: isDark
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: isDark ? Wallet.darkSurface : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: _isSearchFocused
+                            ? AppColors.primary.withOpacity(.5)
+                            : (isDark
                                 ? Wallet.darkLine
-                                : Colors.grey.shade200,
-                          ),
+                                : Colors.grey.withOpacity(.12)),
+                        width: _isSearchFocused ? 1.5 : 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _isSearchFocused
+                              ? AppColors.primary.withOpacity(.08)
+                              : Colors.black.withOpacity(isDark ? .18 : .05),
+                          blurRadius: _isSearchFocused ? 20 : 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 14),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
                           child: Icon(
-                            Icons.close,
-                            size: 13,
-                            color: isDark
-                                ? Wallet.darkMuted
-                                : Colors.grey.shade600,
+                            _isSearchFocused
+                                ? Icons.search_rounded
+                                : Icons.search_rounded,
+                            key: ValueKey(_isSearchFocused),
+                            size: 20,
+                            color: _isSearchFocused
+                                ? AppColors.primary
+                                : (isDark
+                                    ? Wallet.darkFaint
+                                    : Colors.grey.shade400),
                           ),
                         ),
-                      ),
-                    )
-                  else
-                    const SizedBox(width: 14),
-                ],
-              ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            focusNode: _searchFocusNode,
+                            onChanged: (val) => setState(() => _query = val),
+                            style: TextStyle(
+                              fontSize: 14.5,
+                              color: isDark ? Wallet.darkInk : Wallet.ink,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: "Search cards...",
+                              hintStyle: TextStyle(
+                                color: isDark
+                                    ? Wallet.darkFaint
+                                    : Colors.grey.shade400,
+                                fontSize: 14.5,
+                              ),
+                              // The app-wide InputDecorationTheme draws its
+                              // own enabled/focused OutlineInputBorder on
+                              // every field; left unset, that shows up as a
+                              // second border inside this container's own
+                              // pill border. All variants have to be zeroed
+                              // out, not just `border`, since the theme's
+                              // more specific ones take precedence over it.
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                              filled: false,
+                              isDense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ),
+                        if (_query.isNotEmpty)
+                          GestureDetector(
+                            onTap: () {
+                              _searchController.clear();
+                              setState(() => _query = "");
+                              _searchFocusNode.unfocus();
+                            },
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 10),
+                              child: Container(
+                                width: 20,
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isDark
+                                      ? Wallet.darkLine
+                                      : Colors.grey.shade200,
+                                ),
+                                child: Icon(
+                                  Icons.close,
+                                  size: 13,
+                                  color: isDark
+                                      ? Wallet.darkMuted
+                                      : Colors.grey.shade600,
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          const SizedBox(width: 14),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Badge(
+                  isLabelVisible: _selectedCompanyFilter != null,
+                  smallSize: 10,
+                  child: SearchIconButton(
+                    onTap: () => _showCompanyFilterSheet(
+                      _companyNamesFor(currentTabList),
+                    ),
+                    isDark: isDark,
+                    tooltip: 'Filter by company',
+                    active: _selectedCompanyFilter != null,
+                    icon: Icons.tune_rounded,
+                  ),
+                ),
+              ],
             ),
           ),
+
+          if (_selectedCompanyFilter != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: _buildActiveCompanyFilterPill(isDark, currentTabList),
+              ),
+            ),
 
           /// ================= TABS VIEW =================
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildCardList(
-                  myFriendsCards,
-                  isCardLoading,
-                  header: _buildCompanyFilter(myFriendsCards),
-                ),
-                _buildCardList(
-                  mySavedCards,
-                  isCardLoading,
-                  header: _buildCompanyFilter(mySavedCards),
-                ),
+                _buildCardList(myFriendsCards, isCardLoading),
+                _buildCardList(mySavedCards, isCardLoading),
               ],
             ),
           ),
@@ -1433,6 +1289,378 @@ class _CardPageState extends ConsumerState<CardPage>
             _showNewCardOptions();
           }
         },
+      ),
+    );
+  }
+}
+
+/// `null` company means "All Companies" — distinct from the sheet being
+/// dismissed without a choice, which [_CompanyFilterSheet] reports by not
+/// popping a value at all.
+class _CompanyFilterResult {
+  final String? company;
+  const _CompanyFilterResult(this.company);
+}
+
+/// The "Filter by Company" sheet opened from the Cards page search bar.
+///
+/// A letter avatar per company (stable per name, not per rebuild) gives rows
+/// something to visually anchor on beyond a line of text — the wrap-of-chips
+/// this replaced had no such landmark and read as a plain settings list. A
+/// search field only earns its place once there's enough companies to be
+/// worth searching.
+class _CompanyFilterSheet extends StatefulWidget {
+  final List<String> companies;
+  final String? selected;
+
+  const _CompanyFilterSheet({required this.companies, required this.selected});
+
+  @override
+  State<_CompanyFilterSheet> createState() => _CompanyFilterSheetState();
+}
+
+class _CompanyFilterSheetState extends State<_CompanyFilterSheet> {
+  static const _searchThreshold = 6;
+
+  final _searchCtrl = TextEditingController();
+  String _query = '';
+
+  // A handful of accent tints, cycled by a hash of the name so a company's
+  // avatar color is stable across rebuilds and repeat openings rather than
+  // reshuffling — the letter is what varies row to row, not the palette.
+  static const _avatarTints = [
+    Wallet.accentLight,
+    Color(0xFF2563EB),
+    Color(0xFF0D9488),
+    Color(0xFFB45309),
+    Color(0xFFBE185D),
+  ];
+
+  Color _avatarTint(String name) {
+    final hash = name.codeUnits.fold<int>(0, (sum, c) => sum + c);
+    return _avatarTints[hash % _avatarTints.length];
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _choose(String? company) =>
+      Navigator.of(context).pop(_CompanyFilterResult(company));
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final companies = widget.companies;
+    final query = _query.trim().toLowerCase();
+    final filtered = query.isEmpty
+        ? companies
+        : companies.where((c) => c.toLowerCase().contains(query)).toList();
+    final showSearch = companies.length > _searchThreshold;
+
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * .78,
+      ),
+      decoration: BoxDecoration(
+        color: Wallet.surfaceOf(isDark),
+        borderRadius: const BorderRadius.vertical(
+          top: Radius.circular(Wallet.radiusPanel),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? .45 : .12),
+            blurRadius: 32,
+            offset: const Offset(0, -8),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 12),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: isDark ? Wallet.darkLine : Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(isDark ? .18 : .1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.apartment_rounded,
+                      color: AppColors.primary, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Filter by Company',
+                        style: AppTheme.withFontStack(TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? Wallet.darkInk : Wallet.ink,
+                        )),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        companies.length == 1
+                            ? '1 company'
+                            : '${companies.length} companies',
+                        style: AppTheme.withFontStack(TextStyle(
+                          fontSize: 12.5,
+                          color: isDark ? Wallet.darkFaint : Colors.grey.shade500,
+                        )),
+                      ),
+                    ],
+                  ),
+                ),
+                if (widget.selected != null)
+                  TextButton(
+                    onPressed: () => _choose(null),
+                    style: TextButton.styleFrom(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    ),
+                    child: Text(
+                      'Clear',
+                      style: AppTheme.withFontStack(const TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      )),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (showSearch)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+              child: Container(
+                height: 42,
+                decoration: BoxDecoration(
+                  color: isDark ? Wallet.darkGround : const Color(0xFFF4F7FB),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark ? Wallet.darkLine : Colors.grey.withOpacity(.15),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const SizedBox(width: 12),
+                    Icon(Icons.search_rounded,
+                        size: 18,
+                        color: isDark ? Wallet.darkFaint : Colors.grey.shade400),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _searchCtrl,
+                        onChanged: (v) => setState(() => _query = v),
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isDark ? Wallet.darkInk : Wallet.ink,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Search companies',
+                          hintStyle: TextStyle(
+                            fontSize: 14,
+                            color: isDark ? Wallet.darkFaint : Colors.grey.shade400,
+                          ),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          filled: false,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ),
+                    if (_query.isNotEmpty)
+                      GestureDetector(
+                        onTap: () {
+                          _searchCtrl.clear();
+                          setState(() => _query = '');
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          child: Icon(Icons.close_rounded,
+                              size: 16,
+                              color:
+                                  isDark ? Wallet.darkMuted : Colors.grey.shade500),
+                        ),
+                      )
+                    else
+                      const SizedBox(width: 12),
+                  ],
+                ),
+              ),
+            ),
+          const SizedBox(height: 6),
+          Flexible(
+            child: companies.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 28),
+                    child: Center(
+                      child: Text(
+                        'No companies available',
+                        style: AppTheme.withFontStack(TextStyle(
+                          color: isDark ? Wallet.darkFaint : Colors.grey.shade400,
+                        )),
+                      ),
+                    ),
+                  )
+                : ListView(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.fromLTRB(
+                      12,
+                      4,
+                      12,
+                      MediaQuery.of(context).padding.bottom + 16,
+                    ),
+                    children: [
+                      _row(
+                        isDark: isDark,
+                        label: 'All Companies',
+                        isSelected: widget.selected == null,
+                        onTap: () => _choose(null),
+                        leading: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? Wallet.darkLine
+                                : Colors.grey.withOpacity(.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(Icons.grid_view_rounded,
+                              size: 18,
+                              color:
+                                  isDark ? Wallet.darkMuted : Colors.grey.shade600),
+                        ),
+                      ),
+                      if (query.isNotEmpty && filtered.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          child: Center(
+                            child: Text(
+                              'No companies match "${_query.trim()}"',
+                              textAlign: TextAlign.center,
+                              style: AppTheme.withFontStack(TextStyle(
+                                color: isDark
+                                    ? Wallet.darkFaint
+                                    : Colors.grey.shade400,
+                              )),
+                            ),
+                          ),
+                        )
+                      else
+                        ...filtered.map((company) => _row(
+                              isDark: isDark,
+                              label: company,
+                              isSelected: widget.selected == company,
+                              onTap: () => _choose(company),
+                              leading: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: _avatarTint(company)
+                                      .withOpacity(isDark ? .22 : .12),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                alignment: Alignment.center,
+                                child: Text(
+                                  company.isNotEmpty
+                                      ? company[0].toUpperCase()
+                                      : '?',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                    color: _avatarTint(company),
+                                  ),
+                                ),
+                              ),
+                            )),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _row({
+    required bool isDark,
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required Widget leading,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          margin: const EdgeInsets.symmetric(vertical: 3),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppColors.primary.withOpacity(isDark ? .16 : .08)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              leading,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                    color: isSelected
+                        ? (isDark ? Colors.white : AppColors.primary)
+                        : (isDark ? Wallet.darkInk : Wallet.ink),
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 22,
+                height: 22,
+                child: isSelected
+                    ? Container(
+                        decoration: const BoxDecoration(
+                          color: AppColors.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.check_rounded,
+                            size: 14, color: Colors.white),
+                      )
+                    : null,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -59,3 +59,31 @@ class CompanyModel {
 
   Map<String, dynamic> toJson() => _$CompanyModelToJson(this);
 }
+
+/// One page of the companies list, as returned by `GET /companies`.
+///
+/// Hand-written rather than `@JsonSerializable()`: the API nests paging info
+/// under `meta` while `data` stays a plain list, so there is no single object
+/// shape to generate a codec for — plucking the two fields here is simpler.
+class CompanyPage {
+  final List<CompanyModel> companies;
+  final bool hasMore;
+
+  const CompanyPage({required this.companies, required this.hasMore});
+
+  factory CompanyPage.fromResponse(dynamic response) {
+    if (response is! Map<String, dynamic> || response['data'] is! List) {
+      return const CompanyPage(companies: [], hasMore: false);
+    }
+
+    final companies = (response['data'] as List)
+        .whereType<Map>()
+        .map((item) => CompanyModel.fromJson(Map<String, dynamic>.from(item)))
+        .toList();
+
+    final meta = response['meta'];
+    final hasMore = meta is Map && meta['has_more'] == true;
+
+    return CompanyPage(companies: companies, hasMore: hasMore);
+  }
+}

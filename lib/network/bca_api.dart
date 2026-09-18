@@ -73,7 +73,10 @@ abstract class BcaApi {
 
   // ================= COMPANIES =================
   @GET(kEndPointCompanies)
-  Future<Object?> getCompanies();
+  Future<Object?> getCompanies({
+    @Query("page") int? page,
+    @Query("per_page") int? perPage,
+  });
 
   @POST(kEndPointCompanies)
   Future<Object?> createCompany(
