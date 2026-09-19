@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/auth/auth_provider.dart';
+import '../responsive/auth_web_card.dart';
+import '../responsive/responsive.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/app_primary_button.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/loading_view.dart';
+import '../widgets/premium_hero_painter.dart';
 import 'register_page.dart';
 import '../theme/wallet_tokens.dart';
 
@@ -78,6 +81,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       });
     } else if (pendingMessage == null) {
       _lastShownMessage = null;
+    }
+
+    if (Responsive.isDesktop(context)) {
+      return _buildDesktop(authState);
     }
 
     return Theme(
@@ -288,6 +295,126 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     );
   }
 
+  /// Desktop-web layout: a brand panel plus this same form, each with real
+  /// room, instead of the mobile hero-and-scroll column full-bleed on a
+  /// browser window. The mobile branch above is untouched.
+  Widget _buildDesktop(AuthState authState) {
+    return Stack(
+      children: [
+        AuthWebCard(form: _buildFormFields(authState)),
+        if (authState.isLoading)
+          AbsorbPointer(
+            absorbing: true,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const LoadingView(size: 120),
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed: () {
+                        ref.read(authProvider.notifier).cancelLoading();
+                      },
+                      child: const Text('Cancel'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildFormFields(AuthState authState) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Welcome back',
+          style: AppTypography.primary(
+            const TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w600,
+              color: Wallet.ink,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Log in to manage your business cards.',
+          style: AppTypography.secondary(
+            const TextStyle(color: Color(0xFF5B6473)),
+          ),
+        ),
+        const SizedBox(height: 32),
+        NeumorphicField(
+          controller: _emailController,
+          label: 'Email',
+          icon: Icons.email_outlined,
+        ),
+        const SizedBox(height: 18),
+        NeumorphicField(
+          controller: _passwordController,
+          label: 'Password',
+          icon: Icons.lock_outline,
+          obscureText: _obscurePassword,
+          focusNode: _passwordFocusNode,
+          suffix: IconButton(
+            icon: Icon(
+              _obscurePassword ? Icons.visibility_off : Icons.visibility,
+              size: 20,
+            ),
+            onPressed: () {
+              setState(() {
+                _obscurePassword = !_obscurePassword;
+              });
+            },
+          ),
+        ),
+        const SizedBox(height: 28),
+        NeumorphicButton(
+          text: 'Log In',
+          loading: authState.isLoading,
+          onPressed: authState.isLoading
+              ? null
+              : () async {
+                  final result = await ref.read(authProvider.notifier).login(
+                        _emailController.text.trim(),
+                        _passwordController.text.trim(),
+                      );
+
+                  if (!result.isSuccess && context.mounted) {
+                    final updatedAuthState =
+                        ref.read(authProvider).valueOrNull;
+                    AppToast.show(
+                      context,
+                      updatedAuthState?.lastErrorMessage ??
+                          'Invalid email or password',
+                      type: AppToastType.error,
+                    );
+                  }
+                },
+        ),
+        const SizedBox(height: 16),
+        Center(
+          child: TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const RegisterPage()),
+              );
+            },
+            child: const Text("Don't have an account? Register"),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _inputField({
     required TextEditingController controller,
     required String label,
@@ -326,32 +453,4 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       ),
     );
   }
-}
-
-/// ================= HERO WAVE PAINTER =================
-class PremiumHeroPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-
-    final path = Path();
-    path.lineTo(0, size.height * 0.75);
-
-    path.quadraticBezierTo(
-      size.width * 0.6,
-      size.height * 1.05,
-      size.width,
-      size.height * 0.85,
-    );
-
-    path.lineTo(size.width, 0);
-    path.close();
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

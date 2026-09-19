@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme/app_colors.dart';
 import '../../data/vos/company_model.dart';
+import '../responsive/responsive.dart';
 import '../theme/wallet_tokens.dart';
 
 class CompanyDetailPage extends StatelessWidget {
@@ -18,26 +19,35 @@ class CompanyDetailPage extends StatelessWidget {
         slivers: [
           _buildAppBar(context, isDark),
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildMainInfo(context),
-                  const SizedBox(height: 24),
-                  _buildSectionTitle(context, "Contact Details"),
-                  _buildContactCard(context),
-                  const SizedBox(height: 24),
-                  if (company.description != null && company.description!.isNotEmpty) ...[
-                    _buildSectionTitle(context, "About Company"),
-                    _buildAboutCard(context),
-                    const SizedBox(height: 24),
-                  ],
-                  if (company.socials.isNotEmpty) ...[
-                    _buildSectionTitle(context, "Social Presence"),
-                    _buildSocialsCard(context),
-                  ],
-                ],
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth:
+                      Responsive.isDesktop(context) ? 720 : double.infinity,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildMainInfo(context),
+                      const SizedBox(height: 24),
+                      _buildSectionTitle(context, "Contact Details"),
+                      _buildContactCard(context),
+                      const SizedBox(height: 24),
+                      if (company.description != null &&
+                          company.description!.isNotEmpty) ...[
+                        _buildSectionTitle(context, "About Company"),
+                        _buildAboutCard(context),
+                        const SizedBox(height: 24),
+                      ],
+                      if (company.socials.isNotEmpty) ...[
+                        _buildSectionTitle(context, "Social Presence"),
+                        _buildSocialsCard(context),
+                      ],
+                    ],
+                  ),
+                ),
               ),
             ),
           ),

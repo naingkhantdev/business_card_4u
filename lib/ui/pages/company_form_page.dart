@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/company/company_provider.dart';
+import '../responsive/responsive.dart';
 import '../theme/app_colors.dart';
 import '../../data/vos/company_model.dart';
 import '../widgets/app_primary_button.dart';
@@ -179,7 +180,13 @@ class _CompanyFormPageState extends ConsumerState<CompanyFormPage> {
         children: [
           SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: Form(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth:
+                      Responsive.isDesktop(context) ? 640 : double.infinity,
+                ),
+                child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -279,6 +286,8 @@ class _CompanyFormPageState extends ConsumerState<CompanyFormPage> {
                   ),
                   const SizedBox(height: 20),
                 ],
+              ),
+            ),
               ),
             ),
           ),

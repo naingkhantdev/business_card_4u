@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 
 import '../../providers/auth/auth_provider.dart';
 import '../../providers/card/card_provider.dart';
+import '../responsive/responsive.dart';
 import '../theme/app_colors.dart';
 import '../../data/vos/business_card_model.dart';
 import '../widgets/app_toast.dart';
@@ -277,6 +278,20 @@ class _CardPageState extends ConsumerState<CardPage>
               const SizedBox(height: 40),
             ],
           ),
+        ),
+      );
+    } else if (Responsive.isDesktop(context)) {
+      // A single-column list stretched across a browser window reads as
+      // mostly empty space. A wrapped multi-column layout uses that width
+      // the way a real card directory would, without forcing every card into
+      // a uniform grid cell height.
+      scrollChildren.add(
+        Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: filtered
+              .map((card) => SizedBox(width: 340, child: CardItem(card: card)))
+              .toList(),
         ),
       );
     } else {
@@ -1109,7 +1124,12 @@ class _CardPageState extends ConsumerState<CardPage>
           const SizedBox(width: 4),
         ],
       ),
-      body: Column(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: Responsive.isDesktop(context) ? 1100 : double.infinity,
+          ),
+          child: Column(
         children: [
           /// ================= SEARCH =================
           Padding(
@@ -1268,6 +1288,8 @@ class _CardPageState extends ConsumerState<CardPage>
             ),
           ),
         ],
+          ),
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'action_fab',

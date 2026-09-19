@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/card/card_provider.dart';
 import '../../network/image_url.dart';
+import '../responsive/responsive.dart';
 import '../../data/vos/business_card_model.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/loading_view.dart';
@@ -106,38 +107,45 @@ class _FriendRequestsPageState extends ConsumerState<FriendRequestsPage> {
         elevation: 0,
         surfaceTintColor: isDark ? Wallet.darkGround : Colors.white,
       ),
-      body: _isLoading
-          ? const Center(child: LoadingView(size: 90))
-          : _requests.isEmpty
-              ? Center(
-                  child: Text(
-                    'No pending friend requests',
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: isDark
-                          ? Wallet.darkMuted
-                          : Colors.black.withOpacity(.55),
-                      fontWeight: FontWeight.w600,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: Responsive.isDesktop(context) ? 680 : double.infinity,
+          ),
+          child: _isLoading
+              ? const Center(child: LoadingView(size: 90))
+              : _requests.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No pending friend requests',
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: isDark
+                              ? Wallet.darkMuted
+                              : Colors.black.withOpacity(.55),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _loadRequests,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: _requests.length,
+                        itemBuilder: (context, index) {
+                          final card = _requests[index];
+                          return _FriendRequestCard(
+                            card: card,
+                            isAccepted: _acceptedIds.contains(card.id),
+                            isBusy: _processingIds.contains(card.id),
+                            onAccept: () => _acceptRequest(card.id),
+                            onReject: () => _rejectRequest(card.id),
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadRequests,
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _requests.length,
-                    itemBuilder: (context, index) {
-                      final card = _requests[index];
-                      return _FriendRequestCard(
-                        card: card,
-                        isAccepted: _acceptedIds.contains(card.id),
-                        isBusy: _processingIds.contains(card.id),
-                        onAccept: () => _acceptRequest(card.id),
-                        onReject: () => _rejectRequest(card.id),
-                      );
-                    },
-                  ),
-                ),
+        ),
+      ),
     );
   }
 }

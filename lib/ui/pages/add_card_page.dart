@@ -15,6 +15,7 @@ import '../../data/vos/address_model.dart';
 import '../../data/vos/business_card_model.dart';
 import '../../data/vos/company_model.dart';
 import '../../data/vos/scanned_card_data.dart';
+import '../responsive/responsive.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_primary_button.dart';
 import '../widgets/app_toast.dart';
@@ -581,7 +582,13 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         children: [
           SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
-            child: Form(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth:
+                      Responsive.isDesktop(context) ? 720 : double.infinity,
+                ),
+                child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -674,6 +681,8 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                     ],
                   ),
                 ],
+              ),
+            ),
               ),
             ),
           ),

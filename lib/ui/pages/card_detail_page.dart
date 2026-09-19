@@ -10,6 +10,7 @@ import '../../data/vos/address_model.dart';
 import '../../data/vos/business_card_model.dart';
 import '../../data/vos/company_model.dart';
 import '../../utils/full_image_viewer.dart';
+import '../responsive/responsive.dart';
 import '../widgets/app_toast.dart';
 import '../theme/wallet_tokens.dart';
 import '../widgets/my_qr_panel.dart';
@@ -503,7 +504,12 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
             showAvatar: isUserCard,
           ),
 
-          Padding(
+          Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: Responsive.isDesktop(context) ? 720 : double.infinity,
+              ),
+              child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 22, 20, 44),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -676,10 +682,12 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                   ],
                 ),
               ),
-            ],
-          ),
-        );
-      }
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 /// The identity: a large centered avatar, name, role, and a status chip, on

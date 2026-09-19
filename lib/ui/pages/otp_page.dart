@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/auth/auth_provider.dart';
 import '../../utils/app_result.dart';
+import '../responsive/auth_web_card.dart';
+import '../responsive/responsive.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_primary_button.dart';
 import '../widgets/app_toast.dart';
@@ -137,6 +139,13 @@ class _OtpPageState extends ConsumerState<OtpPage> {
           loading: () => AuthState(isLoading: true),
           error: (error, stackTrace) => AuthState(),
         );
+
+    if (Responsive.isDesktop(context)) {
+      return AuthWebCard(
+        tagline: 'Enter the code we sent to verify it\'s you.',
+        form: _buildFormFields(authState),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -290,6 +299,103 @@ class _OtpPageState extends ConsumerState<OtpPage> {
           if (authState.isLoading) const _LoadingGlassOverlay(),
         ],
       ),
+    );
+  }
+
+  Widget _buildFormFields(AuthState authState) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            TextButton.icon(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.arrow_back_rounded, size: 18),
+              label: const Text('Change email'),
+            ),
+            const Spacer(),
+            _TimerPill(
+              timeText: _formattedTime,
+              isExpired: _secondsRemaining == 0,
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        const Text(
+          'Verify OTP',
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.w600,
+            color: Wallet.ink,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'We sent a 6-digit code to',
+          style: TextStyle(fontSize: 14, color: Colors.black.withOpacity(.55)),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          widget.email,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+            color: Wallet.ink,
+          ),
+        ),
+        const SizedBox(height: 26),
+        _OtpPinField(
+          controller: _otpController,
+          focusNode: _otpFocus,
+          enabled: !authState.isLoading,
+          onCompleted: (_) => _verifyOtp(),
+        ),
+        const SizedBox(height: 22),
+        NeumorphicButton(
+          text: 'Verify OTP',
+          loading: authState.isLoading,
+          onPressed: authState.isLoading ? null : _verifyOtp,
+        ),
+        const SizedBox(height: 12),
+        Center(
+          child: TextButton(
+            onPressed: (_secondsRemaining == 0 && !authState.isLoading)
+                ? _resendOtp
+                : null,
+            child: Text(
+              _secondsRemaining == 0
+                  ? 'Resend OTP'
+                  : 'Resend available after $_formattedTime',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: (_secondsRemaining == 0 && !authState.isLoading)
+                    ? const Color(0xFF1E3C72)
+                    : Colors.black.withOpacity(.35),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 18),
+        Row(
+          children: [
+            Icon(Icons.lock_outline_rounded,
+                size: 18, color: Colors.black.withOpacity(.45)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                "Don’t share your OTP with anyone. This code expires in 5 minutes.",
+                style: TextStyle(
+                  fontSize: 12.5,
+                  height: 1.35,
+                  color: Colors.black.withOpacity(.50),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

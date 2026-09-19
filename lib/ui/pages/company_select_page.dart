@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/auth/auth_provider.dart';
 import '../../providers/company/company_provider.dart';
+import '../responsive/responsive.dart';
 import '../theme/app_colors.dart';
 import '../../data/vos/company_model.dart';
 import '../widgets/app_toast.dart';
@@ -197,31 +198,38 @@ class _CompanySelectPageState extends ConsumerState<CompanySelectPage> {
         icon: const Icon(Icons.add),
         label: const Text("Add New Company"),
       ),
-      body: companyState.isLoading
-          ? const Center(child: LoadingView(size: 90))
-          : RefreshIndicator(
-              onRefresh: () =>
-                  ref.read(companyProvider.notifier).fetchCompanies(),
-              child: companyState.companies.isEmpty
-                  ? SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      child: _buildEmptyState(),
-                    )
-                  : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    itemCount: companyState.companies.length +
-                        (companyState.hasMore ? 1 : 0),
-                    itemBuilder: (_, i) {
-                      if (i >= companyState.companies.length) {
-                        return _buildLoadMoreFooter();
-                      }
-                      final c = companyState.companies[i];
-                      return _buildCompanyCard(c);
-                    },
-                  ),
-                ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: Responsive.isDesktop(context) ? 680 : double.infinity,
+          ),
+          child: companyState.isLoading
+              ? const Center(child: LoadingView(size: 90))
+              : RefreshIndicator(
+                  onRefresh: () =>
+                      ref.read(companyProvider.notifier).fetchCompanies(),
+                  child: companyState.companies.isEmpty
+                      ? SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: _buildEmptyState(),
+                        )
+                      : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        itemCount: companyState.companies.length +
+                            (companyState.hasMore ? 1 : 0),
+                        itemBuilder: (_, i) {
+                          if (i >= companyState.companies.length) {
+                            return _buildLoadMoreFooter();
+                          }
+                          final c = companyState.companies[i];
+                          return _buildCompanyCard(c);
+                        },
+                      ),
+                    ),
+        ),
+      ),
     );
   }
 

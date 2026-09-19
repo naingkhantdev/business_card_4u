@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/card/card_provider.dart';
+import '../responsive/responsive.dart';
 import '../theme/app_colors.dart';
 import '../../data/vos/business_card_model.dart';
 import '../widgets/card_item.dart';
@@ -127,7 +128,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         elevation: 0,
         surfaceTintColor: isDark ? Wallet.darkGround : Colors.white,
       ),
-      body: Column(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: Responsive.isDesktop(context) ? 1100 : double.infinity,
+          ),
+          child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
@@ -310,18 +316,34 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                           )
                         : _results.isEmpty
                             ? const Center(child: Text("No users found"))
-                            : ListView.builder(
-                                padding: const EdgeInsets.all(16),
-                                itemCount: _results.length,
-                                itemBuilder: (context, index) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 12),
-                                    child: CardItem(card: _results[index]),
-                                  );
-                                },
-                              ),
+                            : Responsive.isDesktop(context)
+                                ? SingleChildScrollView(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Wrap(
+                                      spacing: 16,
+                                      runSpacing: 16,
+                                      children: _results
+                                          .map((card) => SizedBox(
+                                              width: 340,
+                                              child: CardItem(card: card)))
+                                          .toList(),
+                                    ),
+                                  )
+                                : ListView.builder(
+                                    padding: const EdgeInsets.all(16),
+                                    itemCount: _results.length,
+                                    itemBuilder: (context, index) {
+                                      return Padding(
+                                        padding:
+                                            const EdgeInsets.only(bottom: 12),
+                                        child: CardItem(card: _results[index]),
+                                      );
+                                    },
+                                  ),
           ),
         ],
+          ),
+        ),
       ),
     );
   }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../providers/auth/auth_provider.dart';
+import '../responsive/auth_web_card.dart';
+import '../responsive/responsive.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_primary_button.dart';
 import '../widgets/app_toast.dart';
@@ -16,6 +18,9 @@ class RegisterPage extends ConsumerStatefulWidget {
 }
 
 class _RegisterPageState extends ConsumerState<RegisterPage> {
+  static const _text = Wallet.ink;
+  static const _muted = Color(0xFF5B6473);
+
   final _emailController = TextEditingController();
 
   void _toast(String message, {bool isError = false}) {
@@ -67,6 +72,13 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
     const deep = AppColors.secondary;
     const blue = AppColors.primary;
+
+    if (Responsive.isDesktop(context)) {
+      return AuthWebCard(
+        tagline: 'Create an account to start sharing your card.',
+        form: _buildFormFields(authState),
+      );
+    }
 
     return Theme(
       data: Theme.of(context).copyWith(
@@ -238,6 +250,51 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildFormFields(AuthState authState) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text(
+          'Create your account',
+          style: TextStyle(
+            color: _text,
+            fontWeight: FontWeight.w600,
+            fontSize: 28,
+            height: 1.1,
+          ),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'Enter your email to receive a verification code.',
+          style: TextStyle(color: _muted, fontSize: 14, height: 1.45),
+        ),
+        const SizedBox(height: 22),
+        NeumorphicField(
+          controller: _emailController,
+          label: 'Email',
+          icon: Icons.alternate_email_rounded,
+          enabled: !authState.isLoading,
+          keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => authState.isLoading ? null : _submit(),
+        ),
+        const SizedBox(height: 16),
+        NeumorphicButton(
+          text: 'Send code',
+          loading: authState.isLoading,
+          onPressed: authState.isLoading ? null : _submit,
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'Code expires in 5 minutes.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: _muted, fontSize: 12),
+        ),
+      ],
     );
   }
 }

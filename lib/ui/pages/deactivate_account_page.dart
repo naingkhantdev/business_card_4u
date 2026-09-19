@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth_gate.dart';
 import '../../providers/auth/auth_provider.dart';
 import '../../services/navigation/app_navigator.dart';
+import '../responsive/responsive.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_primary_button.dart';
 import '../widgets/app_toast.dart';
@@ -95,7 +96,12 @@ class _DeactivateAccountPageState extends ConsumerState<DeactivateAccountPage> {
         ),
       ),
       body: SafeArea(
-        child: ListView(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: Responsive.isDesktop(context) ? 520 : double.infinity,
+            ),
+            child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
             Container(
@@ -209,6 +215,8 @@ class _DeactivateAccountPageState extends ConsumerState<DeactivateAccountPage> {
               ),
             ),
           ],
+        ),
+        ),
         ),
       ),
     );

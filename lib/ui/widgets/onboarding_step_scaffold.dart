@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../responsive/responsive.dart';
 import '../theme/app_typography.dart';
 import '../theme/glass.dart';
 import '../theme/wallet_tokens.dart';
@@ -109,32 +110,41 @@ class OnboardingStepScaffold extends StatelessWidget {
                           Wallet.margin,
                           28,
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              headline,
-                              style: AppTypography.primary(TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.w700,
-                                height: 1.05,
-                                color: Wallet.inkOf(isDark),
-                              )),
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: Responsive.isDesktop(context)
+                                  ? 640
+                                  : double.infinity,
                             ),
-                            if (subhead != null) ...[
-                              const SizedBox(height: 10),
-                              Text(
-                                subhead!,
-                                style: AppTypography.secondary(TextStyle(
-                                  fontSize: 14.5,
-                                  height: 1.5,
-                                  color: Wallet.mutedOf(isDark),
-                                )),
-                              ),
-                            ],
-                            const SizedBox(height: 24),
-                            ...children,
-                          ],
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  headline,
+                                  style: AppTypography.primary(TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.05,
+                                    color: Wallet.inkOf(isDark),
+                                  )),
+                                ),
+                                if (subhead != null) ...[
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    subhead!,
+                                    style: AppTypography.secondary(TextStyle(
+                                      fontSize: 14.5,
+                                      height: 1.5,
+                                      color: Wallet.mutedOf(isDark),
+                                    )),
+                                  ),
+                                ],
+                                const SizedBox(height: 24),
+                                ...children,
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),
