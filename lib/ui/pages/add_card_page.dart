@@ -8,13 +8,13 @@ import 'package:image_picker/image_picker.dart';
 import '../../providers/auth/auth_provider.dart';
 import '../../providers/card/card_provider.dart';
 import '../../providers/company/company_provider.dart';
-import '../../services/ocr/card_ocr_service.dart';
+import '../../providers/ocr/card_scanner_provider.dart';
 import '../../utils/app_result.dart';
-import '../../utils/business_card_parser.dart';
 import '../../network/image_url.dart';
 import '../../data/vos/address_model.dart';
 import '../../data/vos/business_card_model.dart';
 import '../../data/vos/company_model.dart';
+import '../../data/vos/scanned_card_data.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_primary_button.dart';
 import '../widgets/app_toast.dart';
@@ -34,7 +34,7 @@ class AddCardPage extends ConsumerStatefulWidget {
 
   /// Fields OCR read off those photos. Pre-fills the form; every value stays
   /// editable because recognition is a guess, not a source of truth.
-  final ParsedCardData? scanned;
+  final ScannedCardData? scanned;
 
   const AddCardPage({
     super.key,
@@ -190,7 +190,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
 
   /// Writes OCR results into the form. Only empty fields are filled, so a
   /// rescan can add what was missed without discarding the user's own edits.
-  void _applyScanned(ParsedCardData data) {
+  void _applyScanned(ScannedCardData data) {
     void fill(String key, TextEditingController controller, String? value) {
       if (value == null || value.trim().isEmpty) return;
       if (controller.text.trim().isNotEmpty) return;
@@ -203,16 +203,19 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     fill('phones', _phonesCtrl, data.phones.join(', '));
     fill('emails', _emailsCtrl, data.emails.join(', '));
 
-    if (data.addressLines.isNotEmpty && _addressEntries.first.isEmpty) {
-      // City and country are required by the API once an address is started,
-      // and OCR cannot tell them apart from the rest of the address reliably.
-      // The whole block goes into `street` and the user splits it out.
-      _addressEntries.first.street.text = data.addressLines.join(', ');
+    final address = data.address;
+    if (address != null && _addressEntries.first.isEmpty) {
+      final entry = _addressEntries.first;
+      entry.street.text = address.street ?? '';
+      entry.city.text = address.city ?? '';
+      entry.state.text = address.state ?? '';
+      entry.postalCode.text = address.postalCode ?? '';
+      entry.country.text = address.country ?? '';
       _scannedFields.add('address');
     }
 
-    if (_selectedCompanyId == null && data.company != null) {
-      _scannedCompanyName = data.company;
+    if (_selectedCompanyId == null && data.companyName != null) {
+      _scannedCompanyName = data.companyName;
     }
   }
 
@@ -258,19 +261,19 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     await _runOcr(silentWhenEmpty: true);
   }
 
-  /// Re-reads whichever card photos are attached and fills any field still
-  /// blank. Existing values are never overwritten — see [_applyScanned].
+  /// Re-reads the front card photo and fills any field still blank. Existing
+  /// values are never overwritten — see [_applyScanned]. Only the front side
+  /// is read; the back photo is stored but not scanned.
   Future<void> _runOcr({bool silentWhenEmpty = false}) async {
     final front = _frontImage;
     if (front == null) return;
 
     setState(() => _isRescanning = true);
     try {
-      final parsed = await const CardOcrService()
-          .scan(front: front, back: _backImage);
+      final scanned = await ref.read(cardScannerProvider).scan(front.path);
       if (!mounted) return;
 
-      if (parsed.isEmpty) {
+      if (scanned.isEmpty) {
         if (!silentWhenEmpty) {
           _showToast(
             "Couldn't read any text from that photo. Try better lighting, or fill the form in yourself.",
@@ -280,7 +283,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         return;
       }
 
-      setState(() => _applyScanned(parsed));
+      setState(() => _applyScanned(scanned));
       unawaited(_resolveScannedCompany());
       if (!silentWhenEmpty) {
         _showToast('Scanned details added. Check them before saving.');

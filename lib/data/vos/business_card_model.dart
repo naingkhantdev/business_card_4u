@@ -18,7 +18,8 @@ class BusinessCardModel {
   @JsonKey(name: 'profile_image')
   final String? profileImage;
 
-  /// Photo of the physical card's front side, as captured or scanned.
+  /// Photo of the physical card's front side, as captured or scanned. Stored
+  /// on the server as a path under /storage.
   @JsonKey(name: 'front_image')
   final String? frontImage;
 

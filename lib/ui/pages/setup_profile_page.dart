@@ -12,8 +12,8 @@ import '../../network/image_url.dart';
 import '../../providers/auth/auth_provider.dart';
 import '../../providers/card/card_provider.dart';
 import '../../providers/company/company_provider.dart';
-import '../../services/ocr/card_ocr_service.dart';
-import '../../utils/business_card_parser.dart';
+import '../../providers/ocr/card_scanner_provider.dart';
+import '../../data/vos/scanned_card_data.dart';
 import '../theme/app_typography.dart';
 import '../theme/wallet_tokens.dart';
 import '../widgets/app_primary_button.dart';
@@ -195,11 +195,10 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
 
     setState(() => _isScanning = true);
     try {
-      final parsed =
-          await const CardOcrService().scan(front: front, back: _backImage);
+      final scanned = await ref.read(cardScannerProvider).scan(front.path);
       if (!mounted) return;
 
-      if (parsed.isEmpty) {
+      if (scanned.isEmpty) {
         if (!silentWhenEmpty) {
           _showToast(
             "Couldn't read that photo. Try better lighting, or type the "
@@ -210,8 +209,8 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
         return;
       }
 
-      setState(() => _applyScanned(parsed));
-      unawaited(_resolveScannedCompany(parsed.company));
+      setState(() => _applyScanned(scanned));
+      unawaited(_resolveScannedCompany(scanned.companyName));
       if (!silentWhenEmpty) {
         _showToast('Filled in what we could read. Check it before saving.');
       }
@@ -226,7 +225,7 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
     }
   }
 
-  void _applyScanned(ParsedCardData data) {
+  void _applyScanned(ScannedCardData data) {
     if (_positionCtrl.text.trim().isEmpty && data.position != null) {
       _positionCtrl.text = data.position!.trim();
     }
