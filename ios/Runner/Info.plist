@@ -28,6 +28,8 @@
 	<string>Used to photograph a business card so its details can be filled in for you.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Used to pick a photo of a business card or a profile picture.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Used to save your QR code or a card photo to your photo library.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

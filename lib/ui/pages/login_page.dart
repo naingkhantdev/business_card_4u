@@ -1,11 +1,12 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../theme/app_page_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../../providers/auth/auth_provider.dart';
 import '../responsive/auth_web_card.dart';
 import '../responsive/responsive.dart';
-import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../widgets/app_primary_button.dart';
 import '../widgets/app_toast.dart';
@@ -65,6 +66,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final authState = ref.watch(authProvider).when(
           data: (state) => state,
           loading: () => AuthState(isCheckingSession: true),
@@ -87,22 +89,31 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       return _buildDesktop(authState);
     }
 
+    // Forced light on purpose: the hero illustration (login.png) is drawn
+    // for a light background and isn't ready for a dark one, so unlike the
+    // rest of the app this page doesn't follow the system theme. isDark
+    // stays false so every Wallet.*Of(isDark) call below still resolves to
+    // its light value; wrapping in Theme keeps default-styled descendants
+    // (TextButton, the password-visibility IconButton) light too, not just
+    // the colors set explicitly here.
+    const isDark = false;
+
     return Theme(
       data: Theme.of(context).copyWith(
         brightness: Brightness.light,
-        scaffoldBackgroundColor: AppColors.surfaceSoft,
+        scaffoldBackgroundColor: Wallet.groundOf(isDark),
         colorScheme: Theme.of(context).colorScheme.copyWith(
               brightness: Brightness.light,
-              surface: Colors.white,
-              onSurface: Wallet.ink,
+              surface: Wallet.surfaceOf(isDark),
+              onSurface: Wallet.inkOf(isDark),
             ),
         textTheme: Theme.of(context).textTheme.apply(
-              bodyColor: Wallet.ink,
-              displayColor: Wallet.ink,
+              bodyColor: Wallet.inkOf(isDark),
+              displayColor: Wallet.inkOf(isDark),
             ),
       ),
       child: Scaffold(
-        backgroundColor: AppColors.surfaceSoft,
+        backgroundColor: Wallet.groundOf(isDark),
         resizeToAvoidBottomInset: true,
         body: Stack(
           children: [
@@ -134,28 +145,34 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     height: heroHeight,
                     width: double.infinity,
                     child: CustomPaint(
-                      painter: PremiumHeroPainter(),
+                      painter: PremiumHeroPainter(color: Wallet.surfaceOf(isDark)),
                       child: Column(
+                        // Centered, not top-anchored — anchoring to the top
+                        // left a large dead gap above the wave at taller
+                        // hero heights, since the wave itself is now a
+                        // shallow shape confined near the bottom edge
+                        // (peaking no higher than 85% down). Centered text
+                        // lands well clear of that without hugging the top.
                         mainAxisAlignment: MainAxisAlignment.center,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          SizedBox(height: heroHeight >= 160 ? 40 : 12),
+                          SizedBox(height: heroHeight >= 160 ? 12 : 6),
                           if (!isKeyboardOpen)
                             RichText(
                               text: TextSpan(
                                 text: 'businessCard',
                                 style: AppTypography.primary(
-                                  const TextStyle(
+                                  TextStyle(
                                     fontSize: 28,
                                     fontWeight: FontWeight.w600,
-                                    color: Wallet.ink,
+                                    color: Wallet.inkOf(isDark),
                                   ),
                                 ),
-                                children: const [
+                                children: [
                                   TextSpan(
                                     text: '4U',
                                     style: TextStyle(
-                                      color: AppColors.primary,
+                                      color: Wallet.accentOf(isDark),
                                     ),
                                   ),
                                 ],
@@ -176,23 +193,41 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
                   /// ================= LOGIN FORM (scrollable) =================
                   Expanded(
-                    child: SingleChildScrollView(
+                    // Fades the scroll content at the top and bottom edges
+                    // instead of cutting it off abruptly — the usual cue
+                    // that there's more to scroll to in that direction.
+                    child: ShaderMask(
+                      shaderCallback: (rect) => const LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black,
+                          Colors.black,
+                          Colors.transparent,
+                        ],
+                        stops: [0.0, 0.04, 0.94, 1.0],
+                      ).createShader(rect),
+                      blendMode: BlendMode.dstIn,
+                      child: SingleChildScrollView(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
                       child: Column(
                         children: [
                           const SizedBox(height: 16),
                           _inputField(
                             controller: _emailController,
-                            label: 'Email',
+                            label: l10n.loginPageEmailLabel,
                             icon: Icons.email_outlined,
+                            isDark: isDark,
                           ),
                           const SizedBox(height: 18),
                           _inputField(
                             controller: _passwordController,
-                            label: 'Password',
+                            label: l10n.loginPagePasswordLabel,
                             icon: Icons.lock_outline,
                             obscure: _obscurePassword,
                             focusNode: _passwordFocusNode,
+                            isDark: isDark,
                             suffix: IconButton(
                               icon: Icon(
                                 _obscurePassword
@@ -208,7 +243,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           ),
                           const SizedBox(height: 28),
                           AppPrimaryButton(
-                            text: 'Log In',
+                            text: l10n.loginPageLogIn,
                             loading: authState.isLoading,
                             onPressed: authState.isLoading
                                 ? null
@@ -220,13 +255,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                           _passwordController.text.trim(),
                                         );
 
-                                    if (!result.isSuccess && context.mounted) {
+                                    if (!result.isSuccess &&
+                                        !result.cancelled &&
+                                        context.mounted) {
                                       final updatedAuthState =
                                           ref.read(authProvider).valueOrNull;
                                       AppToast.show(
                                         context,
                                         updatedAuthState?.lastErrorMessage ??
-                                            'Invalid email or password',
+                                            l10n.loginPageInvalidCredentials,
                                         type: AppToastType.error,
                                       );
                                     }
@@ -239,20 +276,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             onPressed: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(
+                                AppPageRoute(
                                   builder: (_) => const RegisterPage(),
                                 ),
                               );
                             },
-                            child:
-                                const Text("Don't have an account? Register"),
+                            child: Text(l10n.loginPageNoAccountRegister),
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'Developed by Asia Brightway',
+                            l10n.loginPageDevelopedBy,
                             style: AppTypography.tertiary(
-                              const TextStyle(
-                                color: Color(0xFF5B6473),
+                              TextStyle(
+                                color: Wallet.mutedOf(isDark),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -261,6 +297,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         ],
                       ),
                     ),
+                    ),
                   ),
                 ],
               );
@@ -268,26 +305,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
             /// ================= LOADING OVERLAY =================
             if (authState.isLoading)
-              AbsorbPointer(
-                absorbing: true,
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const LoadingView(size: 120),
-                        const SizedBox(height: 16),
-                        TextButton(
-                          onPressed: () {
-                            ref.read(authProvider.notifier).cancelLoading();
-                          },
-                          child: const Text('Cancel'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              _SigningInOverlay(
+                onCancel: () =>
+                    ref.read(authProvider.notifier).cancelLoading(),
               ),
           ],
         ),
@@ -303,38 +323,21 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       children: [
         AuthWebCard(form: _buildFormFields(authState)),
         if (authState.isLoading)
-          AbsorbPointer(
-            absorbing: true,
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const LoadingView(size: 120),
-                    const SizedBox(height: 16),
-                    TextButton(
-                      onPressed: () {
-                        ref.read(authProvider.notifier).cancelLoading();
-                      },
-                      child: const Text('Cancel'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          _SigningInOverlay(
+            onCancel: () => ref.read(authProvider.notifier).cancelLoading(),
           ),
       ],
     );
   }
 
   Widget _buildFormFields(AuthState authState) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Welcome back',
+          l10n.loginPageWelcomeBack,
           style: AppTypography.primary(
             const TextStyle(
               fontSize: 26,
@@ -345,7 +348,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         ),
         const SizedBox(height: 8),
         Text(
-          'Log in to manage your business cards.',
+          l10n.loginPageSubtitle,
           style: AppTypography.secondary(
             const TextStyle(color: Color(0xFF5B6473)),
           ),
@@ -353,13 +356,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         const SizedBox(height: 32),
         NeumorphicField(
           controller: _emailController,
-          label: 'Email',
+          label: l10n.loginPageEmailLabel,
           icon: Icons.email_outlined,
         ),
         const SizedBox(height: 18),
         NeumorphicField(
           controller: _passwordController,
-          label: 'Password',
+          label: l10n.loginPagePasswordLabel,
           icon: Icons.lock_outline,
           obscureText: _obscurePassword,
           focusNode: _passwordFocusNode,
@@ -377,7 +380,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         ),
         const SizedBox(height: 28),
         NeumorphicButton(
-          text: 'Log In',
+          text: l10n.loginPageLogIn,
           loading: authState.isLoading,
           onPressed: authState.isLoading
               ? null
@@ -387,13 +390,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         _passwordController.text.trim(),
                       );
 
-                  if (!result.isSuccess && context.mounted) {
+                  if (!result.isSuccess &&
+                      !result.cancelled &&
+                      context.mounted) {
                     final updatedAuthState =
                         ref.read(authProvider).valueOrNull;
                     AppToast.show(
                       context,
                       updatedAuthState?.lastErrorMessage ??
-                          'Invalid email or password',
+                          l10n.loginPageInvalidCredentials,
                       type: AppToastType.error,
                     );
                   }
@@ -405,10 +410,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const RegisterPage()),
+                AppPageRoute(builder: (_) => const RegisterPage()),
               );
             },
-            child: const Text("Don't have an account? Register"),
+            child: Text(l10n.loginPageNoAccountRegister),
           ),
         ),
       ],
@@ -419,38 +424,90 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     required TextEditingController controller,
     required String label,
     required IconData icon,
+    required bool isDark,
     bool obscure = false,
     FocusNode? focusNode,
     Widget? suffix,
   }) {
-    return TextFormField(
-      controller: controller,
-      focusNode: focusNode,
-      obscureText: obscure,
-      style: AppTypography.secondary(
-        const TextStyle(
-          color: Wallet.ink,
-          fontWeight: FontWeight.w400,
+    OutlineInputBorder outline(Color color, double width) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: color, width: width),
+        );
+
+    // The field's fill used to be flat white, almost indistinguishable from
+    // the page background in light mode and always wrong in dark mode since
+    // this whole page used to force light regardless of system theme. A
+    // hairline border plus a soft shadow give it a boundary at rest, using
+    // the same light/dark tokens as the rest of the app.
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: Wallet.shadowOf(isDark),
+      ),
+      child: TextFormField(
+        controller: controller,
+        focusNode: focusNode,
+        obscureText: obscure,
+        style: AppTypography.secondary(
+          TextStyle(
+            color: Wallet.inkOf(isDark),
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: AppTypography.tertiary(
+            TextStyle(color: Wallet.mutedOf(isDark)),
+          ),
+          prefixIcon: Icon(icon, color: Wallet.mutedOf(isDark)),
+          suffixIcon: suffix,
+          filled: true,
+          fillColor: Wallet.surfaceOf(isDark),
+          border: outline(Wallet.lineOf(isDark), 1),
+          enabledBorder: outline(Wallet.lineOf(isDark), 1),
+          focusedBorder: outline(Wallet.accentOf(isDark), 1.6),
         ),
       ),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: AppTypography.tertiary(
-          const TextStyle(color: Color(0xFF5B6473)),
+    );
+  }
+}
+
+/// Shown over the login form while signing in: the fading ABW loader on a
+/// blur, with Cancel underneath.
+///
+/// Taps on the form behind are stopped by a barrier *underneath* the loader.
+/// The old version wrapped the whole overlay in an AbsorbPointer, which
+/// swallowed the Cancel button's own taps along with the form's.
+class _SigningInOverlay extends StatelessWidget {
+  final VoidCallback onCancel;
+
+  const _SigningInOverlay({required this.onCancel});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        const ModalBarrier(dismissible: false),
+        BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const LoadingView(size: 120),
+                const SizedBox(height: 16),
+                TextButton(
+                  onPressed: onCancel,
+                  child: Text(l10n.loginPageCancel),
+                ),
+              ],
+            ),
+          ),
         ),
-        prefixIcon: Icon(icon, color: const Color(0xFF5B6473)),
-        suffixIcon: suffix,
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-        ),
-      ),
+      ],
     );
   }
 }

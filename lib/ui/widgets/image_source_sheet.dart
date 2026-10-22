@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../theme/app_typography.dart';
 import '../theme/wallet_tokens.dart';
 
@@ -17,6 +18,7 @@ Future<ImageSource?> showImageSourceSheet(
   String? subtitle,
 }) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
+  final l10n = AppLocalizations.of(context)!;
 
   return showModalBottomSheet<ImageSource>(
     context: context,
@@ -84,10 +86,10 @@ Future<ImageSource?> showImageSourceSheet(
             ),
             _SourceRow(
               icon: Icons.photo_camera_outlined,
-              label: 'Take a photo',
+              label: l10n.imageSourceTakePhoto,
               // Named as the expected path so the choice is not two equal
               // options with nothing to separate them.
-              hint: 'Recommended',
+              hint: l10n.imageSourceRecommended,
               isDark: isDark,
               onTap: () => Navigator.of(context).pop(ImageSource.camera),
             ),
@@ -98,7 +100,7 @@ Future<ImageSource?> showImageSourceSheet(
             ),
             _SourceRow(
               icon: Icons.photo_library_outlined,
-              label: 'Choose from gallery',
+              label: l10n.imageSourceChooseGallery,
               isDark: isDark,
               onTap: () => Navigator.of(context).pop(ImageSource.gallery),
             ),

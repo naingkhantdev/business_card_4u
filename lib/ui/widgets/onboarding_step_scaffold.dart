@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../responsive/responsive.dart';
 import '../theme/app_typography.dart';
 import '../theme/glass.dart';
@@ -188,6 +189,7 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     // One segment more than there are steps: the email verification that got
     // the user here counts, so the rail never starts empty.
     final segments = totalSteps + 1;
@@ -205,7 +207,7 @@ class _Header extends StatelessWidget {
               _ExitButton(icon: exitIcon, onTap: onExit, isDark: isDark),
               const SizedBox(width: 4),
               Text(
-                'STEP $step / $totalSteps',
+                l10n.onboardingStepCounter(step, totalSteps),
                 style: AppTypography.eyebrow(
                   color: Wallet.accentOf(isDark),
                   fontSize: 10.5,

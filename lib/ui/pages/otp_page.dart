@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import '../theme/app_page_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../../providers/auth/auth_provider.dart';
 import '../../utils/app_result.dart';
 import '../responsive/auth_web_card.dart';
@@ -80,9 +82,10 @@ class _OtpPageState extends ConsumerState<OtpPage> {
     if (_isVerifying) return;
 
     final otp = _otpController.text.trim();
+    final l10n = AppLocalizations.of(context)!;
 
     if (otp.length != 6) {
-      _showMessage("OTP ၆ လုံး ထည့်ပါ", isError: true);
+      _showMessage(l10n.otpPageEnterSixDigits, isError: true);
       return;
     }
 
@@ -98,7 +101,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
 
     if (!mounted) return;
     final message = result.message ??
-        (result.success ? "OTP verified" : "Something went wrong");
+        (result.success ? l10n.otpPageVerifiedMessage : l10n.otpPageGenericError);
     _showMessage(message, isError: !result.success);
 
     if (result.success) {
@@ -106,7 +109,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
+          AppPageRoute(
             builder: (_) => CompleteRegisterPage(email: widget.email),
           ),
         );
@@ -120,9 +123,10 @@ class _OtpPageState extends ConsumerState<OtpPage> {
     final result = await ref.read(authProvider.notifier).sendOtp(widget.email);
 
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     _showMessage(
       result.message ??
-          (result.success ? "OTP resent" : "Failed to resend OTP"),
+          (result.success ? l10n.otpPageResentMessage : l10n.otpPageResendFailed),
       isError: !result.success,
     );
 
@@ -140,18 +144,25 @@ class _OtpPageState extends ConsumerState<OtpPage> {
           error: (error, stackTrace) => AuthState(),
         );
 
+    final l10n = AppLocalizations.of(context)!;
+
     if (Responsive.isDesktop(context)) {
       return AuthWebCard(
-        tagline: 'Enter the code we sent to verify it\'s you.',
-        form: _buildFormFields(authState),
+        tagline: l10n.otpPageTagline,
+        form: _buildFormFields(authState, l10n),
       );
     }
 
+    // None of the "glass" widgets below used to take the system theme into
+    // account at all — every one of them was hardcoded to a white/light
+    // aesthetic, so this page looked identical (and wrong) in dark mode.
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Wallet.groundOf(isDark),
       body: Stack(
         children: [
-          const _PremiumBackground(),
+          _PremiumBackground(isDark: isDark),
 
           SafeArea(
             child: GestureDetector(
@@ -170,34 +181,36 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                         _CircleIconButton(
                           icon: Icons.arrow_back_rounded,
                           onTap: () => Navigator.pop(context),
+                          isDark: isDark,
                         ),
                         const Spacer(),
                         _TimerPill(
                           timeText: _formattedTime,
                           isExpired: _secondsRemaining == 0,
+                          isDark: isDark,
                         ),
                       ],
                     ),
 
                     const SizedBox(height: 28),
 
-                    const Text(
-                      "Verify OTP",
+                    Text(
+                      l10n.otpPageTitle,
                       style: TextStyle(
                         fontSize: 30,
                         height: 1.1,
                         fontWeight: FontWeight.w600,
-                        color: Wallet.ink,
+                        color: Wallet.inkOf(isDark),
                       ),
                     ),
 
                     const SizedBox(height: 10),
 
                     Text(
-                      "We sent a 6-digit code to",
+                      l10n.otpPageSentCodeTo,
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.black.withOpacity(.55),
+                        color: Wallet.mutedOf(isDark),
                       ),
                     ),
 
@@ -205,16 +218,17 @@ class _OtpPageState extends ConsumerState<OtpPage> {
 
                     Text(
                       widget.email,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
-                        color: Wallet.ink,
+                        color: Wallet.inkOf(isDark),
                       ),
                     ),
 
                     const SizedBox(height: 26),
 
                     _GlassCard(
+                      isDark: isDark,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -227,13 +241,14 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                             focusNode: _otpFocus,
                             enabled: !authState.isLoading,
                             onCompleted: (_) => _verifyOtp(),
+                            isDark: isDark,
                           ),
 
                           const SizedBox(height: 22),
 
                           // Verify button
                           AppPrimaryButton(
-                            text: "Verify OTP",
+                            text: l10n.otpPageTitle,
                             loading: authState.isLoading,
                             onPressed: authState.isLoading ? null : _verifyOtp,
                             height: 54,
@@ -252,15 +267,15 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                                   : null,
                               child: Text(
                                 _secondsRemaining == 0
-                                    ? "Resend OTP"
-                                    : "Resend available after $_formattedTime",
+                                    ? l10n.otpPageResendNow
+                                    : l10n.otpPageResendAfter(_formattedTime),
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontWeight: FontWeight.w500,
                                   color: (_secondsRemaining == 0 &&
                                           !authState.isLoading)
-                                      ? const Color(0xFF1E3C72)
-                                      : Colors.black.withOpacity(.35),
+                                      ? Wallet.accentOf(isDark)
+                                      : Wallet.faintOf(isDark),
                                 ),
                               ),
                             ),
@@ -275,15 +290,15 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                     Row(
                       children: [
                         Icon(Icons.lock_outline_rounded,
-                            size: 18, color: Colors.black.withOpacity(.45)),
+                            size: 18, color: Wallet.faintOf(isDark)),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            "Don’t share your OTP with anyone. This code expires in 5 minutes.",
+                            l10n.otpPageFooterTip,
                             style: TextStyle(
                               fontSize: 12.5,
                               height: 1.35,
-                              color: Colors.black.withOpacity(.50),
+                              color: Wallet.mutedOf(isDark),
                             ),
                           ),
                         ),
@@ -296,13 +311,13 @@ class _OtpPageState extends ConsumerState<OtpPage> {
           ),
 
           // Loading overlay premium
-          if (authState.isLoading) const _LoadingGlassOverlay(),
+          if (authState.isLoading) _LoadingGlassOverlay(isDark: isDark),
         ],
       ),
     );
   }
 
-  Widget _buildFormFields(AuthState authState) {
+  Widget _buildFormFields(AuthState authState, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -312,7 +327,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
             TextButton.icon(
               onPressed: () => Navigator.pop(context),
               icon: const Icon(Icons.arrow_back_rounded, size: 18),
-              label: const Text('Change email'),
+              label: Text(l10n.otpPageChangeEmail),
             ),
             const Spacer(),
             _TimerPill(
@@ -322,9 +337,9 @@ class _OtpPageState extends ConsumerState<OtpPage> {
           ],
         ),
         const SizedBox(height: 20),
-        const Text(
-          'Verify OTP',
-          style: TextStyle(
+        Text(
+          l10n.otpPageTitle,
+          style: const TextStyle(
             fontSize: 26,
             fontWeight: FontWeight.w600,
             color: Wallet.ink,
@@ -332,7 +347,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
         ),
         const SizedBox(height: 8),
         Text(
-          'We sent a 6-digit code to',
+          l10n.otpPageSentCodeTo,
           style: TextStyle(fontSize: 14, color: Colors.black.withOpacity(.55)),
         ),
         const SizedBox(height: 4),
@@ -353,7 +368,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
         ),
         const SizedBox(height: 22),
         NeumorphicButton(
-          text: 'Verify OTP',
+          text: l10n.otpPageTitle,
           loading: authState.isLoading,
           onPressed: authState.isLoading ? null : _verifyOtp,
         ),
@@ -365,8 +380,8 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                 : null,
             child: Text(
               _secondsRemaining == 0
-                  ? 'Resend OTP'
-                  : 'Resend available after $_formattedTime',
+                  ? l10n.otpPageResendNow
+                  : l10n.otpPageResendAfter(_formattedTime),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontWeight: FontWeight.w500,
@@ -385,7 +400,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                "Don’t share your OTP with anyone. This code expires in 5 minutes.",
+                l10n.otpPageFooterTip,
                 style: TextStyle(
                   fontSize: 12.5,
                   height: 1.35,
@@ -403,22 +418,25 @@ class _OtpPageState extends ConsumerState<OtpPage> {
 /* ===================== Premium UI Widgets ===================== */
 
 class _PremiumBackground extends StatelessWidget {
-  const _PremiumBackground();
+  final bool isDark;
+  const _PremiumBackground({required this.isDark});
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
         // Base
-        Container(color: Wallet.ground),
+        Container(color: Wallet.groundOf(isDark)),
 
-        // Gradient blobs
+        // Gradient blobs. The third one was a plain white glow — fine
+        // floating over a light ground, a stray bright patch over a dark
+        // one — so dark mode gets a second accent-tinted blob instead.
         Positioned(
           top: -120,
           left: -60,
           child: _BlurBlob(
             size: 260,
-            color: AppColors.secondary.withOpacity(.22),
+            color: AppColors.secondary.withOpacity(isDark ? .16 : .22),
           ),
         ),
         Positioned(
@@ -426,7 +444,9 @@ class _PremiumBackground extends StatelessWidget {
           right: -80,
           child: _BlurBlob(
             size: 320,
-            color: AppColors.secondaryLight.withOpacity(.18),
+            color: isDark
+                ? Wallet.accentDark.withOpacity(.14)
+                : AppColors.secondaryLight.withOpacity(.18),
           ),
         ),
         Positioned(
@@ -434,7 +454,9 @@ class _PremiumBackground extends StatelessWidget {
           right: -40,
           child: _BlurBlob(
             size: 180,
-            color: Colors.white.withOpacity(.35),
+            color: isDark
+                ? Wallet.accentDark.withOpacity(.10)
+                : Colors.white.withOpacity(.35),
           ),
         ),
       ],
@@ -462,7 +484,8 @@ class _BlurBlob extends StatelessWidget {
 
 class _GlassCard extends StatelessWidget {
   final Widget child;
-  const _GlassCard({required this.child});
+  final bool isDark;
+  const _GlassCard({required this.child, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
@@ -474,11 +497,15 @@ class _GlassCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(26),
-            color: Colors.white.withOpacity(.75),
-            border: Border.all(color: Colors.white.withOpacity(.55)),
+            color: (isDark ? Wallet.darkSurface : Colors.white)
+                .withOpacity(.75),
+            // A faint white rim reads as a glass highlight in both modes —
+            // just far fainter in dark, where a bright rim would look like a
+            // stray outline rather than a highlight.
+            border: Border.all(color: Colors.white.withOpacity(isDark ? .10 : .55)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(.08),
+                color: Colors.black.withOpacity(isDark ? .28 : .08),
                 blurRadius: 24,
                 offset: const Offset(0, 14),
               ),
@@ -494,7 +521,12 @@ class _GlassCard extends StatelessWidget {
 class _CircleIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
-  const _CircleIconButton({required this.icon, required this.onTap});
+  final bool isDark;
+  const _CircleIconButton({
+    required this.icon,
+    required this.onTap,
+    this.isDark = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -505,18 +537,18 @@ class _CircleIconButton extends StatelessWidget {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(.75),
+          color: (isDark ? Wallet.darkSurface : Colors.white).withOpacity(.75),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withOpacity(.6)),
+          border: Border.all(color: Colors.white.withOpacity(isDark ? .10 : .6)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(.06),
+              color: Colors.black.withOpacity(isDark ? .3 : .06),
               blurRadius: 18,
               offset: const Offset(0, 10),
             ),
           ],
         ),
-        child: Icon(icon, color: Wallet.ink),
+        child: Icon(icon, color: Wallet.inkOf(isDark)),
       ),
     );
   }
@@ -525,16 +557,21 @@ class _CircleIconButton extends StatelessWidget {
 class _TimerPill extends StatelessWidget {
   final String timeText;
   final bool isExpired;
-  const _TimerPill({required this.timeText, required this.isExpired});
+  final bool isDark;
+  const _TimerPill({
+    required this.timeText,
+    required this.isExpired,
+    this.isDark = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(.75),
+        color: (isDark ? Wallet.darkSurface : Colors.white).withOpacity(.75),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(.6)),
+        border: Border.all(color: Colors.white.withOpacity(isDark ? .10 : .6)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -559,7 +596,8 @@ class _TimerPill extends StatelessWidget {
 }
 
 class _LoadingGlassOverlay extends StatelessWidget {
-  const _LoadingGlassOverlay();
+  final bool isDark;
+  const _LoadingGlassOverlay({required this.isDark});
 
   @override
   Widget build(BuildContext context) {
@@ -567,29 +605,33 @@ class _LoadingGlassOverlay extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
         child: Container(
-          color: Colors.black.withOpacity(.08),
+          color: Colors.black.withOpacity(isDark ? .35 : .08),
           child: Center(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(.88),
+                color: (isDark ? Wallet.darkSurface : Colors.white)
+                    .withOpacity(.88),
                 borderRadius: BorderRadius.circular(18),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(.12),
+                    color: Colors.black.withOpacity(isDark ? .35 : .12),
                     blurRadius: 24,
                     offset: const Offset(0, 14),
                   ),
                 ],
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  LoadingView(size: 22),
-                  SizedBox(width: 12),
+                  const LoadingView(size: 22),
+                  const SizedBox(width: 12),
                   Text(
-                    "Please wait...",
-                    style: TextStyle(fontWeight: FontWeight.w500),
+                    AppLocalizations.of(context)!.otpPageLoadingWait,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w500,
+                      color: Wallet.inkOf(isDark),
+                    ),
                   ),
                 ],
               ),
@@ -608,12 +650,14 @@ class _OtpPinField extends StatefulWidget {
   final FocusNode focusNode;
   final bool enabled;
   final ValueChanged<String>? onCompleted;
+  final bool isDark;
 
   const _OtpPinField({
     required this.controller,
     required this.focusNode,
     required this.enabled,
     this.onCompleted,
+    this.isDark = false,
   });
 
   @override
@@ -684,23 +728,25 @@ class _OtpPinFieldState extends State<_OtpPinField> {
                 final isActive =
                     widget.focusNode.hasFocus && i == value.length.clamp(0, 5);
 
+                final isDark = widget.isDark;
                 return AnimatedContainer(
                   duration: const Duration(milliseconds: 140),
                   width: boxWidth,
                   height: boxHeight,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(.85),
+                    color: (isDark ? Wallet.darkSurface : Colors.white)
+                        .withOpacity(.85),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: isActive
-                          ? AppColors.secondary
-                          : Colors.black.withOpacity(.10),
+                          ? Wallet.accentOf(isDark)
+                          : Wallet.lineOf(isDark),
                       width: isActive ? 1.6 : 1,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(.06),
+                        color: Colors.black.withOpacity(isDark ? .3 : .06),
                         blurRadius: 14,
                         offset: const Offset(0, 10),
                       ),
@@ -712,8 +758,8 @@ class _OtpPinFieldState extends State<_OtpPinField> {
                       fontSize: 18,
                       fontWeight: FontWeight.w500,
                       color: char.isEmpty
-                          ? Colors.black.withOpacity(.18)
-                          : Wallet.ink,
+                          ? Wallet.faintOf(isDark)
+                          : Wallet.inkOf(isDark),
                     ),
                   ),
                 );

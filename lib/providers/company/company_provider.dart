@@ -55,12 +55,13 @@ final companyProvider =
     AsyncNotifierProvider<CompanyNotifier, CompanyState>(CompanyNotifier.new);
 
 class CompanyNotifier extends AsyncNotifier<CompanyState> {
-  late final BcaDataAgent _dataAgent;
+  // A getter, not a `late final` set in build(): Riverpod reruns build() on
+  // the same notifier after ref.invalidate (login/logout), and assigning a
+  // late final twice threw — build failed and the list never loaded.
+  BcaDataAgent get _dataAgent => ref.read(bcaDataAgentProvider);
 
   @override
   Future<CompanyState> build() async {
-    _dataAgent = ref.read(bcaDataAgentProvider);
-
     // Riverpod assigns this future's value to `state` wholesale when it
     // resolves, so `build` must not call the methods that write `state` —
     // a parallel write from a page would be overwritten by the stale value.
@@ -85,7 +86,10 @@ class CompanyNotifier extends AsyncNotifier<CompanyState> {
   }
 
   Future<CompanyState> fetchCompanies() async {
-    state = const AsyncLoading();
+    // Keep the current list while reloading. A bare AsyncLoading dropped it,
+    // so after every add/edit/delete the page flashed "no companies" (or a
+    // loader) before the fresh list arrived.
+    state = const AsyncLoading<CompanyState>().copyWithPrevious(state);
     final newState = await _loadCompanies();
     state = AsyncData(newState);
     return newState;

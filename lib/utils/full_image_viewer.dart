@@ -1,4 +1,11 @@
+import 'dart:typed_data';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+
+import '../l10n/generated/app_localizations.dart';
+import '../ui/widgets/app_toast.dart';
+import 'save_to_gallery.dart';
 
 /// Full-screen image viewer: swipe between images, pinch to zoom.
 ///
@@ -25,6 +32,7 @@ class FullImageViewer extends StatefulWidget {
 class _FullImageViewerState extends State<FullImageViewer> {
   late final PageController _pageController;
   late int _currentIndex;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -37,6 +45,37 @@ class _FullImageViewerState extends State<FullImageViewer> {
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  Future<void> _downloadCurrent() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      final url = widget.images[_currentIndex];
+      final response = await Dio().get<List<int>>(
+        url,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      final data = response.data;
+      if (data == null || data.isEmpty) throw Exception('empty image');
+
+      if (!mounted) return;
+      await saveImageBytesToGallery(
+        context,
+        Uint8List.fromList(data),
+        fileName: 'businessCard4U_${DateTime.now().millisecondsSinceEpoch}',
+      );
+    } catch (_) {
+      if (mounted) {
+        AppToast.show(
+          context,
+          AppLocalizations.of(context)!.fullImageViewerDownloadFailed,
+          type: AppToastType.error,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override
@@ -95,25 +134,54 @@ class _FullImageViewerState extends State<FullImageViewer> {
               ),
             ),
 
-          // ── Close button ──────────────────────
+          // ── Download + close buttons ──────────
           Positioned(
             top: 16,
             right: 16,
-            child: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
-                  shape: BoxShape.circle,
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: _saving ? null : _downloadCurrent,
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: _saving
+                        ? const Padding(
+                            padding: EdgeInsets.all(8),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.download_rounded,
+                            size: 20,
+                            color: Colors.white,
+                          ),
+                  ),
                 ),
-                child: const Icon(
-                  Icons.close_rounded,
-                  size: 24,
-                  color: Colors.white,
+                const SizedBox(width: 10),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      size: 24,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
 

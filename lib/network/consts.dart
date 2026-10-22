@@ -14,6 +14,7 @@ const kEndPointDeactivateAccount = "deactivate-account";
 const kEndPointCompanies = 'companies';
 const kEndPointBusinessCards = 'business-cards';
 const kEndPointMyBusinessCards = 'my-business-cards';
+const kEndPointProfessions = 'professions';
 
 const kEndPointChangePassword = 'change-password';
 const kEndPointRefreshToken = 'refresh-token';

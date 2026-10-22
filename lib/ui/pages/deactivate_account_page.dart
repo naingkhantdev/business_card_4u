@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../theme/app_page_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../auth_gate.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../providers/auth/auth_provider.dart';
 import '../../services/navigation/app_navigator.dart';
 import '../responsive/responsive.dart';
@@ -36,7 +38,7 @@ class _DeactivateAccountPageState extends ConsumerState<DeactivateAccountPage> {
     if (password.isEmpty) {
       AppToast.show(
         context,
-        'Please enter your password',
+        AppLocalizations.of(context)!.deactivateAccountEnterPassword,
         type: AppToastType.error,
       );
       return;
@@ -52,14 +54,14 @@ class _DeactivateAccountPageState extends ConsumerState<DeactivateAccountPage> {
       setState(() => _submitting = false);
       AppToast.show(
         context,
-        result.message ?? 'Failed to deactivate account',
+        result.message ?? AppLocalizations.of(context)!.deactivateAccountFailed,
         type: AppToastType.error,
       );
       return;
     }
 
     final message = result.message ??
-        'Your account has been deactivated. Log in again within 7 days to restore it.';
+        AppLocalizations.of(context)!.deactivateAccountSuccessMessage;
 
     await authNotifier.completeDeactivatedLogout(message);
 
@@ -67,7 +69,7 @@ class _DeactivateAccountPageState extends ConsumerState<DeactivateAccountPage> {
     if (navigator == null) return;
 
     navigator.pushAndRemoveUntil(
-      MaterialPageRoute(
+      AppPageRoute(
         builder: (_) => const AuthGate(),
       ),
       (route) => false,
@@ -77,12 +79,13 @@ class _DeactivateAccountPageState extends ConsumerState<DeactivateAccountPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: isDark ? Wallet.darkGround : const Color(0xFFF8FAFD),
       appBar: AppBar(
         title: Text(
-          'Deactivate Account',
+          l10n.deactivateAccountTitle,
           style: TextStyle(
             color: isDark ? Colors.white : Wallet.ink,
             fontWeight: FontWeight.w800,
@@ -137,7 +140,7 @@ class _DeactivateAccountPageState extends ConsumerState<DeactivateAccountPage> {
                   ),
                   const SizedBox(height: 18),
                   Text(
-                    'Your account will be turned off now.',
+                    l10n.deactivateAccountHeadline,
                     style: TextStyle(
                       color: isDark ? Wallet.darkInk : Wallet.ink,
                       fontSize: 20,
@@ -146,7 +149,7 @@ class _DeactivateAccountPageState extends ConsumerState<DeactivateAccountPage> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'You can get it back by logging in again within 7 days.',
+                    l10n.deactivateAccountSubtext,
                     style: TextStyle(
                       color: isDark ? Wallet.darkMuted : const Color(0xFF5B6473),
                       height: 1.5,
@@ -162,7 +165,7 @@ class _DeactivateAccountPageState extends ConsumerState<DeactivateAccountPage> {
                       color: isDark ? Wallet.darkInk : Wallet.ink,
                     ),
                     decoration: InputDecoration(
-                      labelText: 'Password',
+                      labelText: l10n.deactivateAccountPasswordLabel,
                       labelStyle: TextStyle(
                         color: isDark ? Wallet.darkMuted : const Color(0xFF5B6473),
                       ),
@@ -194,7 +197,7 @@ class _DeactivateAccountPageState extends ConsumerState<DeactivateAccountPage> {
                   ),
                   const SizedBox(height: 22),
                   AppPrimaryButton(
-                    text: 'Deactivate Account',
+                    text: l10n.deactivateAccountTitle,
                     loading: _submitting,
                     onPressed: _submitting ? null : _submit,
                     height: 52,
@@ -204,7 +207,7 @@ class _DeactivateAccountPageState extends ConsumerState<DeactivateAccountPage> {
                   TextButton(
                     onPressed: _submitting ? null : () => Navigator.pop(context),
                     child: Text(
-                      'Cancel',
+                      l10n.deactivateAccountCancel,
                       style: TextStyle(
                         color: isDark ? Wallet.darkMuted : AppColors.secondary,
                         fontWeight: FontWeight.w700,

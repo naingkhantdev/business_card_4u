@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import '../ui/theme/app_page_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/generated/app_localizations.dart';
 import '../providers/auth/auth_provider.dart';
 import '../providers/card/card_provider.dart';
 import '../network/image_url.dart';
@@ -9,7 +11,16 @@ import '../data/vos/business_card_model.dart';
 import '../data/vos/user_model.dart';
 import '../ui/pages/card_detail_page.dart';
 import '../ui/pages/company_select_page.dart';
+import '../ui/pages/help_page.dart';
+import '../ui/pages/settings_page.dart';
 import '../ui/theme/wallet_tokens.dart';
+
+/// Shown at the foot of the drawer. Bump alongside `pubspec.yaml`'s
+/// `version:` field — kept as a plain constant rather than reading the
+/// package's own metadata (package_info_plus) since a drawer footer isn't
+/// worth a new dependency for one label.
+const _appVersion = '1.0.0';
+const _appBuildNumber = '1';
 
 class UserDrawer extends ConsumerWidget {
   const UserDrawer({super.key});
@@ -17,6 +28,7 @@ class UserDrawer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
     final authState = ref.watch(authProvider).valueOrNull ?? AuthState();
     final currentUser = authState.currentUser;
     final cardState = ref.watch(cardProvider).valueOrNull ?? CardState();
@@ -40,7 +52,7 @@ class UserDrawer extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildModernHeader(currentUser, myAccountCard, isDark, () async {
+            _buildModernHeader(currentUser, myAccountCard, isDark, l10n, () async {
               // Click on "my account" (avatar + name) in sidebar -> go to my account detail page (card detail)
               final navigator = Navigator.of(context);
               navigator.pop();
@@ -58,7 +70,7 @@ class UserDrawer extends ConsumerWidget {
               final accountCardToOpen = accountCard;
               if (accountCardToOpen != null) {
                 navigator.push(
-                  MaterialPageRoute(
+                  AppPageRoute(
                     builder: (_) => CardDetailPage(card: accountCardToOpen),
                   ),
                 );
@@ -78,7 +90,7 @@ class UserDrawer extends ConsumerWidget {
                   friendRequestStatus: 'none',
                 );
                 navigator.push(
-                  MaterialPageRoute(
+                  AppPageRoute(
                     builder: (_) => CardDetailPage(card: fallbackCard),
                   ),
                 );
@@ -91,15 +103,41 @@ class UserDrawer extends ConsumerWidget {
                 children: [
                   _buildMenuTile(
                     icon: Icons.business_rounded,
-                    title: 'Manage Companies',
+                    title: l10n.userDrawerManageCompanies,
                     onTap: () {
                       Navigator.pop(context);
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
+                        AppPageRoute(
                           builder: (_) =>
                               const CompanySelectPage(isSelectionMode: false),
                         ),
+                      );
+                    },
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: 4),
+                  _buildMenuTile(
+                    icon: Icons.settings_outlined,
+                    title: l10n.settingsTitle,
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        AppPageRoute(builder: (_) => const SettingsPage()),
+                      );
+                    },
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: 4),
+                  _buildMenuTile(
+                    icon: Icons.help_outline_rounded,
+                    title: l10n.userDrawerHelpSupport,
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        AppPageRoute(builder: (_) => const HelpPage()),
                       );
                     },
                     isDark: isDark,
@@ -115,7 +153,7 @@ class UserDrawer extends ConsumerWidget {
                   const SizedBox(height: 8),
                   _buildMenuTile(
                     icon: Icons.logout_rounded,
-                    title: 'Logout',
+                    title: l10n.userDrawerLogout,
                     onTap: () {
                       Navigator.pop(context);
                       ref.read(authProvider.notifier).logout();
@@ -126,14 +164,27 @@ class UserDrawer extends ConsumerWidget {
                 ],
               ),
             ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 14, top: 4),
+              child: Text(
+                l10n.userDrawerVersion(_appVersion, _appBuildNumber),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? Colors.white38 : Colors.black38,
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildModernHeader(UserModel? user, BusinessCardModel? accountCard, bool isDark, VoidCallback onAccountTap) {
-    final name = user?.name ?? 'User';
+  Widget _buildModernHeader(UserModel? user, BusinessCardModel? accountCard,
+      bool isDark, AppLocalizations l10n, VoidCallback onAccountTap) {
+    final name = user?.name ?? l10n.userDrawerDefaultUserName;
     final email = user?.email ?? '';
     final profileImage = accountCard?.profileImage;
     final hasImage = profileImage != null && profileImage.isNotEmpty;

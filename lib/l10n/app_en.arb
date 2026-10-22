@@ -1,0 +1,590 @@
+{
+  "@@locale": "en",
+  "settingsTitle": "Settings",
+  "@settingsTitle": {
+    "description": "Title of the Settings page"
+  },
+  "settingsAccountSection": "Account",
+  "settingsName": "Name",
+  "settingsEmail": "Email",
+  "settingsAccountActionsSection": "Account actions",
+  "settingsDeactivateAccount": "Deactivate account",
+  "settingsLanguageSection": "Language",
+  "settingsLanguage": "Language",
+  "languageEnglish": "English",
+  "languageBurmese": "Burmese",
+  "chooseLanguageTitle": "Choose language",
+  "chooseLanguageSubtitle": "Pick the language for menus, buttons, and screen text.",
+  "cardDetailUpdateSuccess": "Business card updated successfully",
+  "cardDetailShareYourCard": "Share Your Card",
+  "cardDetailShareYourCardSubtitle": "Others can scan this to save your contact",
+  "cardDetailDeleteCardTitle": "Delete Card",
+  "cardDetailDeleteCardBody": "Are you sure you want to delete this card?",
+  "cardDetailDelete": "Delete",
+  "cardDetailDeleteSuccess": "Card deleted successfully",
+  "cardDetailDeleteFailed": "Failed to delete card",
+  "cardDetailShareMyCard": "Share my card",
+  "cardDetailShare": "Share",
+  "cardDetailEdit": "Edit",
+  "cardDetailDeactivateAccount": "Deactivate Account",
+  "cardDetailTypeSaved": "Saved",
+  "cardDetailTypeBusiness": "Business",
+  "cardDetailUnfriend": "Unfriend",
+  "cardDetailUnfriendBody": "Remove this connection?",
+  "cardDetailFriendRemoved": "Friend removed",
+  "cardDetailFriendRemoveFailed": "Failed to remove friend",
+  "cardDetailCancelRequest": "Cancel Request",
+  "cardDetailCancelRequestBody": "Cancel the friend request sent to this user?",
+  "cardDetailFriendRequestCancelled": "Friend request cancelled",
+  "cardDetailCancelRequestFailed": "Failed to cancel request",
+  "cardDetailFriendRequestSent": "Friend request sent",
+  "cardDetailFriendRequestSendFailed": "Failed to send friend request",
+  "cardDetailFriendRequestAccepted": "Friend request accepted",
+  "cardDetailAcceptRequestFailed": "Failed to accept request",
+  "cardDetailFriendRequestDeclined": "Friend request declined",
+  "cardDetailDeclineRequestFailed": "Failed to decline request",
+  "cardDetailAbout": "About",
+  "cardDetailBusinessCardSection": "Business card",
+  "cardDetailAddFrontBackPhotos": "Add front & back photos",
+  "cardDetailYourProfile": "Your profile",
+  "cardDetailConnected": "Connected",
+  "cardDetailCall": "Call",
+  "cardDetailEmail": "Email",
+  "cardDetailMap": "Map",
+  "cardDetailWebsite": "Website",
+  "cardDetailAddedOn": "Added {date}",
+  "@cardDetailAddedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "cardDetailPhone": "Phone",
+  "cardDetailAddress": "Address",
+  "cardDetailCompanyHeader": "Company",
+  "cardDetailContactHeader": "Contact",
+  "cardDetailSocialHeader": "Social",
+  "cardDetailTapToEnlarge": "{label} · tap to enlarge",
+  "@cardDetailTapToEnlarge": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "cardDetailAccept": "Accept",
+  "cardDetailDecline": "Decline",
+  "cardDetailRequestSent": "Request sent",
+  "cardDetailConnect": "Connect",
+  "cardDetailCancel": "Cancel",
+  "cardDetailSocialLinkFallback": "Link",
+  "cardItemFriendRequestSent": "Friend request sent",
+  "cardItemFriendRequestSendFailed": "Failed to send request",
+  "cardItemFriendRequestAccepted": "Friend request accepted",
+  "cardItemFriendRequestAcceptFailed": "Failed to accept request",
+  "cardItemFriendRequestDeclined": "Friend request declined",
+  "cardItemFriendRequestDeclineFailed": "Failed to decline request",
+  "cardItemStatusPending": "Pending",
+  "cardItemStatusFriend": "Friend",
+  "cardItemStatusSaved": "Saved",
+  "cardItemStatusProfile": "Profile",
+  "onboardingStepCounter": "STEP {step} / {totalSteps}",
+  "@onboardingStepCounter": {
+    "placeholders": {
+      "step": {
+        "type": "num"
+      },
+      "totalSteps": {
+        "type": "num"
+      }
+    }
+  },
+  "myQrPanelShareEyebrow": "SHARE",
+  "myQrPanelTitleEyebrow": "MY QR CODE",
+  "myQrPanelShareTitle": "Share my QR",
+  "myQrPanelScanTitle": "Scan to add me",
+  "myQrPanelCompactBlurb": "Show this to people nearby so they can add you fast.",
+  "myQrPanelFullBlurb": "Let others scan this code to add your card instantly.",
+  "myQrPanelNoProfileBlurb": "Create your profile card first to generate your QR.",
+  "myQrPanelSaveError": "Could not save the QR code. Please try again.",
+  "myQrPanelSaving": "Saving…",
+  "myQrPanelSaveToGallery": "Save QR to Gallery",
+  "imageSourceTakePhoto": "Take a photo",
+  "imageSourceRecommended": "Recommended",
+  "imageSourceChooseGallery": "Choose from gallery",
+  "appSplashTagline": "SCAN · SAVE · CONNECT",
+  "fullImageViewerDownloadFailed": "Could not download image. Please try again.",
+  "userDrawerManageCompanies": "Manage Companies",
+  "userDrawerHelpSupport": "Help & Support",
+  "userDrawerLogout": "Logout",
+  "userDrawerVersion": "Version {version} ({build})",
+  "@userDrawerVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "build": {
+        "type": "String"
+      }
+    }
+  },
+  "userDrawerDefaultUserName": "User",
+  "cardPageNoMatchingCardsTitle": "No matching cards",
+  "cardPageNoCardsThisTabTitle": "No cards match this tab",
+  "cardPageNoCardsYetTitle": "No cards yet",
+  "cardPageFilterHidingCardsSubtitle": "There are cards in the database, but your current search or company filter is hiding them.\nClear the filter to see them.",
+  "cardPagePullToRefreshSubtitle": "Pull down to refresh or add new cards.",
+  "cardPageMyQrCodeTitle": "My QR Code",
+  "cardPageMyQrCodeSubtitle": "Open this when someone wants to scan your card.",
+  "cardPageCreateProfileCard": "Create My Profile Card",
+  "cardPageProfileCardCreatedSuccess": "Profile card created successfully",
+  "cardPageAddACardTitle": "Add a card",
+  "cardPageAddACardSubtitle": "Snap the card or pick a photo — we fill in the details.",
+  "cardPageScanBusinessCard": "Scan a business card",
+  "cardPageScanFastestSubtitle": "Fastest — reads front and back for you",
+  "cardPageEnterDetailsManually": "Enter details manually",
+  "cardPageScanFrontTitle": "Scan the front",
+  "cardPageScanFrontSubtitle": "Step 1 of 2 — we read the card and fill in the details for you.",
+  "cardPageScanBackTitle": "Scan the back",
+  "cardPageScanBackSubtitle": "Step 2 of 2 — whatever we find here joins the same card.",
+  "cardPageImageSourceOpenFailed": "Could not open the {source}. You can still enter the card manually.",
+  "@cardPageImageSourceOpenFailed": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "cardPageSourceCamera": "camera",
+  "cardPageSourceGallery": "gallery",
+  "cardPageFrontCapturedLabel": "Front captured",
+  "cardPageAddBackQuestion": "Add the back?",
+  "cardPageAddBackSubtitle": "The back usually carries the address, extra numbers, and social links the front leaves off.",
+  "cardPageScanBackTooTitle": "Scan the back too",
+  "cardPageScanBackTooSubtitle": "Recommended — catches what the front misses",
+  "cardPageSkipFrontOnly": "Skip — front only",
+  "cardPageBusinessCardCreatedSuccess": "Business card created successfully",
+  "cardPageScanQrCodeTitle": "Scan QR Code",
+  "cardPageScanQrCodeSubtitle": "Add friend by scanning their QR code",
+  "cardPageSearchUsersTitle": "Search Users",
+  "cardPageSearchUsersSubtitle": "Find users by name or company",
+  "cardPageFriendsCardsTab": "Friend's Cards",
+  "cardPageSavedCardsTab": "Saved Cards",
+  "cardPageSearchHint": "Search cards...",
+  "cardPageFilterByCompanyTooltip": "Filter by company",
+  "cardPageAddFriendFabLabel": "Add Friend",
+  "cardPageNewCardFabLabel": "New Card",
+  "cardPageFilterByCompanySheetTitle": "Filter by Company",
+  "cardPageCompanyCount": "{count, plural, one{1 company} other{{count} companies}}",
+  "@cardPageCompanyCount": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      }
+    }
+  },
+  "cardPageClearFilter": "Clear",
+  "cardPageSearchCompaniesHint": "Search companies",
+  "cardPageNoCompaniesAvailable": "No companies available",
+  "cardPageAllCompaniesLabel": "All Companies",
+  "cardPageAllProfessions": "All",
+  "professionEngineer": "Engineer",
+  "professionDoctor": "Doctor",
+  "professionSailor": "Sailor",
+  "professionNurse": "Nurse",
+  "professionTeacher": "Teacher",
+  "professionLawyer": "Lawyer",
+  "professionAccountant": "Accountant",
+  "professionDesigner": "Designer",
+  "professionManager": "Manager",
+  "professionSales": "Sales",
+  "professionPickerTitle": "Profession",
+  "professionPickerOther": "Other",
+  "professionPickerOtherHint": "Type your profession",
+  "professionPickerAdd": "Add",
+  "professionPickerSuggested": "Suggested from the position — tap another to change",
+  "cardPageNoCompaniesMatchQuery": "No companies match \"{query}\"",
+  "@cardPageNoCompaniesMatchQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "authGateSomethingWrong": "Something went wrong",
+  "scanPageTitle": "Scan QR Code",
+  "scanPageCardNotFound": "Card not found for this QR code",
+  "scanPageErrorScanning": "Error scanning QR code",
+  "deactivateAccountTitle": "Deactivate Account",
+  "deactivateAccountEnterPassword": "Please enter your password",
+  "deactivateAccountFailed": "Failed to deactivate account",
+  "deactivateAccountSuccessMessage": "Your account has been deactivated. Log in again within 7 days to restore it.",
+  "deactivateAccountHeadline": "Your account will be turned off now.",
+  "deactivateAccountSubtext": "You can get it back by logging in again within 7 days.",
+  "deactivateAccountPasswordLabel": "Password",
+  "deactivateAccountCancel": "Cancel",
+  "registerPageTagline": "Create an account to start sharing your card.",
+  "registerPageTitle": "Create your account",
+  "registerPageSubtitle": "Enter your email to receive a verification code.",
+  "registerPageEmailLabel": "Email",
+  "registerPageSendCode": "Send code",
+  "registerPageCodeExpiry": "Code expires in 5 minutes.",
+  "registerPageHaveAccount": "Already have an account? Log in",
+  "helpPageTitle": "Help & Support",
+  "helpPageContactSection": "Contact",
+  "helpPageContactSupport": "Contact support",
+  "helpPageHowItWorksSection": "How BusinessCard4U works",
+  "helpPageFeatureScan": "Scan a card and its name, role, phone, email and address fill in on their own.",
+  "helpPageFeatureCompany": "Companies are matched or created automatically from the scan — no separate step.",
+  "helpPageFeatureQr": "Share your own card instantly with a QR code.",
+  "helpPageFeatureFriends": "Connect with other users as friends so their card details stay current on your side.",
+  "helpPageFaqSection": "FAQ",
+  "helpPageFaq1Question": "Does scanning a card create the company automatically?",
+  "helpPageFaq1Answer": "Yes. When the photo names a company that already exists it links to it; when it doesn't, BusinessCard4U files a new company right away so you're not interrupted mid-scan. You can always change the linked company afterwards from the card's edit screen.",
+  "helpPageFaq2Question": "What's the difference between Saved Cards and Friends?",
+  "helpPageFaq2Answer": "Saved Cards are entries you added yourself — from a photo or typed in by hand. Friends are other BusinessCard4U users you're connected with, so their card stays up to date on your side whenever they edit it.",
+  "helpPageFaq3Question": "Can I fix a field the scanner got wrong?",
+  "helpPageFaq3Answer": "Every scanned field is editable — a scan is a best guess, not a final answer. Open the card and correct anything before saving.",
+  "helpPageFaq4Question": "How do people find my card?",
+  "helpPageFaq4Answer": "Share your QR code from your profile card — anyone who scans it saves your details straight away.",
+  "companySelectTitle": "Manage Companies",
+  "companySelectAddNew": "Add New Company",
+  "companySelectCancel": "Cancel",
+  "companySelectCreatedSuccess": "Company created successfully",
+  "companySelectUpdatedSuccess": "Company updated successfully",
+  "companySelectDelete": "Delete",
+  "companySelectDeleteTitle": "Delete Company",
+  "companySelectDeleteConfirm": "Are you sure you want to delete {name}?",
+  "@companySelectDeleteConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "companySelectDeletedSuccess": "Company deleted successfully",
+  "companySelectDeleteFailed": "Failed to delete company",
+  "companySelectEdit": "Edit",
+  "companySelectEmptyTitle": "No companies found",
+  "companySelectEmptySubtitle": "Add your first company to get started",
+  "companySelectGeneralIndustry": "General Industry",
+  "loginPageEmailLabel": "Email",
+  "loginPagePasswordLabel": "Password",
+  "loginPageLogIn": "Log In",
+  "loginPageInvalidCredentials": "Invalid email or password",
+  "loginPageNoAccountRegister": "Don't have an account? Register",
+  "loginPageDevelopedBy": "Developed by Asia Brightway",
+  "loginPageCancel": "Cancel",
+  "loginPageWelcomeBack": "Welcome back",
+  "loginPageSubtitle": "Log in to manage your business cards.",
+  "searchPageTitle": "Search Users",
+  "searchPageHint": "Enter name or email...",
+  "searchPageSearchTooltip": "Search",
+  "searchPageFilterByLocation": "Filter by location",
+  "searchPageFilterCity": "City: {city}",
+  "@searchPageFilterCity": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "searchPageFilterState": "State: {state}",
+  "@searchPageFilterState": {
+    "placeholders": {
+      "state": {
+        "type": "String"
+      }
+    }
+  },
+  "searchPageFilterCountry": "Country: {country}",
+  "@searchPageFilterCountry": {
+    "placeholders": {
+      "country": {
+        "type": "String"
+      }
+    }
+  },
+  "searchPageEmptyHint": "Search by name, email or location",
+  "searchPageNoResults": "No users found",
+  "searchPageErrorOccurred": "An error occurred while searching",
+  "searchPageCityLabel": "City",
+  "searchPageStateLabel": "State / Region",
+  "searchPageCountryLabel": "Country",
+  "searchPageClear": "Clear",
+  "searchPageApply": "Apply",
+  "addCardProfilePhotoSourceTitle": "Profile photo",
+  "addCardFrontSourceTitle": "Card front",
+  "addCardBackSourceTitle": "Card back",
+  "addCardOcrNoTextFound": "Couldn't read any text from that photo. Try better lighting, or fill the form in yourself.",
+  "addCardScannedDetailsAdded": "Scanned details added. Check them before saving.",
+  "addCardScanFailed": "Could not scan that photo. Please try again.",
+  "addCardCouldNotOpenSource": "Could not open the {source}.",
+  "@addCardCouldNotOpenSource": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "addCardSourceCamera": "camera",
+  "addCardSourceGallery": "gallery",
+  "addCardInvalidEmail": "Invalid email: {email}",
+  "@addCardInvalidEmail": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "addCardPhoneTooShort": "Each phone must be at least 6 characters",
+  "addCardUpdateFailed": "Failed to update card",
+  "addCardCreateFailed": "Failed to create card",
+  "addCardEditTitle": "Edit Business Card",
+  "addCardAddTitle": "Add Business Card",
+  "addCardPersonalInfoTitle": "Personal info",
+  "addCardPersonalInfoSubtitleOwn": "Your photo, name, and role as others see them",
+  "addCardPersonalInfoSubtitleOther": "The name and role printed on the card",
+  "addCardFullNameLabel": "Full name",
+  "addCardFullNameHint": "e.g. John Doe",
+  "addCardPositionLabel": "Position",
+  "addCardPositionHint": "e.g. Software Engineer",
+  "addCardCompanySectionTitle": "Company",
+  "addCardCompanySectionSubtitle": "Links this card to a company record",
+  "addCardContactDetailsTitle": "Contact details",
+  "addCardContactDetailsSubtitle": "Separate several entries with commas",
+  "addCardPhonesLabel": "Phones",
+  "addCardPhonesHint": "e.g. 998991112233, ...",
+  "addCardEmailsLabel": "Emails",
+  "addCardEmailsHint": "e.g. mail@example.com, ...",
+  "addCardAddressesTitle": "Addresses",
+  "addCardAddressesSubtitle": "Where this person works",
+  "addCardMoreTitle": "More",
+  "addCardMoreSubtitle": "Anything worth remembering about this contact",
+  "addCardBioLabel": "Bio",
+  "addCardBioHint": "Short description...",
+  "addCardYourCardPhotosTitle": "Your card photos",
+  "addCardCardPhotosTitle": "Card photos",
+  "addCardPhotosSubtitleHasFront": "Tap a photo to replace it. Scanning only fills empty fields.",
+  "addCardPhotosSubtitleOwnEmpty": "Add both sides of your printed card so people can see the real thing.",
+  "addCardPhotosSubtitleOtherEmpty": "Add a photo of the card to fill this form automatically.",
+  "addCardReading": "Reading…",
+  "addCardRescan": "Rescan",
+  "addCardFrontLabel": "Front",
+  "addCardBackLabel": "Back",
+  "addCardChangeProfilePhoto": "Change profile photo",
+  "addCardAddProfilePhoto": "Add a profile photo",
+  "addCardProfilePhotoHelp": "Shown at the top of your card and next to your name in search results.",
+  "addCardOptional": "Optional",
+  "addCardRequiredToScan": "Required to scan",
+  "addCardFilingCompany": "Filing \"{name}\"…",
+  "@addCardFilingCompany": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "addCardAddedNewCompany": "Added \"{name}\" as a new company. Its industry and business type can be filled in any time.",
+  "@addCardAddedNewCompany": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "addCardMatchedCompany": "Matched \"{name}\" to a company already on file.",
+  "@addCardMatchedCompany": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "addCardScannedPickCompany": "Scanned \"{name}\" — pick the matching company",
+  "@addCardScannedPickCompany": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "addCardChoose": "Choose",
+  "addCardChange": "Change",
+  "addCardScannedBadge": "Scanned",
+  "addCardAddressNumber": "Address {number}",
+  "@addCardAddressNumber": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "addCardStreetLabel": "Street",
+  "addCardStreetHint": "e.g. 123 Main St",
+  "addCardCityLabel": "City",
+  "addCardCityHint": "e.g. Yangon",
+  "addCardCityRequired": "City is required",
+  "addCardStateLabel": "State / Region",
+  "addCardPostalCodeLabel": "Postal Code",
+  "addCardCountryLabel": "Country",
+  "addCardCountryHint": "e.g. Myanmar",
+  "addCardCountryRequired": "Country is required",
+  "addCardAddAddress": "Add address",
+  "addCardSelectedCompanyLabel": "Selected company",
+  "addCardChooseCompany": "Choose a company",
+  "addCardSaveChanges": "Save changes",
+  "addCardCreateCard": "Create card",
+  "setupProfileImageSourceError": "Could not open the {source}.",
+  "@setupProfileImageSourceError": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "setupProfileSourceCamera": "camera",
+  "setupProfileSourceGallery": "gallery",
+  "setupProfileImageSheetTitle": "Profile photo",
+  "setupProfileImageSheetSubtitle": "This is the face people see when they find your card.",
+  "setupProfileFrontSheetTitle": "Front of your card",
+  "setupProfileBackSheetTitle": "Back of your card",
+  "setupProfileFrontSheetSubtitle": "We read it and fill in the details below.",
+  "setupProfileBackSheetSubtitle": "Often where the address and extra numbers live.",
+  "setupProfileOcrEmptyError": "Couldn't read that photo. Try better lighting, or type the details in yourself.",
+  "setupProfileOcrFilledMessage": "Filled in what we could read. Check it before saving.",
+  "setupProfileOcrError": "Could not scan that photo. Please try again.",
+  "setupProfileFinishLaterMessage": "You can finish your card any time from the menu.",
+  "setupProfileSavedMessage": "Your card is ready. Share it any time from the QR button.",
+  "setupProfileSaveError": "Could not save your card. Please try again.",
+  "setupProfileYourCardLabel": "Your card",
+  "setupProfileAccountCreated": "Account created",
+  "setupProfileHeadline": "Complete your card",
+  "setupProfileSubhead": "This is what people see when they scan you. Everything here is optional.",
+  "setupProfileSaveButton": "Save My Card",
+  "setupProfileSkipButton": "Skip for now",
+  "setupProfilePhotosTitle": "Your printed card",
+  "setupProfilePhotosCaption": "Photograph the front and we read it into the form below.",
+  "setupProfileReadingLabel": "READING",
+  "setupProfileRescanLabel": "RESCAN",
+  "setupProfileFrontLabel": "Front",
+  "setupProfileBackLabel": "Back",
+  "setupProfileProfileTitle": "Profile",
+  "setupProfilePhotoAdded": "PHOTO ADDED",
+  "setupProfileAddPhoto": "ADD A PHOTO",
+  "setupProfilePositionHint": "Position — e.g. Product Designer",
+  "setupProfilePhoneHint": "Phone number",
+  "setupProfilePhoneMinLength": "Phone must be at least 6 digits",
+  "setupProfileCompanyPlaceholder": "Company (optional)",
+  "setupProfileChangeLabel": "Change",
+  "setupProfileChooseLabel": "Choose",
+  "setupProfileFillsFormHint": "Fills the form",
+  "otpPageEnterSixDigits": "Please enter all 6 digits",
+  "otpPageVerifiedMessage": "OTP verified",
+  "otpPageGenericError": "Something went wrong",
+  "otpPageResentMessage": "OTP resent",
+  "otpPageResendFailed": "Failed to resend OTP",
+  "otpPageTagline": "Enter the code we sent to verify it's you.",
+  "otpPageTitle": "Verify OTP",
+  "otpPageSentCodeTo": "We sent a 6-digit code to",
+  "otpPageResendNow": "Resend OTP",
+  "otpPageResendAfter": "Resend available after {time}",
+  "@otpPageResendAfter": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "otpPageFooterTip": "Don't share your OTP with anyone. This code expires in 5 minutes.",
+  "otpPageChangeEmail": "Change email",
+  "otpPageLoadingWait": "Please wait...",
+  "completeRegisterStepLabel": "Account details",
+  "completeRegisterStepCompleted": "Email verified",
+  "completeRegisterHeadline": "Finish your account",
+  "completeRegisterSubhead": "Two fields and a password. Your card comes next.",
+  "completeRegisterCreateAccount": "Create My Account",
+  "completeRegisterTerms": "By continuing you agree to our Terms & Privacy.",
+  "completeRegisterWhoYouAre": "Who you are",
+  "completeRegisterFullNameHint": "Full name",
+  "completeRegisterFullNameRequired": "Full name is required",
+  "completeRegisterFullNameTooShort": "Enter at least 2 characters",
+  "completeRegisterSetPassword": "Set a password",
+  "completeRegisterPasswordCaption": "At least 6 characters. Longer is better.",
+  "completeRegisterPasswordHint": "Password",
+  "completeRegisterPasswordRequired": "Password is required",
+  "completeRegisterPasswordTooShort": "Password must be at least 6 characters",
+  "completeRegisterConfirmPasswordHint": "Confirm password",
+  "completeRegisterConfirmPasswordRequired": "Please confirm your password",
+  "completeRegisterPasswordMismatch": "Passwords don't match",
+  "completeRegisterVerified": "VERIFIED",
+  "completeRegisterShowPassword": "Show password",
+  "completeRegisterHidePassword": "Hide password",
+  "completeRegisterStrengthTooShort": "Too short",
+  "completeRegisterStrengthWeak": "Weak",
+  "completeRegisterStrengthGood": "Good",
+  "completeRegisterStrengthStrong": "Strong",
+  "completeRegisterFailed": "Registration failed",
+  "friendRequestsAcceptedToast": "Friend request accepted",
+  "friendRequestsAcceptFailed": "Failed to accept request",
+  "friendRequestsRejectedToast": "Friend request rejected",
+  "friendRequestsRejectFailed": "Failed to reject request",
+  "friendRequestsTitle": "Friend Requests",
+  "friendRequestsEmpty": "No pending friend requests",
+  "friendRequestsJustNow": "Just now",
+  "friendRequestsMinutesAgo": "{count, plural, one{1 minute ago} other{{count} minutes ago}}",
+  "@friendRequestsMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      }
+    }
+  },
+  "friendRequestsHoursAgo": "{count, plural, one{1 hour ago} other{{count} hours ago}}",
+  "@friendRequestsHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      }
+    }
+  },
+  "friendRequestsDaysAgo": "{count, plural, one{1 day ago} other{{count} days ago}}",
+  "@friendRequestsDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      }
+    }
+  },
+  "friendRequestsDefaultSubtitle": "Requested to add you",
+  "friendRequestsNowFriends": "You are now friends",
+  "friendRequestsReject": "Reject",
+  "friendRequestsAccept": "Accept",
+  "companyDetailContactDetails": "Contact Details",
+  "companyDetailAboutCompany": "About Company",
+  "companyDetailSocialPresence": "Social Presence",
+  "companyDetailGeneralFallback": "General",
+  "companyDetailCorporateFallback": "Corporate",
+  "companyFormSaveFailed": "Failed to save company details",
+  "companyFormEditTitle": "Edit Company",
+  "companyFormNewTitle": "New Company",
+  "companyFormProfileTitle": "Company Profile",
+  "companyFormProfileSubtitle": "Fill in the details below to create a premium business profile.",
+  "companyFormNameLabel": "Company Name *",
+  "companyFormNameRequired": "Name is required",
+  "companyFormIndustryLabel": "Industry *",
+  "companyFormFieldRequired": "Required",
+  "companyFormTypeLabel": "Type *",
+  "companyFormDescriptionLabel": "Description",
+  "companyFormContactInfo": "Contact Information",
+  "companyFormAddressLabel": "Physical Address",
+  "companyFormWebsiteLabel": "Website URL",
+  "companyFormPhoneLabel": "Phone",
+  "companyFormEmailLabel": "Email",
+  "companyFormUpdateButton": "UPDATE COMPANY",
+  "companyFormCreateButton": "CREATE COMPANY",
+  "saveToGalleryAccessDenied": "Allow photo access in Settings to save images.",
+  "saveToGallerySuccess": "Saved to gallery",
+  "saveToGalleryError": "Could not save image. Please try again."
+}

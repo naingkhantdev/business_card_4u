@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import '../theme/app_page_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../../providers/auth/auth_provider.dart';
 import '../../providers/card/card_provider.dart';
 import '../../network/image_url.dart';
@@ -14,6 +16,7 @@ import '../responsive/responsive.dart';
 import '../widgets/app_toast.dart';
 import '../theme/wallet_tokens.dart';
 import '../widgets/my_qr_panel.dart';
+import '../widgets/profession_picker.dart';
 import 'add_card_page.dart';
 import 'company_detail_page.dart';
 import 'deactivate_account_page.dart';
@@ -54,9 +57,7 @@ class CardDetailPage extends ConsumerStatefulWidget {
   static const _primary = Wallet.accentLight;
   static const _border = Wallet.line;
   static const _accentSoft = Wallet.accentSoft;
-  static const _iconSoft = Wallet.iconSoft;
 
-  static const _darkBg = Wallet.darkGround;
   static const _darkSurface = Wallet.darkSurface;
   static const _darkBorder = Wallet.darkLine;
   static const _darkInk = Wallet.darkInk;
@@ -70,6 +71,11 @@ class CardDetailPage extends ConsumerStatefulWidget {
   static Color muted(bool isDark) => Wallet.mutedOf(isDark);
   static Color faint(bool isDark) => Wallet.faintOf(isDark);
   static Color line(bool isDark) => Wallet.lineOf(isDark);
+
+  /// The page's only framing: a hairline, no shadow. Shadows on every block
+  /// made the page read as a stack of floating cards rather than one sheet.
+  static Border hairline(bool isDark) =>
+      Border.all(color: isDark ? _darkBorder : line(isDark));
 
   // Typography using desired stack (Helvetica Neue / Inter / Arial fallback)
   // These inherit the app's fontFamily + fallback from ThemeData
@@ -113,7 +119,7 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
   Future<void> _openCardEditor(BusinessCardModel card) async {
     final updated = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => AddCardPage(card: card)),
+      AppPageRoute(builder: (_) => AddCardPage(card: card)),
     );
     if (!mounted || updated != true) return;
 
@@ -123,7 +129,7 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
 
     AppToast.show(
       context,
-      'Business card updated successfully',
+      AppLocalizations.of(context)!.cardDetailUpdateSuccess,
       type: AppToastType.success,
     );
 
@@ -198,7 +204,7 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
         TextButton(
           onPressed: () => Navigator.pop(context, false),
           child: Text(
-            'Cancel',
+            AppLocalizations.of(context)!.cardDetailCancel,
             style: TextStyle(color: isDark ? CardDetailPage._darkMuted : CardDetailPage._muted),
           ),
         ),
@@ -235,13 +241,14 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
 
   Future<void> _showDeactivateAccountFlow(BuildContext context) async {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const DeactivateAccountPage()),
+      AppPageRoute(builder: (_) => const DeactivateAccountPage()),
     );
   }
 
   /// The QR sheet. Lifted out of the body so the overflow menu is its only
   /// caller — sharing used to be reachable from two places at once.
   void _showQrSheet(BusinessCardModel card, bool isDark) {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -280,7 +287,7 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
               ),
               const SizedBox(height: 22),
               Text(
-                'Share Your Card',
+                l10n.cardDetailShareYourCard,
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
@@ -293,7 +300,7 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
               ),
               const SizedBox(height: 6),
               Text(
-                'Others can scan this to save your contact',
+                l10n.cardDetailShareYourCardSubtitle,
                 style: CardDetailPage.smallMutedStyle(isDark),
                 textAlign: TextAlign.center,
               ),
@@ -308,6 +315,7 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final ref = this.ref;
     final card = widget.card;
     final isFriend = _isFriend;
@@ -335,10 +343,12 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
         if (ImageUrl.resolve(entry.value) case final url?) entry.key: url,
     };
 
+    // One plain sheet, not boxes on a tinted ground — sections are told apart
+    // by their captions and hairlines alone.
     return Scaffold(
-      backgroundColor: isDark ? CardDetailPage._darkBg : CardDetailPage.tertiary,
+      backgroundColor: CardDetailPage.surface(isDark),
       appBar: AppBar(
-        backgroundColor: isDark ? CardDetailPage._darkBg : CardDetailPage.tertiary,
+        backgroundColor: CardDetailPage.surface(isDark),
         elevation: 0,
         scrolledUnderElevation: 0,
         foregroundColor: isDark ? CardDetailPage._darkInk : CardDetailPage._ink,
@@ -383,9 +393,9 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                       context: context,
                       builder: (ctx) => _buildActionDialog(
                         ctx,
-                        title: 'Delete Card',
-                        content: 'Are you sure you want to delete this card?',
-                        confirmText: 'Delete',
+                        title: l10n.cardDetailDeleteCardTitle,
+                        content: l10n.cardDetailDeleteCardBody,
+                        confirmText: l10n.cardDetailDelete,
                         destructive: true,
                         onConfirm: () => Navigator.pop(ctx, true),
                       ),
@@ -405,7 +415,7 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                           context,
                           deleteMessage ??
                               result.message ??
-                              'Card deleted successfully',
+                              l10n.cardDetailDeleteSuccess,
                           isDestructiveSoft: true,
                         );
                         Navigator.pop(context);
@@ -414,7 +424,7 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                           context,
                           deleteMessage ??
                               result.message ??
-                              'Failed to delete card',
+                              l10n.cardDetailDeleteFailed,
                           isError: true,
                         );
                       }
@@ -436,7 +446,9 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                                   : Colors.black87),
                           const SizedBox(width: 12),
                           Text(
-                            isMyProfileCard ? 'Share my card' : 'Share',
+                            isMyProfileCard
+                                ? l10n.cardDetailShareMyCard
+                                : l10n.cardDetailShare,
                             style: TextStyle(
                                 color: isDark
                                     ? CardDetailPage._darkInk
@@ -457,7 +469,7 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                                   : Colors.black87),
                           const SizedBox(width: 12),
                           Text(
-                            'Edit',
+                            l10n.cardDetailEdit,
                             style: TextStyle(
                                 color: isDark
                                     ? CardDetailPage._darkInk
@@ -475,7 +487,9 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                               size: 19, color: Colors.redAccent),
                           const SizedBox(width: 12),
                           Text(
-                            isMyProfileCard ? 'Deactivate Account' : 'Delete',
+                            isMyProfileCard
+                                ? l10n.cardDetailDeactivateAccount
+                                : l10n.cardDetailDelete,
                             style: const TextStyle(color: Colors.redAccent),
                           ),
                         ],
@@ -496,12 +510,16 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
             avatarUrl: avatarUrl,
             isDark: isDark,
             isMyProfileCard: isMyProfileCard,
-            cardTypeLabel: card.cardType == 'saved_card' ? 'Saved' : 'Business',
+            cardTypeLabel: card.cardType == 'saved_card'
+                ? l10n.cardDetailTypeSaved
+                : l10n.cardDetailTypeBusiness,
             isFriend: isFriend,
             // A portrait belongs to a person's own card. A saved card is a
-            // photo of someone's printed card — it has no portrait, and a
-            // letter-circle standing in for one is just noise above it.
+            // photo of someone's printed card — it has no portrait, so that
+            // slot shows the printed card itself instead (see cardPhotoUrls
+            // below).
             showAvatar: isUserCard,
+            cardPhotoUrls: cardPhotoUrls,
           ),
 
           Center(
@@ -510,7 +528,7 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                 maxWidth: Responsive.isDesktop(context) ? 720 : double.infinity,
               ),
               child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 22, 20, 44),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -528,9 +546,9 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                             context: context,
                             builder: (ctx) => _buildActionDialog(
                               ctx,
-                              title: 'Unfriend',
-                              content: 'Remove this connection?',
-                              confirmText: 'Unfriend',
+                              title: l10n.cardDetailUnfriend,
+                              content: l10n.cardDetailUnfriendBody,
+                              confirmText: l10n.cardDetailUnfriend,
                               destructive: true,
                               onConfirm: () => Navigator.pop(ctx, true),
                             ),
@@ -549,9 +567,9 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                               }
                             });
                             if (res.isSuccess) {
-                              _showToast(context, 'Friend removed', isDestructiveSoft: true);
+                              _showToast(context, l10n.cardDetailFriendRemoved, isDestructiveSoft: true);
                             } else {
-                              _showToast(context, res.message ?? 'Failed to remove friend', isError: true);
+                              _showToast(context, res.message ?? l10n.cardDetailFriendRemoveFailed, isError: true);
                             }
                           }
                         } else if (friendRequestStatus == 'pending_sent' || friendRequestStatus == 'pending') {
@@ -559,9 +577,9 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                             context: context,
                             builder: (ctx) => _buildActionDialog(
                               ctx,
-                              title: 'Cancel Request',
-                              content: 'Cancel the friend request sent to this user?',
-                              confirmText: 'Cancel Request',
+                              title: l10n.cardDetailCancelRequest,
+                              content: l10n.cardDetailCancelRequestBody,
+                              confirmText: l10n.cardDetailCancelRequest,
                               destructive: true,
                               onConfirm: () => Navigator.pop(ctx, true),
                             ),
@@ -580,9 +598,9 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                               }
                             });
                             if (res.isSuccess) {
-                              _showToast(context, 'Friend request cancelled', isDestructiveSoft: true);
+                              _showToast(context, l10n.cardDetailFriendRequestCancelled, isDestructiveSoft: true);
                             } else {
-                              _showToast(context, res.message ?? 'Failed to cancel request', isError: true);
+                              _showToast(context, res.message ?? l10n.cardDetailCancelRequestFailed, isError: true);
                             }
                           }
                         } else {
@@ -598,9 +616,9 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                             }
                           });
                           if (res.isSuccess) {
-                            _showToast(context, 'Friend request sent');
+                            _showToast(context, l10n.cardDetailFriendRequestSent);
                           } else {
-                            _showToast(context, res.message ?? 'Failed to send friend request', isError: true);
+                            _showToast(context, res.message ?? l10n.cardDetailFriendRequestSendFailed, isError: true);
                           }
                         }
                       },
@@ -618,9 +636,9 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                           }
                         });
                         if (res.isSuccess) {
-                          _showToast(context, 'Friend request accepted');
+                          _showToast(context, l10n.cardDetailFriendRequestAccepted);
                         } else {
-                          _showToast(context, res.message ?? 'Failed to accept request', isError: true);
+                          _showToast(context, res.message ?? l10n.cardDetailAcceptRequestFailed, isError: true);
                         }
                       },
                       onRejectFriend: () async {
@@ -637,44 +655,58 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                           }
                         });
                         if (res.isSuccess) {
-                          _showToast(context, 'Friend request declined', isDestructiveSoft: true);
+                          _showToast(context, l10n.cardDetailFriendRequestDeclined, isDestructiveSoft: true);
                         } else {
-                          _showToast(context, res.message ?? 'Failed to decline request', isError: true);
+                          _showToast(context, res.message ?? l10n.cardDetailDeclineRequestFailed, isError: true);
                         }
                       },
                     ),
 
                     // ===== BIO =====
+                    // On its own surface, like every block below it — plain
+                    // text floating between the actions and the first card
+                    // used to read as unfinished rather than intentional.
                     if ((card.bio ?? '').trim().isNotEmpty) ...[
-                      _SectionLabel('About', isDark: isDark),
-                      Text(
-                        card.bio!.trim(),
-                        style: CardDetailPage.bodyStyle(isDark),
+                      _SectionLabel(l10n.cardDetailAbout, isDark: isDark),
+                      _GroupCard(
+                        isDark: isDark,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: Text(
+                              card.bio!.trim(),
+                              style: CardDetailPage.bodyStyle(isDark)
+                                  .copyWith(fontSize: 14, height: 1.5),
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 20),
                     ],
 
-                    // ===== COMPANY / CONTACT / SOCIAL =====
-                    // One surface, not three — a card per few rows of text
-                    // read as clutter before it read as organization. The
-                    // groups still separate cleanly by their own caption and
-                    // the hairline `_GroupCard` already draws between rows.
+                    // ===== COMPANY, then CONTACT / SOCIAL =====
+                    // Two surfaces, not one: company details (its own phone,
+                    // email, address) sitting in the same card as the
+                    // person's made it easy to misread whose number you were
+                    // looking at. A gap between cards reads as "these are two
+                    // different things" more clearly than a caption can.
                     _DetailsCard(card: card, isDark: isDark),
 
                     // ===== THE PRINTED CARD =====
-                    // Last, as reference. Tapping opens it full screen, which
-                    // is where anyone actually reads a card photo.
-                    if (cardPhotoUrls.isNotEmpty) ...[
-                      _SectionLabel('Business card', isDark: isDark),
+                    // Own profile and friends' cards — not saved cards,
+                    // whose front/back photos now live in the hero above (a
+                    // _CardCarousel there too) and would just repeat here.
+                    if (cardPhotoUrls.isNotEmpty && !isSavedCard) ...[
+                      _SectionLabel(l10n.cardDetailBusinessCardSection, isDark: isDark),
                       _CardCarousel(photos: cardPhotoUrls, isDark: isDark),
                     ]
-                    // Your own card still names the gap, so a half-finished
-                    // profile does not look complete.
+                    // Only your own card gets an invitation to add what's
+                    // missing — there's no editing a friend's card from here.
                     else if (isMyProfileCard) ...[
-                      _SectionLabel('Business card', isDark: isDark),
+                      _SectionLabel(l10n.cardDetailBusinessCardSection, isDark: isDark),
                       _SecondaryButton(
                         icon: Icons.add_a_photo_outlined,
-                        label: 'Add front & back photos',
+                        label: l10n.cardDetailAddFrontBackPhotos,
                         onTap: () => _openCardEditor(card),
                         isDark: isDark,
                       ),
@@ -690,7 +722,7 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
   }
 }
 
-/// The identity: a large centered avatar, name, role, and a status chip, on
+/// The identity: a compact avatar beside the name, role, and a status chip, on
 /// one quiet surface with a single accent line across its top.
 ///
 /// A gradient cover was tried here and reverted — it read as "premium" in
@@ -711,9 +743,13 @@ class _PremiumHero extends StatelessWidget {
   final String cardTypeLabel;
   final bool isFriend;
 
-  /// Only a person's own card carries a portrait; a saved card gets a
-  /// neutral card icon in the same spot instead — see the call site.
+  /// Only a person's own card carries a portrait; a saved card shows the
+  /// printed card itself in that spot instead — see [cardPhotoUrls].
   final bool showAvatar;
+
+  /// Front/back photos of the physical card, keyed by label. Used to fill
+  /// the identity slot for a saved card, which has no portrait of its own.
+  final Map<String, String> cardPhotoUrls;
 
   const _PremiumHero({
     required this.card,
@@ -723,10 +759,12 @@ class _PremiumHero extends StatelessWidget {
     required this.cardTypeLabel,
     required this.isFriend,
     required this.showAvatar,
+    required this.cardPhotoUrls,
   });
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final firstLetter =
         card.fullName.isNotEmpty ? card.fullName[0].toUpperCase() : '?';
     final company = card.company?.name ?? '';
@@ -736,9 +774,9 @@ class _PremiumHero extends StatelessWidget {
     ].join('  ·  ');
 
     final chip = isMyProfileCard
-        ? 'Your profile'
+        ? l10n.cardDetailYourProfile
         : isFriend
-            ? 'Connected'
+            ? l10n.cardDetailConnected
             : cardTypeLabel;
     final tag = (card.tag ?? '').trim();
     final createdAt = card.createdAt;
@@ -756,120 +794,151 @@ class _PremiumHero extends StatelessWidget {
 
     final quickActions = <_QuickAction>[
       if (card.phones.isNotEmpty)
-        _QuickAction(Icons.call_rounded, 'Call',
+        _QuickAction(Icons.call_rounded, l10n.cardDetailCall,
             () => _openLink('tel:${card.phones.first}')),
       if (card.emails.isNotEmpty)
-        _QuickAction(Icons.mail_rounded, 'Email',
+        _QuickAction(Icons.mail_rounded, l10n.cardDetailEmail,
             () => _openLink('mailto:${card.emails.first}')),
       if (mapAddress != null)
         _QuickAction(
             Icons.map_rounded,
-            'Map',
+            l10n.cardDetailMap,
             () => _openLink(
                 'https://maps.google.com/?q=${Uri.encodeComponent(mapAddress.displayText)}')),
       if (companyWebsite != null && companyWebsite.isNotEmpty)
-        _QuickAction(Icons.language_rounded, 'Website',
+        _QuickAction(Icons.language_rounded, l10n.cardDetailWebsite,
             () => _openLink(_normalizeUrl(companyWebsite))),
     ];
 
-    const avatarSize = 88.0;
+    const avatarSize = 60.0;
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-      decoration: BoxDecoration(
-        color: CardDetailPage.surface(isDark),
-        borderRadius: BorderRadius.circular(24),
-        border:
-            isDark ? Border.all(color: CardDetailPage._darkBorder) : null,
-        boxShadow: CardDetailPage.surfaceShadow(isDark),
-      ),
-      clipBehavior: Clip.antiAlias,
+    // Avatar sits beside the name rather than stacked above it — the stacked,
+    // centered layout spent most of the hero's height on whitespace before
+    // the reader reached anything they could act on.
+    Widget avatarCircle(Widget child) => Container(
+          width: avatarSize,
+          height: avatarSize,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isDark
+                ? CardDetailPage._accentDark.withOpacity(.16)
+                : CardDetailPage._accentSoft,
+            border: Border.all(
+              color: CardDetailPage.accent(isDark).withOpacity(.25),
+              width: 1.5,
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: child,
+        );
+
+    final showCarousel = !showAvatar && cardPhotoUrls.isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // The one line of colour on the page — a signature, not a banner.
-          Container(height: 3, color: CardDetailPage.accent(isDark)),
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 32, 24, 28),
+            padding: const EdgeInsets.fromLTRB(0, 4, 0, 16),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Container(
-                  width: avatarSize,
-                  height: avatarSize,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: isDark
-                        ? CardDetailPage._accentDark.withOpacity(.16)
-                        : CardDetailPage._accentSoft,
-                    border: Border.all(
-                      color: CardDetailPage.accent(isDark).withOpacity(.25),
-                      width: 1.5,
-                    ),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: showAvatar
-                      ? (avatarUrl != null
+                if (showCarousel) ...[
+                  // Full-width and swipeable between front/back, same as the
+                  // old lower "Business card" section this replaced — a
+                  // saved card's photo is the point of this page, not a
+                  // small teaser for it.
+                  _CardCarousel(photos: cardPhotoUrls, isDark: isDark),
+                  const SizedBox(height: 14),
+                ],
+                Row(
+                  children: [
+                    if (showAvatar)
+                      avatarCircle(avatarUrl != null
                           ? Image.network(
                               avatarUrl!,
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) => _AvatarFallback(
                                   letter: firstLetter, isDark: isDark),
                             )
-                          : _AvatarFallback(letter: firstLetter, isDark: isDark))
-                      : _AvatarFallback(
-                          icon: Icons.badge_rounded, isDark: isDark),
-                ),
-                const SizedBox(height: 18),
-                Text(
-                  card.fullName,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.55,
-                    height: 1.15,
-                    color: CardDetailPage.ink(isDark),
-                  ),
-                ),
-                if (subtitle.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    subtitle,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      height: 1.35,
-                      fontWeight: FontWeight.w500,
-                      color: CardDetailPage.muted(isDark),
+                          : _AvatarFallback(
+                              letter: firstLetter, isDark: isDark))
+                    else if (!showCarousel)
+                      avatarCircle(_AvatarFallback(
+                          icon: Icons.badge_rounded, isDark: isDark)),
+                    if (showAvatar || !showCarousel)
+                      const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            card.fullName,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 19,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.45,
+                              height: 1.15,
+                              color: CardDetailPage.ink(isDark),
+                            ),
+                          ),
+                          if (subtitle.isNotEmpty) ...[
+                            const SizedBox(height: 3),
+                            Text(
+                              subtitle,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.3,
+                                fontWeight: FontWeight.w500,
+                                color: CardDetailPage.muted(isDark),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 7),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: [
+                              _Chip(label: chip, isDark: isDark),
+                              if ((card.profession ?? '').isNotEmpty)
+                                _Chip(
+                                    label: professionLabel(
+                                        l10n, card.profession!),
+                                    isDark: isDark),
+                              if (tag.isNotEmpty)
+                                _Chip(label: tag, isDark: isDark),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-                const SizedBox(height: 14),
-                Wrap(
-                  alignment: WrapAlignment.center,
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    _Chip(label: chip, isDark: isDark),
-                    if (tag.isNotEmpty) _Chip(label: tag, isDark: isDark),
                   ],
                 ),
                 if (quickActions.isNotEmpty) ...[
-                  const SizedBox(height: 20),
-                  Divider(height: 1, color: CardDetailPage.line(isDark)),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
+                  // Equal-width slots so a 4-action row always fits on one
+                  // line; a fixed gap pushed it onto two on a normal phone.
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      for (final action in quickActions)
-                        _QuickActionButton(action: action, isDark: isDark),
+                      for (var i = 0; i < quickActions.length; i++) ...[
+                        if (i > 0) const SizedBox(width: 8),
+                        Expanded(
+                          child: _QuickActionButton(
+                              action: quickActions[i], isDark: isDark),
+                        ),
+                      ],
                     ],
                   ),
                 ],
                 if (createdAt != null) ...[
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 10),
                   Text(
-                    'Added ${_formatDate(createdAt)}',
+                    l10n.cardDetailAddedOn(_formatDate(createdAt)),
                     style: TextStyle(
                       fontSize: 11,
                       color: isDark ? Wallet.darkFaint : Colors.grey.shade400,
@@ -879,6 +948,7 @@ class _PremiumHero extends StatelessWidget {
               ],
             ),
           ),
+          Divider(height: 1, thickness: 1, color: CardDetailPage.line(isDark)),
         ],
       ),
     );
@@ -894,11 +964,9 @@ class _QuickAction {
   const _QuickAction(this.icon, this.label, this.onTap);
 }
 
-/// One of the hero's quick actions — a filled circular icon with its label
-/// underneath, the pattern contact-card apps use for "the handful of things
-/// you'd actually do with this person right now" (call, email, find them,
-/// visit their site), pulled up out of the detail rows below so they don't
-/// need a scroll and a squint at a label to find.
+/// One of the hero's quick actions (call, email, map, website) — a compact
+/// tinted pill with the icon and label on one line, so the row costs a
+/// single short line of height instead of a big icon stacked over a label.
 class _QuickActionButton extends StatelessWidget {
   final _QuickAction action;
   final bool isDark;
@@ -907,33 +975,32 @@ class _QuickActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accent = CardDetailPage.accent(isDark);
     return Material(
-      color: Colors.transparent,
+      color: isDark
+          ? CardDetailPage._accentDark.withOpacity(.14)
+          : CardDetailPage._accentSoft,
+      borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: action.onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+        borderRadius: BorderRadius.circular(12),
+        child: SizedBox(
+          height: 38,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: CardDetailPage.accent(isDark),
-                ),
-                child: Icon(action.icon,
-                    size: 19, color: Wallet.onAccentOf(isDark)),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                action.label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: CardDetailPage.muted(isDark),
+              Icon(action.icon, size: 16, color: accent),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  action.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: accent,
+                  ),
                 ),
               ),
             ],
@@ -1006,7 +1073,7 @@ class _SectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(left: 4, bottom: 9),
+        padding: const EdgeInsets.only(left: 2, bottom: 8),
         child: Text(
           title.toUpperCase(),
           style: TextStyle(
@@ -1019,8 +1086,8 @@ class _SectionLabel extends StatelessWidget {
       );
 }
 
-/// A lifted white surface. Rows inside it are separated by hairlines, so the
-/// group reads as one object instead of a stack of loose lines.
+/// A frameless group of rows. Rows are separated by hairlines, so the group
+/// still reads as one object without a box of its own around it.
 class _GroupCard extends StatelessWidget {
   final List<Widget> children;
   final bool isDark;
@@ -1037,14 +1104,6 @@ class _GroupCard extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: padding,
-      decoration: BoxDecoration(
-        color: CardDetailPage.surface(isDark),
-        borderRadius: BorderRadius.circular(20),
-        border:
-            isDark ? Border.all(color: CardDetailPage._darkBorder) : null,
-        boxShadow: CardDetailPage.surfaceShadow(isDark),
-      ),
-      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1057,7 +1116,7 @@ class _GroupCard extends StatelessWidget {
                 // (a section break, not just the next field) — indented to
                 // clear the icon tile everywhere else, so it reads as
                 // continuing the same group rather than ending it.
-                indent: children[i] is _InlineHeader ? 0 : 58,
+                indent: children[i] is _InlineHeader ? 0 : 32,
                 color: CardDetailPage.line(isDark),
               ),
             children[i],
@@ -1068,8 +1127,9 @@ class _GroupCard extends StatelessWidget {
   }
 }
 
-/// One detail: tinted icon tile, label over value, chevron. The whole row is
-/// the action — tapping the phone number calls it.
+/// One detail: a plain icon, the value, and its label underneath. The whole
+/// row is the action — tapping the phone number calls it — so it carries no
+/// chevron; the value itself is what the eye is looking for.
 class _DetailRow extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -1090,51 +1150,36 @@ class _DetailRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(
           children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: isDark
-                    ? CardDetailPage._accentDark.withOpacity(.13)
-                    : CardDetailPage._iconSoft,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, size: 16, color: CardDetailPage.accent(isDark)),
-            ),
-            const SizedBox(width: 12),
+            Icon(icon, size: 18, color: CardDetailPage.muted(isDark)),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    label.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1.0,
-                      color: CardDetailPage.faint(isDark),
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
                     value,
                     style: TextStyle(
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -0.2,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: -0.1,
                       height: 1.3,
                       color: CardDetailPage.ink(isDark),
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: CardDetailPage.faint(isDark),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
-            Icon(Icons.chevron_right_rounded,
-                size: 18, color: CardDetailPage.faint(isDark)),
           ],
         ),
       ),
@@ -1164,40 +1209,27 @@ class _PrimaryButton extends StatelessWidget {
       opacity: enabled ? 1 : .55,
       child: Material(
         color: CardDetailPage.accent(isDark),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(12),
           child: Ink(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(15),
-              boxShadow: enabled && !isDark
-                  ? [
-                      BoxShadow(
-                        color: CardDetailPage._primary.withOpacity(.42),
-                        blurRadius: 22,
-                        offset: const Offset(0, 10),
-                        spreadRadius: -10,
-                      ),
-                    ]
-                  : null,
-            ),
             child: SizedBox(
-              height: 50,
+              height: 46,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(icon,
                       size: 18,
                       color: Wallet.onAccentOf(isDark)),
-                  const SizedBox(width: 9),
+                  const SizedBox(width: 8),
                   Flexible(
                     child: Text(
                       label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 15,
+                        fontSize: 14.5,
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.2,
                         color: Wallet.onAccentOf(isDark),
@@ -1239,20 +1271,17 @@ class _SecondaryButton extends StatelessWidget {
       opacity: onTap == null ? .55 : 1,
       child: Material(
         color: CardDetailPage.surface(isDark),
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(12),
           child: Ink(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(15),
-              border: isDark
-                  ? Border.all(color: CardDetailPage._darkBorder)
-                  : null,
-              boxShadow: CardDetailPage.surfaceShadow(isDark),
+              borderRadius: BorderRadius.circular(12),
+              border: CardDetailPage.hairline(isDark),
             ),
             child: SizedBox(
-              height: 50,
+              height: 46,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -1313,11 +1342,12 @@ class _ActionList extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    final l10n = AppLocalizations.of(context)!;
     final Widget content;
     if (isFriend) {
       content = _SecondaryButton(
         icon: Icons.person_remove_alt_1_rounded,
-        label: 'Unfriend',
+        label: l10n.cardDetailUnfriend,
         onTap: isProcessing ? null : onFriendAction,
         isDark: isDark,
         destructive: true,
@@ -1329,7 +1359,7 @@ class _ActionList extends StatelessWidget {
             flex: 3,
             child: _PrimaryButton(
               icon: Icons.check_rounded,
-              label: 'Accept',
+              label: l10n.cardDetailAccept,
               onTap: isProcessing ? null : onAcceptFriend,
               isDark: isDark,
             ),
@@ -1339,7 +1369,7 @@ class _ActionList extends StatelessWidget {
             flex: 2,
             child: _SecondaryButton(
               icon: Icons.close_rounded,
-              label: 'Decline',
+              label: l10n.cardDetailDecline,
               onTap: isProcessing ? null : onRejectFriend,
               isDark: isDark,
             ),
@@ -1350,21 +1380,21 @@ class _ActionList extends StatelessWidget {
         friendRequestStatus == 'pending') {
       content = _SecondaryButton(
         icon: Icons.schedule_rounded,
-        label: 'Request sent',
+        label: l10n.cardDetailRequestSent,
         onTap: isProcessing ? null : onFriendAction,
         isDark: isDark,
       );
     } else {
       content = _PrimaryButton(
         icon: Icons.person_add_alt_1_rounded,
-        label: 'Connect',
+        label: l10n.cardDetailConnect,
         onTap: isProcessing ? null : onFriendAction,
         isDark: isDark,
       );
     }
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 26),
+      padding: const EdgeInsets.only(bottom: 20),
       child: content,
     );
   }
@@ -1402,23 +1432,26 @@ class _DetailsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final children = <Widget>[];
+    final l10n = AppLocalizations.of(context)!;
+    final companyChildren = <Widget>[];
 
     final company = card.company;
     if (company != null) {
-      children.add(_InlineHeader('Company', isDark: isDark, isFirst: true));
-      children.add(_CompanyHeaderRow(company: company, isDark: isDark));
+      companyChildren
+          .add(_InlineHeader(l10n.cardDetailCompanyHeader, isDark: isDark, isFirst: true));
+      companyChildren.add(_CompanyHeaderRow(company: company, isDark: isDark));
       if ((company.description ?? '').trim().isNotEmpty) {
-        children.add(_InlineTextRow(company.description!.trim(), isDark: isDark));
+        companyChildren
+            .add(_InlineTextRow(company.description!.trim(), isDark: isDark));
       }
       // Same row shape as the Contact section below, not a quieter,
       // non-tappable readout of the same kind of data — a phone number
       // should look and behave the same whether it's the company's or the
       // person's.
       if ((company.address ?? '').isNotEmpty) {
-        children.add(_DetailRow(
+        companyChildren.add(_DetailRow(
           icon: Icons.place_outlined,
-          label: 'Address',
+          label: l10n.cardDetailAddress,
           value: company.address!,
           onTap: () => _openLink(
               'https://maps.google.com/?q=${Uri.encodeComponent(company.address!)}'),
@@ -1426,27 +1459,27 @@ class _DetailsCard extends StatelessWidget {
         ));
       }
       if ((company.website ?? '').isNotEmpty) {
-        children.add(_DetailRow(
+        companyChildren.add(_DetailRow(
           icon: Icons.language_rounded,
-          label: 'Website',
+          label: l10n.cardDetailWebsite,
           value: company.website!,
           onTap: () => _openLink(_normalizeUrl(company.website!)),
           isDark: isDark,
         ));
       }
       if ((company.phone ?? '').isNotEmpty) {
-        children.add(_DetailRow(
+        companyChildren.add(_DetailRow(
           icon: Icons.call_rounded,
-          label: 'Phone',
+          label: l10n.cardDetailPhone,
           value: company.phone!,
           onTap: () => _openLink('tel:${company.phone}'),
           isDark: isDark,
         ));
       }
       if ((company.email ?? '').isNotEmpty) {
-        children.add(_DetailRow(
+        companyChildren.add(_DetailRow(
           icon: Icons.mail_outline_rounded,
-          label: 'Email',
+          label: l10n.cardDetailEmail,
           value: company.email!,
           onTap: () => _openLink('mailto:${company.email}'),
           isDark: isDark,
@@ -1455,7 +1488,7 @@ class _DetailsCard extends StatelessWidget {
       // The company's own social links — separate from the card's own
       // `socialLinks` below, which belong to the person, not the business.
       for (final s in company.socials) {
-        children.add(_DetailRow(
+        companyChildren.add(_DetailRow(
           icon: _socialIconFor(s.platform),
           label: s.platform,
           value: s.url,
@@ -1465,18 +1498,20 @@ class _DetailsCard extends StatelessWidget {
       }
     }
 
+    final contactSocialChildren = <Widget>[];
+
     final contactRows = <Widget>[
       for (final p in card.phones)
         _DetailRow(
             icon: Icons.call_rounded,
-            label: 'Phone',
+            label: l10n.cardDetailPhone,
             value: p,
             onTap: () => _openLink('tel:$p'),
             isDark: isDark),
       for (final e in card.emails)
         _DetailRow(
             icon: Icons.mail_outline_rounded,
-            label: 'Email',
+            label: l10n.cardDetailEmail,
             value: e,
             onTap: () => _openLink('mailto:$e'),
             isDark: isDark),
@@ -1487,22 +1522,22 @@ class _DetailsCard extends StatelessWidget {
         if (!a.isEmpty)
           _DetailRow(
               icon: Icons.place_outlined,
-              label: 'Address',
+              label: l10n.cardDetailAddress,
               value: a.displayText,
               onTap: () => _openLink(
                   'https://maps.google.com/?q=${Uri.encodeComponent(a.displayText)}'),
               isDark: isDark),
     ];
     if (contactRows.isNotEmpty) {
-      children.add(_InlineHeader('Contact',
-          isDark: isDark, isFirst: children.isEmpty));
-      children.addAll(contactRows);
+      contactSocialChildren.add(_InlineHeader(l10n.cardDetailContactHeader,
+          isDark: isDark, isFirst: companyChildren.isEmpty));
+      contactSocialChildren.addAll(contactRows);
     }
 
     final socialRows = <Widget>[];
     for (final s in card.socialLinks ?? const []) {
       final m = s is Map ? Map<String, dynamic>.from(s) : <String, dynamic>{};
-      final platform = (m['platform'] ?? 'Link').toString();
+      final platform = (m['platform'] ?? l10n.cardDetailSocialLinkFallback).toString();
       final url = m['url']?.toString() ?? '';
       socialRows.add(_DetailRow(
         icon: _socialIconFor(platform),
@@ -1513,16 +1548,21 @@ class _DetailsCard extends StatelessWidget {
       ));
     }
     if (socialRows.isNotEmpty) {
-      children.add(_InlineHeader('Social',
-          isDark: isDark, isFirst: children.isEmpty));
-      children.addAll(socialRows);
+      contactSocialChildren.add(_InlineHeader(l10n.cardDetailSocialHeader,
+          isDark: isDark,
+          isFirst: companyChildren.isEmpty && contactSocialChildren.isEmpty));
+      contactSocialChildren.addAll(socialRows);
     }
 
-    if (children.isEmpty) return const SizedBox.shrink();
+    // One continuous list. Whose number is whose is carried by the COMPANY /
+    // CONTACT captions and the full-width rule above each of them, not by
+    // putting each group in a box of its own.
+    final rows = [...companyChildren, ...contactSocialChildren];
+    if (rows.isEmpty) return const SizedBox.shrink();
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 26),
-      child: _GroupCard(isDark: isDark, children: children),
+      padding: const EdgeInsets.only(bottom: 20),
+      child: _GroupCard(isDark: isDark, children: rows),
     );
   }
 }
@@ -1542,7 +1582,7 @@ class _InlineHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.fromLTRB(14, isFirst ? 14 : 16, 14, 6),
+        padding: EdgeInsets.fromLTRB(0, isFirst ? 4 : 18, 0, 2),
         child: Text(
           title.toUpperCase(),
           style: TextStyle(
@@ -1565,11 +1605,14 @@ class _InlineTextRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+        // Left edge matches every other row's text (18 icon + 14 gap = 32) —
+        // flush left made the description jut out past the name/address/
+        // phone rows above and below it.
+        padding: const EdgeInsets.fromLTRB(32, 0, 0, 12),
         child: Text(
           text,
           style: TextStyle(
-            fontSize: 13.5,
+            fontSize: 13,
             height: 1.5,
             color: CardDetailPage.muted(isDark),
           ),
@@ -1577,8 +1620,8 @@ class _InlineTextRow extends StatelessWidget {
       );
 }
 
-/// The company's identity — same icon-tile/value/chevron shape as
-/// [_DetailRow] (not a bigger avatar-style block of its own), so it lines up
+/// The company's identity — same plain-icon/value shape as [_DetailRow]
+/// (not a bigger avatar-style block of its own), so it lines up
 /// with the contact and social rows under it instead of reading as a
 /// different kind of thing wedged into the same card. Taps through to the
 /// company's own page, which is what the chevron implies everywhere else.
@@ -1596,25 +1639,15 @@ class _CompanyHeaderRow extends StatelessWidget {
 
     return InkWell(
       onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => CompanyDetailPage(company: company)),
+        AppPageRoute(builder: (_) => CompanyDetailPage(company: company)),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(
           children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: isDark
-                    ? CardDetailPage._accentDark.withOpacity(.13)
-                    : CardDetailPage._iconSoft,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(Icons.apartment_rounded,
-                  size: 16, color: CardDetailPage.accent(isDark)),
-            ),
-            const SizedBox(width: 12),
+            Icon(Icons.apartment_rounded,
+                size: 18, color: CardDetailPage.muted(isDark)),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1623,7 +1656,7 @@ class _CompanyHeaderRow extends StatelessWidget {
                     company.name,
                     style: TextStyle(
                       fontSize: 14.5,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                       letterSpacing: -0.2,
                       height: 1.3,
                       color: CardDetailPage.ink(isDark),
@@ -1757,12 +1790,9 @@ class _CardCarouselState extends State<_CardCarousel> {
               onTap: () => _openViewer(entries, i),
               child: Container(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(14),
                   color: CardDetailPage.surface(isDark),
-                  boxShadow: CardDetailPage.surfaceShadow(isDark),
-                  border: isDark
-                      ? Border.all(color: CardDetailPage._darkBorder)
-                      : null,
+                  border: CardDetailPage.hairline(isDark),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: Image(
@@ -1799,7 +1829,8 @@ class _CardCarouselState extends State<_CardCarousel> {
               const Spacer(),
               Flexible(
                 child: Text(
-                  '${entries[_index].key} · tap to enlarge',
+                  AppLocalizations.of(context)!
+                      .cardDetailTapToEnlarge(entries[_index].key),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(

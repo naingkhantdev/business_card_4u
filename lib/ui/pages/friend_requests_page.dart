@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../../providers/card/card_provider.dart';
 import '../../network/image_url.dart';
 import '../responsive/responsive.dart';
@@ -60,10 +61,11 @@ class _FriendRequestsPageState extends ConsumerState<FriendRequestsPage> {
       }
     });
 
+    final l10n = AppLocalizations.of(context)!;
     if (result.isSuccess) {
-      AppToast.show(context, 'Friend request accepted', type: AppToastType.success);
+      AppToast.show(context, l10n.friendRequestsAcceptedToast, type: AppToastType.success);
     } else {
-      AppToast.show(context, result.message ?? 'Failed to accept request', type: AppToastType.error);
+      AppToast.show(context, result.message ?? l10n.friendRequestsAcceptFailed, type: AppToastType.error);
     }
   }
 
@@ -83,21 +85,23 @@ class _FriendRequestsPageState extends ConsumerState<FriendRequestsPage> {
       }
     });
 
+    final l10n = AppLocalizations.of(context)!;
     if (result.isSuccess) {
-      AppToast.show(context, 'Friend request rejected', type: AppToastType.destructiveSoft);
+      AppToast.show(context, l10n.friendRequestsRejectedToast, type: AppToastType.destructiveSoft);
     } else {
-      AppToast.show(context, result.message ?? 'Failed to reject request', type: AppToastType.error);
+      AppToast.show(context, result.message ?? l10n.friendRequestsRejectFailed, type: AppToastType.error);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: isDark ? Wallet.darkGround : const Color(0xFFF8FAFD),
       appBar: AppBar(
         title: Text(
-          'Friend Requests',
+          l10n.friendRequestsTitle,
           style: TextStyle(
             fontWeight: FontWeight.w800,
             color: isDark ? Colors.white : Wallet.ink,
@@ -117,7 +121,7 @@ class _FriendRequestsPageState extends ConsumerState<FriendRequestsPage> {
               : _requests.isEmpty
                   ? Center(
                       child: Text(
-                        'No pending friend requests',
+                        l10n.friendRequestsEmpty,
                         style: TextStyle(
                           fontSize: 15,
                           color: isDark
@@ -165,8 +169,9 @@ class _FriendRequestCard extends StatelessWidget {
     required this.onReject,
   });
 
-  String _relativeTime(DateTime? createdAt) {
+  String _relativeTime(BuildContext context, DateTime? createdAt) {
     if (createdAt == null) return '';
+    final l10n = AppLocalizations.of(context)!;
 
     const myanmarOffset = Duration(hours: 6, minutes: 30);
     final now = DateTime.now().toUtc().add(myanmarOffset);
@@ -176,30 +181,28 @@ class _FriendRequestCard extends StatelessWidget {
     final difference = now.difference(requestTime);
 
     if (difference.isNegative) {
-      return 'Just now';
+      return l10n.friendRequestsJustNow;
     }
 
     if (difference.inSeconds < 60) {
-      return 'Just now';
+      return l10n.friendRequestsJustNow;
     }
     if (difference.inMinutes < 60) {
-      final minutes = difference.inMinutes;
-      return '$minutes minute${minutes == 1 ? '' : 's'} ago';
+      return l10n.friendRequestsMinutesAgo(difference.inMinutes);
     }
     if (difference.inHours < 24) {
-      final hours = difference.inHours;
-      return '$hours hour${hours == 1 ? '' : 's'} ago';
+      return l10n.friendRequestsHoursAgo(difference.inHours);
     }
-    final days = difference.inDays;
-    return '$days day${days == 1 ? '' : 's'} ago';
+    return l10n.friendRequestsDaysAgo(difference.inDays);
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
     final hasImage = card.profileImage != null && card.profileImage!.isNotEmpty;
     final avatarUrl = hasImage ? ImageUrl.resolve(card.profileImage!) : null;
-    final requestedAt = _relativeTime(card.createdAt);
+    final requestedAt = _relativeTime(context, card.createdAt);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -254,7 +257,7 @@ class _FriendRequestCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      card.position.isEmpty ? 'Requested to add you' : card.position,
+                      card.position.isEmpty ? l10n.friendRequestsDefaultSubtitle : card.position,
                       style: TextStyle(
                         color: isDark
                             ? Wallet.darkMuted
@@ -292,10 +295,10 @@ class _FriendRequestCard extends StatelessWidget {
                   color: isDark ? const Color(0xFF294776) : const Color(0xFFBFDBFE),
                 ),
               ),
-              child: const Text(
-                'You are now friends',
+              child: Text(
+                l10n.friendRequestsNowFriends,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   color: Color(0xFF1E3A8A),
                   fontWeight: FontWeight.w800,
                 ),
@@ -320,9 +323,9 @@ class _FriendRequestCard extends StatelessWidget {
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text(
-                      'Reject',
-                      style: TextStyle(fontWeight: FontWeight.w800),
+                    child: Text(
+                      l10n.friendRequestsReject,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
                     ),
                   ),
                 ),
@@ -339,9 +342,9 @@ class _FriendRequestCard extends StatelessWidget {
                     ),
                     child: isBusy
                         ? const LoadingView(size: 18)
-                        : const Text(
-                            'Accept',
-                            style: TextStyle(fontWeight: FontWeight.w900),
+                        : Text(
+                            l10n.friendRequestsAccept,
+                            style: const TextStyle(fontWeight: FontWeight.w900),
                           ),
                   ),
                 ),

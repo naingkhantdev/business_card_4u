@@ -10,6 +10,7 @@ class CreateCardRequest {
   @JsonKey(name: 'company_id')
   final int? companyId;
   final String? position;
+  final String? profession;
   final List<String>? phones;
   final List<String>? emails;
   final List<AddressModel>? addresses;
@@ -30,6 +31,7 @@ class CreateCardRequest {
     this.name,
     this.companyId,
     this.position,
+    this.profession,
     this.phones,
     this.emails,
     this.addresses,

@@ -1,15 +1,19 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import '../theme/app_page_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:image_picker/image_picker.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../../providers/auth/auth_provider.dart';
 import '../../providers/card/card_provider.dart';
+import '../../providers/card/profession_provider.dart';
 import '../../providers/company/company_provider.dart';
 import '../../providers/ocr/card_scanner_provider.dart';
 import '../../utils/app_result.dart';
+import '../../utils/image_upload.dart';
 import '../../network/image_url.dart';
 import '../../data/vos/address_model.dart';
 import '../../data/vos/business_card_model.dart';
@@ -21,6 +25,7 @@ import '../widgets/app_primary_button.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/image_source_sheet.dart';
 import '../widgets/loading_view.dart';
+import '../widgets/profession_picker.dart';
 import 'company_select_page.dart';
 import '../theme/wallet_tokens.dart';
 
@@ -62,6 +67,9 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
   final _profileImageCtrl = TextEditingController();
   int? _selectedCompanyId;
   String? _selectedCompanyName;
+
+  /// Picked in [ProfessionPicker]; what the card list's filter chips use.
+  String? _profession;
   // The portrait shown on the card. Offered on the user's own profile card
   // only: a card saved from someone else's is described by the photos of the
   // card itself, and guessing a face for it is not this form's job.
@@ -86,10 +94,6 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
   bool? _companyCreatedByScan;
 
   bool _isResolvingCompany = false;
-
-  /// Scanned company name the user said not to file as a new company, so a
-  /// rescan (e.g. reading the back of the same card) doesn't ask again.
-  String? _companyCreationDeclinedFor;
 
   /// Field keys that were filled by OCR rather than typed, so the form can
   /// mark them as needing a glance.
@@ -129,6 +133,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
       final c = widget.card!;
       _nameCtrl.text = c.fullName;
       _positionCtrl.text = c.position;
+      _profession = c.profession;
       _phonesCtrl.text = c.phones.join(', ');
       _emailsCtrl.text = c.emails.join(', ');
       for (final address in c.addresses) {
@@ -223,10 +228,11 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
   /// Picks the portrait for the user's own card. Unlike the card photos this
   /// one is never scanned — it is a face, not a source of fields.
   Future<void> _pickProfileImage() async {
-    final source = await _askImageSource('Profile photo');
+    final l10n = AppLocalizations.of(context)!;
+    final source = await _askImageSource(l10n.addCardProfilePhotoSourceTitle);
     if (source == null) return;
 
-    final pickedFile = await _pick(source);
+    final pickedFile = await _pick(source, UploadImageKind.avatar);
     if (pickedFile == null) return;
 
     final bytes = await pickedFile.readAsBytes();
@@ -240,11 +246,12 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
   /// Picks or captures a photo of one side of the physical card, then reads it
   /// so the newly captured side can contribute to the form right away.
   Future<void> _pickCardImage({required bool isFront}) async {
-    final source =
-        await _askImageSource(isFront ? 'Card front' : 'Card back');
+    final l10n = AppLocalizations.of(context)!;
+    final source = await _askImageSource(
+        isFront ? l10n.addCardFrontSourceTitle : l10n.addCardBackSourceTitle);
     if (source == null) return;
 
-    final pickedFile = await _pick(source);
+    final pickedFile = await _pick(source, UploadImageKind.card);
     if (pickedFile == null) return;
 
     final bytes = await pickedFile.readAsBytes();
@@ -268,6 +275,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
   Future<void> _runOcr({bool silentWhenEmpty = false}) async {
     final front = _frontImage;
     if (front == null) return;
+    final l10n = AppLocalizations.of(context)!;
 
     setState(() => _isRescanning = true);
     try {
@@ -277,7 +285,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
       if (scanned.isEmpty) {
         if (!silentWhenEmpty) {
           _showToast(
-            "Couldn't read any text from that photo. Try better lighting, or fill the form in yourself.",
+            l10n.addCardOcrNoTextFound,
             isError: true,
           );
         }
@@ -287,27 +295,30 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
       setState(() => _applyScanned(scanned));
       unawaited(_resolveScannedCompany());
       if (!silentWhenEmpty) {
-        _showToast('Scanned details added. Check them before saving.');
+        _showToast(l10n.addCardScannedDetailsAdded);
       }
     } catch (e) {
       debugPrint('OCR failed: $e');
       if (!mounted) return;
       if (!silentWhenEmpty) {
-        _showToast('Could not scan that photo. Please try again.',
-            isError: true);
+        _showToast(l10n.addCardScanFailed, isError: true);
       }
     } finally {
       if (mounted) setState(() => _isRescanning = false);
     }
   }
 
-  Future<XFile?> _pick(ImageSource source) async {
+  Future<XFile?> _pick(ImageSource source, UploadImageKind kind) async {
     try {
-      return await ImagePicker().pickImage(source: source);
+      return await pickImageForUpload(source, kind);
     } catch (e) {
       debugPrint('Error picking image: $e');
       if (mounted) {
-        _showToast('Could not open the ${source == ImageSource.camera ? 'camera' : 'gallery'}.',
+        final l10n = AppLocalizations.of(context)!;
+        _showToast(
+            l10n.addCardCouldNotOpenSource(source == ImageSource.camera
+                ? l10n.addCardSourceCamera
+                : l10n.addCardSourceGallery),
             isError: true);
       }
       return null;
@@ -335,7 +346,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
 
   Future<void> _pickCompany() async {
     final result = await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const CompanySelectPage()),
+      AppPageRoute(builder: (_) => const CompanySelectPage()),
     );
     if (result != null && result is CompanyModel) {
       setState(() {
@@ -345,29 +356,19 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         // scan's own note about it should stop being shown.
         _scannedCompanyName = null;
         _companyCreatedByScan = null;
-        _companyCreationDeclinedFor = null;
       });
     }
   }
 
   /// Links the card to the company OCR read off it when one already on file
-  /// matches. When none does, asks before filing a new one — unlike a
-  /// straight name match, creating a record is a real decision, and a scan
-  /// occasionally misreads a name badly enough that it shouldn't happen
-  /// unasked.
-  ///
-  /// Declining leaves the scan unresolved rather than trying again: the hint
-  /// keeps pointing at the picker, and a rescan of the same card won't ask a
-  /// second time for the same name.
+  /// matches. When none does, files it as a new company right away — the scan
+  /// flow should not stall on a confirmation for something this routine.
   ///
   /// Failures stay quiet — the hint falls back to pointing at the picker, so a
   /// card can still be saved by hand.
   Future<void> _resolveScannedCompany() async {
     final name = _scannedCompanyName;
-    if (name == null ||
-        _selectedCompanyId != null ||
-        _isResolvingCompany ||
-        _companyCreationDeclinedFor == name) {
+    if (name == null || _selectedCompanyId != null || _isResolvingCompany) {
       return;
     }
 
@@ -392,20 +393,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
       return;
     }
 
-    // Nothing matched — ask before creating one. The dialog closes the
-    // "resolving" state itself; the field a scan produced may have already
-    // been overridden or re-scanned by the time the user answers.
-    setState(() => _isResolvingCompany = false);
-    final shouldCreate = await _confirmCreateCompany(name);
-    if (!mounted || _scannedCompanyName != name || _selectedCompanyId != null) {
-      return;
-    }
-    if (!shouldCreate) {
-      setState(() => _companyCreationDeclinedFor = name);
-      return;
-    }
-
-    setState(() => _isResolvingCompany = true);
+    // Nothing matched — file it as a new company without asking.
     try {
       final created =
           await ref.read(companyProvider.notifier).createMinimal(name);
@@ -418,50 +406,6 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     } finally {
       if (mounted) setState(() => _isResolvingCompany = false);
     }
-  }
-
-  /// Asks whether the scanned name should be filed as a new company. Styled
-  /// like the other confirmation dialogs in the app (Manage Companies'
-  /// delete prompt) so it doesn't look like a stray system dialog.
-  Future<bool> _confirmCreateCompany(String name) async {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        scrollable: true,
-        backgroundColor: isDark ? Wallet.darkSurface : Colors.white,
-        surfaceTintColor: isDark ? Wallet.darkSurface : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Add new company?',
-          style: TextStyle(color: isDark ? Wallet.darkInk : Wallet.ink),
-        ),
-        content: Text(
-          'No company named "$name" is on file yet. '
-          'Add it as a new company?',
-          style: TextStyle(
-            color: isDark ? Wallet.darkMuted : Colors.black87,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(
-              'Not now',
-              style: TextStyle(
-                color: isDark ? Wallet.darkMuted : Colors.grey,
-              ),
-            ),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Add company'),
-          ),
-        ],
-      ),
-    );
-    return result ?? false;
   }
 
   List<String> _splitToList(String input) {
@@ -477,7 +421,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
     for (final e in emails) {
       if (!emailRegex.hasMatch(e)) {
-        return 'Invalid email: $e';
+        return AppLocalizations.of(context)!.addCardInvalidEmail(e);
       }
     }
     return null;
@@ -486,7 +430,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
   String? _validatePhones(String? value) {
     final phones = _splitToList(value ?? '');
     for (final p in phones) {
-      if (p.length < 6) return 'Each phone must be at least 6 characters';
+      if (p.length < 6) return AppLocalizations.of(context)!.addCardPhoneTooShort;
     }
     return null;
   }
@@ -514,6 +458,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         name: name.isEmpty ? null : name,
         companyId: companyId,
         position: position.isEmpty ? null : position,
+        profession: _profession,
         phones: phones.isEmpty ? null : phones,
         emails: emails.isEmpty ? null : emails,
         addresses: addresses.isEmpty ? null : addresses,
@@ -530,6 +475,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         name: name.isEmpty ? null : name,
         companyId: companyId,
         position: position.isEmpty ? null : position,
+        profession: _profession,
         phones: phones.isEmpty ? null : phones,
         emails: emails.isEmpty ? null : emails,
         addresses: addresses.isEmpty ? null : addresses,
@@ -546,14 +492,17 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
 
     if (!mounted) return;
     if (result.isSuccess) {
+      // A newly typed profession is now on the server's list.
+      ref.invalidate(professionsProvider);
       // Success toast is shown by the caller after pop (to avoid timing issues with navigation)
       Navigator.of(context).pop(true);
     } else {
+      final l10n = AppLocalizations.of(context)!;
       final msg = result.message;
       _showToast(
         (msg != null && msg.isNotEmpty && msg != 'null')
             ? msg
-            : (isEditing ? 'Failed to update card' : 'Failed to create card'),
+            : (isEditing ? l10n.addCardUpdateFailed : l10n.addCardCreateFailed),
         isError: true,
       );
     }
@@ -564,12 +513,13 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     final isCreating =
         ref.watch(cardProvider).valueOrNull?.isCreating ?? false;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor:
           isDark ? Wallet.darkGround : const Color(0xFFF8FAFD),
       appBar: AppBar(
-        title: Text(isEditing ? 'Edit Business Card' : 'Add Business Card',
+        title: Text(isEditing ? l10n.addCardEditTitle : l10n.addCardAddTitle,
             style: TextStyle(
                 color: isDark ? Colors.white : Colors.black87,
                 fontWeight: FontWeight.w600)),
@@ -597,10 +547,10 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                   const SizedBox(height: 16),
                   _buildSection(
                     icon: Icons.badge_outlined,
-                    title: 'Personal info',
+                    title: l10n.addCardPersonalInfoTitle,
                     subtitle: isOwnProfileCard
-                        ? 'Your photo, name, and role as others see them'
-                        : 'The name and role printed on the card',
+                        ? l10n.addCardPersonalInfoSubtitleOwn
+                        : l10n.addCardPersonalInfoSubtitleOther,
                     children: [
                       if (isOwnProfileCard) ...[
                         _buildProfilePhotoRow(),
@@ -609,25 +559,38 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                       _buildPremiumTextField(
                         controller: _nameCtrl,
                         fieldKey: 'name',
-                        label: "Full name",
-                        hint: "e.g. John Doe",
+                        label: l10n.addCardFullNameLabel,
+                        hint: l10n.addCardFullNameHint,
                         icon: Icons.person_outline,
                       ),
                       const SizedBox(height: 14),
                       _buildPremiumTextField(
                         controller: _positionCtrl,
                         fieldKey: 'position',
-                        label: "Position",
-                        hint: "e.g. Software Engineer",
+                        label: l10n.addCardPositionLabel,
+                        hint: l10n.addCardPositionHint,
                         icon: Icons.work_outline,
+                      ),
+                      const SizedBox(height: 16),
+                      // Rebuilt as the position is typed, so its suggestion
+                      // follows along.
+                      ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: _positionCtrl,
+                        builder: (_, position, __) => ProfessionPicker(
+                          value: _profession,
+                          position: position.text,
+                          enabled: !isCreating,
+                          onChanged: (value) =>
+                              setState(() => _profession = value),
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
                   _buildSection(
                     icon: Icons.apartment_outlined,
-                    title: 'Company',
-                    subtitle: 'Links this card to a company record',
+                    title: l10n.addCardCompanySectionTitle,
+                    subtitle: l10n.addCardCompanySectionSubtitle,
                     children: [
                       _buildCompanySelector(),
                       ..._buildScannedCompanyHint(),
@@ -636,14 +599,14 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                   const SizedBox(height: 16),
                   _buildSection(
                     icon: Icons.contact_phone_outlined,
-                    title: 'Contact details',
-                    subtitle: 'Separate several entries with commas',
+                    title: l10n.addCardContactDetailsTitle,
+                    subtitle: l10n.addCardContactDetailsSubtitle,
                     children: [
                       _buildPremiumTextField(
                         controller: _phonesCtrl,
                         fieldKey: 'phones',
-                        label: "Phones",
-                        hint: "e.g. 998991112233, ...",
+                        label: l10n.addCardPhonesLabel,
+                        hint: l10n.addCardPhonesHint,
                         icon: Icons.phone_outlined,
                         validator: _validatePhones,
                       ),
@@ -651,8 +614,8 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                       _buildPremiumTextField(
                         controller: _emailsCtrl,
                         fieldKey: 'emails',
-                        label: "Emails",
-                        hint: "e.g. mail@example.com, ...",
+                        label: l10n.addCardEmailsLabel,
+                        hint: l10n.addCardEmailsHint,
                         icon: Icons.email_outlined,
                         validator: _validateEmails,
                       ),
@@ -661,20 +624,20 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                   const SizedBox(height: 16),
                   _buildSection(
                     icon: Icons.place_outlined,
-                    title: 'Addresses',
-                    subtitle: 'Where this person works',
+                    title: l10n.addCardAddressesTitle,
+                    subtitle: l10n.addCardAddressesSubtitle,
                     children: _buildAddressSection(),
                   ),
                   const SizedBox(height: 16),
                   _buildSection(
                     icon: Icons.notes_outlined,
-                    title: 'More',
-                    subtitle: 'Anything worth remembering about this contact',
+                    title: l10n.addCardMoreTitle,
+                    subtitle: l10n.addCardMoreSubtitle,
                     children: [
                       _buildPremiumTextField(
                         controller: _bioCtrl,
-                        label: "Bio",
-                        hint: "Short description...",
+                        label: l10n.addCardBioLabel,
+                        hint: l10n.addCardBioHint,
                         icon: Icons.info_outline,
                         maxLines: 3,
                       ),
@@ -700,16 +663,18 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
   /// starts from — and what fills the rest of the form in.
   Widget _buildCardPhotosPanel() {
     final hasFront = _frontImageBytes != null || _frontImageUrl != null;
+    final l10n = AppLocalizations.of(context)!;
 
     return _buildSection(
       icon: Icons.credit_card_outlined,
-      title: isOwnProfileCard ? 'Your card photos' : 'Card photos',
+      title: isOwnProfileCard
+          ? l10n.addCardYourCardPhotosTitle
+          : l10n.addCardCardPhotosTitle,
       subtitle: hasFront
-          ? 'Tap a photo to replace it. Scanning only fills empty fields.'
+          ? l10n.addCardPhotosSubtitleHasFront
           : (isOwnProfileCard
-              ? 'Add both sides of your printed card so people can see the '
-                  'real thing.'
-              : 'Add a photo of the card to fill this form automatically.'),
+              ? l10n.addCardPhotosSubtitleOwnEmpty
+              : l10n.addCardPhotosSubtitleOtherEmpty),
       trailing: hasFront
           ? TextButton.icon(
               onPressed: _isRescanning ? null : () => _runOcr(),
@@ -727,7 +692,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.auto_fix_high, size: 16),
-              label: Text(_isRescanning ? 'Reading…' : 'Rescan'),
+              label: Text(_isRescanning ? l10n.addCardReading : l10n.addCardRescan),
             )
           : null,
       children: [
@@ -859,7 +824,9 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         ),
       ),
       child: AppPrimaryButton(
-        text: isEditing ? 'Save changes' : 'Create card',
+        text: isEditing
+            ? AppLocalizations.of(context)!.addCardSaveChanges
+            : AppLocalizations.of(context)!.addCardCreateCard,
         loading: isCreating,
         onPressed: isCreating ? null : _submit,
         height: 52,
@@ -873,6 +840,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
   /// control, with the text beside it saying what tapping does.
   Widget _buildProfilePhotoRow() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
     final bytes = _pickedImageBytes;
     final remoteUrl = ImageUrl.resolve(widget.card?.profileImage);
     final hasPhoto = bytes != null || remoteUrl != null;
@@ -945,7 +913,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  hasPhoto ? 'Change profile photo' : 'Add a profile photo',
+                  hasPhoto ? l10n.addCardChangeProfilePhoto : l10n.addCardAddProfilePhoto,
                   style: TextStyle(
                     fontSize: 14.5,
                     fontWeight: FontWeight.w700,
@@ -956,8 +924,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  'Shown at the top of your card and next to your name in '
-                  'search results.',
+                  l10n.addCardProfilePhotoHelp,
                   style: TextStyle(
                     fontSize: 12,
                     height: 1.35,
@@ -996,6 +963,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     required bool isFront,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
     final hasImage = bytes != null || remoteUrl != null;
 
     return GestureDetector(
@@ -1043,7 +1011,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      label,
+                      label == 'Front' ? l10n.addCardFrontLabel : l10n.addCardBackLabel,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 11,
@@ -1074,6 +1042,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
   }
 
   Widget _buildCardPhotoPlaceholder(String label, bool isDark) {
+    final l10n = AppLocalizations.of(context)!;
     // The tile is a 1.7 aspect box, so on a narrow screen it is short enough
     // for this stack to run past it. Scaling down beats clipping.
     return FittedBox(
@@ -1089,7 +1058,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
           ),
           const SizedBox(height: 6),
           Text(
-            label,
+            label == 'Front' ? l10n.addCardFrontLabel : l10n.addCardBackLabel,
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
@@ -1097,7 +1066,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
             ),
           ),
           Text(
-            label == 'Back' ? 'Optional' : 'Required to scan',
+            label == 'Back' ? l10n.addCardOptional : l10n.addCardRequiredToScan,
             style: TextStyle(
               fontSize: 11,
               color: isDark ? Wallet.darkMuted : Colors.grey[600],
@@ -1118,6 +1087,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
   List<Widget> _buildScannedCompanyHint() {
     final scannedName = _scannedCompanyName;
     if (scannedName == null) return [];
+    final l10n = AppLocalizations.of(context)!;
 
     final IconData icon;
     final String message;
@@ -1126,20 +1096,19 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
 
     if (_isResolvingCompany) {
       icon = Icons.hourglass_top;
-      message = 'Filing "$scannedName"…';
+      message = l10n.addCardFilingCompany(scannedName);
       needsChoice = false;
     } else if (_companyCreatedByScan == true) {
       icon = Icons.add_business_outlined;
-      message = 'Added "$scannedName" as a new company. '
-          'Its industry and business type can be filled in any time.';
+      message = l10n.addCardAddedNewCompany(scannedName);
       needsChoice = false;
     } else if (_companyCreatedByScan == false) {
       icon = Icons.auto_awesome;
-      message = 'Matched "$scannedName" to a company already on file.';
+      message = l10n.addCardMatchedCompany(scannedName);
       needsChoice = false;
     } else {
       icon = Icons.auto_awesome;
-      message = 'Scanned "$scannedName" — pick the matching company';
+      message = l10n.addCardScannedPickCompany(scannedName);
       needsChoice = true;
     }
 
@@ -1172,7 +1141,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
               ),
               if (!_isResolvingCompany)
                 Text(
-                  needsChoice ? 'Choose' : 'Change',
+                  needsChoice ? l10n.addCardChoose : l10n.addCardChange,
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -1207,7 +1176,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
           Icon(Icons.auto_awesome, size: 11, color: tint),
           const SizedBox(width: 5),
           Text(
-            'Scanned',
+            AppLocalizations.of(context)!.addCardScannedBadge,
             style: TextStyle(
               fontSize: 10.5,
               height: 1.1,
@@ -1223,6 +1192,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
 
   List<Widget> _buildAddressSection() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
     final widgets = <Widget>[];
 
     for (var i = 0; i < _addressEntries.length; i++) {
@@ -1248,7 +1218,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
               children: [
                 Expanded(
                   child: Text(
-                    "Address ${i + 1}",
+                    l10n.addCardAddressNumber(i + 1),
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -1274,8 +1244,8 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
             const SizedBox(height: 8),
             _buildPremiumTextField(
               controller: entry.street,
-              label: "Street",
-              hint: "e.g. 123 Main St",
+              label: l10n.addCardStreetLabel,
+              hint: l10n.addCardStreetHint,
               icon: Icons.location_on_outlined,
               maxLines: 2,
               // Only the first entry can be scan-filled; see _applyScanned.
@@ -1287,19 +1257,19 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                 Expanded(
                   child: _buildPremiumTextField(
                     controller: entry.city,
-                    label: "City",
-                    hint: "e.g. Yangon",
+                    label: l10n.addCardCityLabel,
+                    hint: l10n.addCardCityHint,
                     validator: (_) => entry.isEmpty || entry.hasCity
                         ? null
-                        : 'City is required',
+                        : l10n.addCardCityRequired,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildPremiumTextField(
                     controller: entry.state,
-                    label: "State / Region",
-                    hint: "Optional",
+                    label: l10n.addCardStateLabel,
+                    hint: l10n.addCardOptional,
                   ),
                 ),
               ],
@@ -1310,19 +1280,19 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                 Expanded(
                   child: _buildPremiumTextField(
                     controller: entry.postalCode,
-                    label: "Postal Code",
-                    hint: "Optional",
+                    label: l10n.addCardPostalCodeLabel,
+                    hint: l10n.addCardOptional,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildPremiumTextField(
                     controller: entry.country,
-                    label: "Country",
-                    hint: "e.g. Myanmar",
+                    label: l10n.addCardCountryLabel,
+                    hint: l10n.addCardCountryHint,
                     validator: (_) => entry.isEmpty || entry.hasCountry
                         ? null
-                        : 'Country is required',
+                        : l10n.addCardCountryRequired,
                   ),
                 ),
               ],
@@ -1341,7 +1311,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
           });
         },
         icon: const Icon(Icons.add, size: 18),
-        label: const Text("Add address"),
+        label: Text(l10n.addCardAddAddress),
       ),
     ));
 
@@ -1444,12 +1414,13 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
   /// above them.
   Widget _buildCompanySelector() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
     final hasCompany = _selectedCompanyName != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Selected company',
+          l10n.addCardSelectedCompanyLabel,
           style: TextStyle(
             fontSize: 12.5,
             fontWeight: FontWeight.w600,
@@ -1493,7 +1464,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    _selectedCompanyName ?? 'Choose a company',
+                    _selectedCompanyName ?? l10n.addCardChooseCompany,
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight:

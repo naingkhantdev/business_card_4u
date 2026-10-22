@@ -100,8 +100,19 @@ abstract class BcaApi {
       );
 
   // ================= BUSINESS CARDS =================
+  // Backend: {status, message, data: ["Engineer", "Doctor", ...]}, most used
+  // first. Object like the company calls; the data agent unwraps it.
+  @GET(kEndPointProfessions)
+  Future<Object?> getProfessions();
+
+  // Optional filters, all ANDed; a null one is left off the URL.
+  // profession is a name from getProfessions ('Engineer', ...).
   @GET(kEndPointBusinessCards)
-  Future<CardResponse?> getCards();
+  Future<CardResponse?> getCards({
+    @Query("query") String? query,
+    @Query("company_id") int? companyId,
+    @Query("profession") String? profession,
+  });
 
   // GET /my-business-cards?card_type=saved_card for saved cards of current user
   @GET(kEndPointMyBusinessCards)

@@ -1,10 +1,17 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
+import '../../data/vos/business_card_model.dart';
+import '../../l10n/generated/app_localizations.dart';
+import '../../utils/save_to_gallery.dart';
+import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../theme/glass.dart';
 import '../theme/wallet_tokens.dart';
-import '../../data/vos/business_card_model.dart';
+import 'app_toast.dart';
 
 /// The share panel: a frosted pane over the page, and a QR set as a plate.
 ///
@@ -16,14 +23,19 @@ class MyQrPanel extends StatelessWidget {
   final BusinessCardModel? profileCard;
   final bool compact;
 
-  const MyQrPanel({
+  MyQrPanel({
     super.key,
     required this.profileCard,
     this.compact = false,
   });
 
+  // Wraps the rendered QR plate so it can be captured as an image for the
+  // "Save QR to Gallery" button below, without re-painting it separately.
+  final GlobalKey _qrBoundaryKey = GlobalKey();
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final qrData = profileCard?.qrCodeData?.trim() ?? '';
     final hasProfile = profileCard != null;
@@ -37,7 +49,7 @@ class MyQrPanel extends StatelessWidget {
         : ((panelWidth - 2 * Wallet.margin - 2 * 24 - 28).clamp(140.0, 216.0));
 
     final eyebrow = Text(
-      compact ? 'SHARE' : 'MY QR CODE',
+      compact ? l10n.myQrPanelShareEyebrow : l10n.myQrPanelTitleEyebrow,
       style: AppTypography.eyebrow(
         color: Wallet.accentOf(isDark),
         fontSize: 10.5,
@@ -46,7 +58,7 @@ class MyQrPanel extends StatelessWidget {
     );
 
     final title = Text(
-      compact ? 'Share my QR' : 'Scan to add me',
+      compact ? l10n.myQrPanelShareTitle : l10n.myQrPanelScanTitle,
       textAlign: compact ? TextAlign.start : TextAlign.center,
       style: AppTypography.primary(TextStyle(
         color: Wallet.inkOf(isDark),
@@ -58,10 +70,8 @@ class MyQrPanel extends StatelessWidget {
 
     final blurb = Text(
       hasProfile
-          ? (compact
-              ? 'Show this to people nearby so they can add you fast.'
-              : 'Let others scan this code to add your card instantly.')
-          : 'Create your profile card first to generate your QR.',
+          ? (compact ? l10n.myQrPanelCompactBlurb : l10n.myQrPanelFullBlurb)
+          : l10n.myQrPanelNoProfileBlurb,
       textAlign: compact ? TextAlign.start : TextAlign.center,
       style: AppTypography.secondary(TextStyle(
         fontSize: 13,
@@ -112,6 +122,7 @@ class MyQrPanel extends StatelessWidget {
                 const SizedBox(height: 24),
                 Center(
                   child: _QrPlate(
+                    boundaryKey: _qrBoundaryKey,
                     isDark: isDark,
                     hasQr: hasQr,
                     qrData: qrData,
@@ -129,6 +140,8 @@ class MyQrPanel extends StatelessWidget {
                       color: Wallet.faintOf(isDark),
                     )),
                   ),
+                  const SizedBox(height: 14),
+                  Center(child: _SaveQrButton(boundaryKey: _qrBoundaryKey)),
                 ],
               ],
             ),
@@ -137,12 +150,14 @@ class MyQrPanel extends StatelessWidget {
 }
 
 class _QrPlate extends StatelessWidget {
+  final Key? boundaryKey;
   final bool isDark;
   final bool hasQr;
   final String qrData;
   final double size;
 
   const _QrPlate({
+    this.boundaryKey,
     required this.isDark,
     required this.hasQr,
     required this.qrData,
@@ -152,25 +167,29 @@ class _QrPlate extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (hasQr) {
-      return Container(
-        padding: EdgeInsets.all(size * .06),
-        decoration: BoxDecoration(
-          // Always white, in both themes. The quiet zone is part of the code.
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(Wallet.radiusCard),
-          border: Border.all(color: Wallet.lineOf(false), width: Wallet.hairline),
-        ),
-        child: QrImageView(
-          data: qrData,
-          version: QrVersions.auto,
-          size: size,
-          eyeStyle: const QrEyeStyle(
-            eyeShape: QrEyeShape.square,
-            color: Wallet.ink,
+      return RepaintBoundary(
+        key: boundaryKey,
+        child: Container(
+          padding: EdgeInsets.all(size * .06),
+          decoration: BoxDecoration(
+            // Always white, in both themes. The quiet zone is part of the code.
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(Wallet.radiusCard),
+            border:
+                Border.all(color: Wallet.lineOf(false), width: Wallet.hairline),
           ),
-          dataModuleStyle: const QrDataModuleStyle(
-            dataModuleShape: QrDataModuleShape.square,
-            color: Wallet.ink,
+          child: QrImageView(
+            data: qrData,
+            version: QrVersions.auto,
+            size: size,
+            eyeStyle: const QrEyeStyle(
+              eyeShape: QrEyeShape.square,
+              color: Wallet.ink,
+            ),
+            dataModuleStyle: const QrDataModuleStyle(
+              dataModuleShape: QrDataModuleShape.square,
+              color: Wallet.ink,
+            ),
           ),
         ),
       );
@@ -188,6 +207,73 @@ class _QrPlate extends StatelessWidget {
         Icons.qr_code_2_rounded,
         size: size * .38,
         color: Wallet.faintOf(isDark),
+      ),
+    );
+  }
+}
+
+/// Captures the QR plate at [boundaryKey] as a PNG and saves it to the
+/// phone's gallery.
+class _SaveQrButton extends StatefulWidget {
+  final GlobalKey boundaryKey;
+
+  const _SaveQrButton({required this.boundaryKey});
+
+  @override
+  State<_SaveQrButton> createState() => _SaveQrButtonState();
+}
+
+class _SaveQrButtonState extends State<_SaveQrButton> {
+  bool _saving = false;
+
+  Future<void> _save() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      final boundary = widget.boundaryKey.currentContext?.findRenderObject()
+          as RenderRepaintBoundary?;
+      final image = await boundary?.toImage(pixelRatio: 3);
+      final byteData = await image?.toByteData(format: ui.ImageByteFormat.png);
+      final bytes = byteData?.buffer.asUint8List();
+      if (bytes == null) throw Exception('QR image not ready');
+
+      if (!mounted) return;
+      await saveImageBytesToGallery(
+        context,
+        bytes,
+        fileName: 'my_qr_code_${DateTime.now().millisecondsSinceEpoch}',
+      );
+    } catch (_) {
+      if (mounted) {
+        AppToast.show(
+          context,
+          AppLocalizations.of(context)!.myQrPanelSaveError,
+          type: AppToastType.error,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return TextButton.icon(
+      onPressed: _saving ? null : _save,
+      icon: _saving
+          ? const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.download_rounded, size: 18, color: AppColors.primary),
+      label: Text(
+        _saving ? l10n.myQrPanelSaving : l10n.myQrPanelSaveToGallery,
+        style: const TextStyle(
+          fontWeight: FontWeight.w700,
+          color: AppColors.primary,
+        ),
       ),
     );
   }

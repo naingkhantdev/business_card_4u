@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import '../theme/app_page_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../../providers/auth/auth_provider.dart';
 import '../theme/app_typography.dart';
 import '../theme/wallet_tokens.dart';
@@ -85,12 +87,13 @@ class _CompleteRegisterPageState extends ConsumerState<CompleteRegisterPage> {
       // on an empty card list would leave that card as the placeholder it is.
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
+        AppPageRoute(
           builder: (_) => SetupProfilePage(email: widget.email),
         ),
       );
     } else {
-      _showMessage(result.message ?? 'Registration failed', isError: true);
+      final l10n = AppLocalizations.of(context)!;
+      _showMessage(result.message ?? l10n.completeRegisterFailed, isError: true);
     }
   }
 
@@ -104,25 +107,26 @@ class _CompleteRegisterPageState extends ConsumerState<CompleteRegisterPage> {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final busy = authState.isLoading;
+    final l10n = AppLocalizations.of(context)!;
 
     return OnboardingStepScaffold(
       step: 1,
       totalSteps: 2,
-      label: 'Account details',
-      completed: 'Email verified',
-      headline: 'Finish your account',
-      subhead: 'Two fields and a password. Your card comes next.',
+      label: l10n.completeRegisterStepLabel,
+      completed: l10n.completeRegisterStepCompleted,
+      headline: l10n.completeRegisterHeadline,
+      subhead: l10n.completeRegisterSubhead,
       onExit: busy ? null : () => Navigator.pop(context),
       busy: busy,
       action: AppPrimaryButton(
-        text: 'Create My Account',
+        text: l10n.completeRegisterCreateAccount,
         loading: busy,
         onPressed: busy ? null : _submit,
       ),
       secondaryAction: Padding(
         padding: const EdgeInsets.only(top: 6),
         child: Text(
-          'By continuing you agree to our Terms & Privacy.',
+          l10n.completeRegisterTerms,
           textAlign: TextAlign.center,
           style: AppTypography.secondary(TextStyle(
             fontSize: 11.5,
@@ -143,22 +147,22 @@ class _CompleteRegisterPageState extends ConsumerState<CompleteRegisterPage> {
               const SizedBox(height: 16),
 
               OnboardingSection(
-                title: 'Who you are',
+                title: l10n.completeRegisterWhoYouAre,
                 children: [
                   OnboardingTextField(
                     controller: _nameController,
                     focusNode: _nameFocus,
                     enabled: !busy,
-                    hintText: 'Full name',
+                    hintText: l10n.completeRegisterFullNameHint,
                     prefixIcon: Icons.person_outline_rounded,
                     textInputAction: TextInputAction.next,
                     onFieldSubmitted: (_) => _passFocus.requestFocus(),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) {
-                        return 'Full Name လိုအပ်ပါတယ်';
+                        return l10n.completeRegisterFullNameRequired;
                       }
                       if (v.trim().length < 2) {
-                        return 'နာမည်ကို အနည်းဆုံး 2 လုံးထည့်ပါ';
+                        return l10n.completeRegisterFullNameTooShort;
                       }
                       return null;
                     },
@@ -167,14 +171,14 @@ class _CompleteRegisterPageState extends ConsumerState<CompleteRegisterPage> {
               ),
 
               OnboardingSection(
-                title: 'Set a password',
-                caption: 'At least 6 characters. Longer is better.',
+                title: l10n.completeRegisterSetPassword,
+                caption: l10n.completeRegisterPasswordCaption,
                 children: [
                   OnboardingTextField(
                     controller: _passwordController,
                     focusNode: _passFocus,
                     enabled: !busy,
-                    hintText: 'Password',
+                    hintText: l10n.completeRegisterPasswordHint,
                     prefixIcon: Icons.lock_outline_rounded,
                     obscureText: _obscurePassword,
                     textInputAction: TextInputAction.next,
@@ -188,10 +192,10 @@ class _CompleteRegisterPageState extends ConsumerState<CompleteRegisterPage> {
                     ),
                     validator: (v) {
                       if (v == null || v.isEmpty) {
-                        return 'Password လိုအပ်ပါတယ်';
+                        return l10n.completeRegisterPasswordRequired;
                       }
                       if (v.length < 6) {
-                        return 'Password ကို အနည်းဆုံး 6 လုံးထည့်ပါ';
+                        return l10n.completeRegisterPasswordTooShort;
                       }
                       return null;
                     },
@@ -209,7 +213,7 @@ class _CompleteRegisterPageState extends ConsumerState<CompleteRegisterPage> {
                     controller: _confirmController,
                     focusNode: _confirmFocus,
                     enabled: !busy,
-                    hintText: 'Confirm password',
+                    hintText: l10n.completeRegisterConfirmPasswordHint,
                     prefixIcon: Icons.lock_reset_rounded,
                     obscureText: _obscureConfirm,
                     textInputAction: TextInputAction.done,
@@ -223,10 +227,10 @@ class _CompleteRegisterPageState extends ConsumerState<CompleteRegisterPage> {
                     ),
                     validator: (v) {
                       if (v == null || v.isEmpty) {
-                        return 'Confirm Password လိုအပ်ပါတယ်';
+                        return l10n.completeRegisterConfirmPasswordRequired;
                       }
                       if (v != _passwordController.text) {
-                        return 'Password မတူပါ';
+                        return l10n.completeRegisterPasswordMismatch;
                       }
                       return null;
                     },
@@ -249,6 +253,7 @@ class _VerifiedEmail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
@@ -268,7 +273,7 @@ class _VerifiedEmail extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'VERIFIED',
+                  l10n.completeRegisterVerified,
                   style: AppTypography.eyebrow(
                     color: Wallet.success,
                     fontSize: 9.5,
@@ -307,9 +312,10 @@ class _RevealButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return IconButton(
       onPressed: onTap,
-      tooltip: obscured ? 'Show password' : 'Hide password',
+      tooltip: obscured ? l10n.completeRegisterShowPassword : l10n.completeRegisterHidePassword,
       icon: Icon(
         obscured ? Icons.visibility_off_rounded : Icons.visibility_rounded,
         size: 19,
@@ -329,8 +335,6 @@ class _StrengthMeter extends StatelessWidget {
   final bool isDark;
 
   const _StrengthMeter({required this.password, required this.isDark});
-
-  static const _labels = ['Too short', 'Weak', 'Good', 'Strong'];
 
   int get _score {
     if (password.isEmpty) return 0;
@@ -365,6 +369,13 @@ class _StrengthMeter extends StatelessWidget {
     // Nothing typed yet: an empty meter beside an empty field is just noise.
     if (password.isEmpty) return const SizedBox.shrink();
 
+    final l10n = AppLocalizations.of(context)!;
+    final labels = [
+      l10n.completeRegisterStrengthTooShort,
+      l10n.completeRegisterStrengthWeak,
+      l10n.completeRegisterStrengthGood,
+      l10n.completeRegisterStrengthStrong,
+    ];
     final score = _score;
     final tone = _tone;
 
@@ -385,7 +396,7 @@ class _StrengthMeter extends StatelessWidget {
         ],
         const SizedBox(width: 10),
         Text(
-          _labels[score].toUpperCase(),
+          labels[score].toUpperCase(),
           style: AppTypography.eyebrow(
             color: tone,
             fontSize: 9.5,

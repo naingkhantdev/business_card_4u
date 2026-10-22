@@ -39,7 +39,13 @@ abstract class BcaDataAgent {
   Future<String?> deleteCompany(int id);
 
   // ================= BUSINESS CARDS =================
-  Future<CardResponse?> getCards();
+  Future<List<String>> getProfessions();
+
+  Future<CardResponse?> getCards({
+    String? query,
+    int? companyId,
+    String? profession,
+  });
 
   Future<CardResponse?> getSavedCards();
 

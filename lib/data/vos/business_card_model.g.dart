@@ -11,6 +11,7 @@ BusinessCardModel _$BusinessCardModelFromJson(Map<String, dynamic> json) =>
       id: (json['id'] as num).toInt(),
       fullName: json['full_name'] as String,
       position: json['position'] as String,
+      profession: json['profession'] as String?,
       phones:
           (json['phones'] as List<dynamic>).map((e) => e as String).toList(),
       emails:
@@ -46,6 +47,7 @@ Map<String, dynamic> _$BusinessCardModelToJson(BusinessCardModel instance) =>
       'id': instance.id,
       'full_name': instance.fullName,
       'position': instance.position,
+      'profession': instance.profession,
       'phones': instance.phones,
       'emails': instance.emails,
       'addresses': instance.addresses.map((e) => e.toJson()).toList(),

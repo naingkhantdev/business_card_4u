@@ -11,6 +11,11 @@ class BusinessCardModel {
   @JsonKey(name: 'full_name')
   final String fullName;
   final String position;
+
+  /// The profession picked for this card ("Engineer", "Doctor", ...), or
+  /// null when none was. Free text on the server, so new ones appear as
+  /// people add them; it's what the card list's profession chips filter on.
+  final String? profession;
   final List<String> phones;
   final List<String> emails;
   final List<AddressModel> addresses;
@@ -55,6 +60,7 @@ class BusinessCardModel {
     required this.id,
     required this.fullName,
     required this.position,
+    this.profession,
     required this.phones,
     required this.emails,
     required this.addresses,
@@ -111,6 +117,7 @@ class BusinessCardModel {
       id: model.id,
       fullName: model.fullName,
       position: model.position,
+      profession: model.profession,
       phones: model.phones,
       emails: model.emails,
       addresses: model.addresses,

@@ -275,32 +275,94 @@ class CardTextParser {
     return null;
   }
 
-  /// Address lines are joined into `street`, with a postal code pulled out
-  /// because the form has a field for it. City, state and country are left to
-  /// the user: guessing them from one line is unreliable enough that a wrong
-  /// value is worse than an empty field.
+  /// Countries a printed address is checked against before a city is
+  /// guessed. Without a recognised country to anchor on, the last couple of
+  /// comma-separated segments are just as likely to be another street
+  /// fragment as a city — e.g. "No. 12, Bogyoke Road, Yangon 11181" has no
+  /// country printed at all, so nothing past the postal code should be
+  /// pulled out as city. Recognising the country first keeps that case safe
+  /// while still catching cards that do print one.
+  static const List<String> _countries = [
+    'myanmar',
+    'thailand',
+    'singapore',
+    'malaysia',
+    'china',
+    'japan',
+    'south korea',
+    'korea',
+    'india',
+    'vietnam',
+    'cambodia',
+    'laos',
+    'indonesia',
+    'philippines',
+    'australia',
+    'united states',
+    'usa',
+    'u.s.a',
+    'united kingdom',
+    'uk',
+    'canada',
+    'germany',
+    'france',
+    'italy',
+    'spain',
+    'united arab emirates',
+    'uae',
+    'hong kong',
+    'taiwan',
+    'bangladesh',
+    'sri lanka',
+    'nepal',
+    'pakistan',
+    'switzerland',
+    'netherlands',
+  ];
+
+  /// Address lines are joined and split on commas, with a postal code pulled
+  /// out first because it can sit anywhere. When the last segment names a
+  /// recognised country, that segment and the one before it (the city) are
+  /// pulled out and whatever remains ahead of them is the street.
   static AddressModel? _buildAddress(List<String> addressLines) {
     if (addressLines.isEmpty) return null;
 
-    var street = addressLines.join(', ');
-    String? postalCode;
+    final parts = addressLines
+        .join(', ')
+        .split(',')
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
 
-    final matches = _postalCode.allMatches(street).toList();
-    if (matches.isNotEmpty) {
-      final match = matches.last;
+    String? postalCode;
+    for (var i = 0; i < parts.length; i++) {
+      final match = _postalCode.firstMatch(parts[i]);
+      if (match == null) continue;
       postalCode = match.group(0);
-      street = street.replaceRange(match.start, match.end, ' ');
+      final rest = parts[i].replaceRange(match.start, match.end, '').trim();
+      if (rest.isEmpty) {
+        parts.removeAt(i);
+      } else {
+        parts[i] = rest;
+      }
+      break;
     }
 
-    street = street
-        .replaceAll(RegExp(r'\s{2,}'), ' ')
-        .replaceAll(RegExp(r'(\s*,)+\s*,'), ',')
-        .replaceAll(RegExp(r'[,\s]+$'), '')
-        .trim();
+    String? city;
+    String? country;
+    if (parts.isNotEmpty && _countries.contains(parts.last.toLowerCase())) {
+      country = parts.removeLast();
+      if (parts.isNotEmpty) city = parts.removeLast();
+    }
 
-    if (street.isEmpty && postalCode == null) return null;
+    final street = parts.isEmpty ? null : parts.join(', ');
+    if (street == null && city == null && country == null && postalCode == null) {
+      return null;
+    }
     return AddressModel(
-      street: street.isEmpty ? null : street,
+      street: street,
+      city: city,
+      country: country,
       postalCode: postalCode,
     );
   }

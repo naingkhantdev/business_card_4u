@@ -7,7 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'auth_gate.dart';
 import 'fcm/push_notification_service.dart';
 import 'firebase_options.dart';
+import 'l10n/generated/app_localizations.dart';
 import 'network/consts.dart';
+import 'providers/locale/locale_provider.dart';
+import 'services/navigation/app_navigator.dart';
 import 'ui/theme/app_theme.dart';
 
 Future<void> main() async {
@@ -57,18 +60,24 @@ Future<void> _initializeFirebase() async {
   }
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(localeProvider);
+
     return MaterialApp(
+      navigatorKey: appNavigatorKey,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       // The OS is the only control. There is no in-app override, so the app
       // follows the phone appearance setting and switches with it live.
       themeMode: ThemeMode.system,
+      locale: locale,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
       home: const AuthGate(),
       builder: (context, child) {
         // Force font stack on all raw TextStyle across the app

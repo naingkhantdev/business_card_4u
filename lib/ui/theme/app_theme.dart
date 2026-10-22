@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 import 'app_typography.dart';
+import 'smooth_page_transition.dart';
 import 'wallet_tokens.dart';
 
 /// Swiss modernism with a glass layer on top.
@@ -119,6 +120,19 @@ class AppTheme {
       canvasColor: ground,
       textTheme: textTheme,
       primaryTextTheme: primaryTextTheme,
+
+      // One smooth transition for every MaterialPageRoute. Apple platforms
+      // keep their native one so swipe-back still works.
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: SmoothPageTransitionsBuilder(),
+          TargetPlatform.fuchsia: SmoothPageTransitionsBuilder(),
+          TargetPlatform.linux: SmoothPageTransitionsBuilder(),
+          TargetPlatform.windows: SmoothPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+        },
+      ),
 
       // Flat chrome. An app bar that tints and lifts on scroll is Material
       // signalling elevation; in this system the hairline below it does that

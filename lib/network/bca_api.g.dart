@@ -390,7 +390,10 @@ class _BcaApi implements BcaApi {
   }
 
   @override
-  Future<Object?> getCompanies({int? page, int? perPage}) async {
+  Future<Object?> getCompanies({
+    int? page,
+    int? perPage,
+  }) async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{
       r'page': page,
@@ -541,9 +544,45 @@ class _BcaApi implements BcaApi {
   }
 
   @override
-  Future<CardResponse?> getCards() async {
+  Future<Object?> getProfessions() async {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
+    final _headers = <String, dynamic>{};
+    const Map<String, dynamic>? _data = null;
+    final _options = _setStreamType<Object>(Options(
+      method: 'GET',
+      headers: _headers,
+      extra: _extra,
+    )
+        .compose(
+          _dio.options,
+          'professions',
+          queryParameters: queryParameters,
+          data: _data,
+        )
+        .copyWith(
+            baseUrl: _combineBaseUrls(
+          _dio.options.baseUrl,
+          baseUrl,
+        )));
+    final _result = await _dio.fetch(_options);
+    final _value = _result.data;
+    return _value;
+  }
+
+  @override
+  Future<CardResponse?> getCards({
+    String? query,
+    int? companyId,
+    String? profession,
+  }) async {
+    final _extra = <String, dynamic>{};
+    final queryParameters = <String, dynamic>{
+      r'query': query,
+      r'company_id': companyId,
+      r'profession': profession,
+    };
+    queryParameters.removeWhere((k, v) => v == null);
     final _headers = <String, dynamic>{};
     const Map<String, dynamic>? _data = null;
     final _options = _setStreamType<CardResponse>(Options(

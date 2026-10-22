@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../providers/card/card_provider.dart';
 import '../responsive/responsive.dart';
 import '../theme/app_colors.dart';
@@ -65,7 +66,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = "An error occurred while searching";
+        _error = AppLocalizations.of(context)!.searchPageErrorOccurred;
         _isLoading = false;
       });
     }
@@ -112,13 +113,14 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor:
           isDark ? Wallet.darkGround : const Color(0xFFF8FAFD),
       appBar: AppBar(
         title: Text(
-          'Search Users',
+          l10n.searchPageTitle,
           style: TextStyle(
             fontWeight: FontWeight.w600,
             color: isDark ? Colors.white : Wallet.ink,
@@ -191,7 +193,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                               fontWeight: FontWeight.w500,
                             ),
                             decoration: InputDecoration(
-                              hintText: "Enter name or email...",
+                              hintText: l10n.searchPageHint,
                               hintStyle: TextStyle(
                                 color: isDark
                                     ? Wallet.darkFaint
@@ -252,7 +254,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                 SearchIconButton(
                   onTap: _onSearch,
                   isDark: isDark,
-                  tooltip: 'Search',
+                  tooltip: l10n.searchPageSearchTooltip,
                   filled: true,
                   icon: Icons.search_rounded,
                 ),
@@ -263,7 +265,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   child: SearchIconButton(
                     onTap: _openFilterSheet,
                     isDark: isDark,
-                    tooltip: 'Filter by location',
+                    tooltip: l10n.searchPageFilterByLocation,
                     active: _hasActiveFilters,
                     icon: Icons.tune_rounded,
                   ),
@@ -281,13 +283,13 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   runSpacing: 4,
                   children: [
                     if (_cityFilter != null)
-                      _filterChip('City: $_cityFilter',
+                      _filterChip(l10n.searchPageFilterCity(_cityFilter!),
                           () => _removeFilter(() => _cityFilter = null)),
                     if (_stateFilter != null)
-                      _filterChip('State: $_stateFilter',
+                      _filterChip(l10n.searchPageFilterState(_stateFilter!),
                           () => _removeFilter(() => _stateFilter = null)),
                     if (_countryFilter != null)
-                      _filterChip('Country: $_countryFilter',
+                      _filterChip(l10n.searchPageFilterCountry(_countryFilter!),
                           () => _removeFilter(() => _countryFilter = null)),
                   ],
                 ),
@@ -308,14 +310,14 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                     color: Colors.grey.withOpacity(0.5)),
                                 const SizedBox(height: 16),
                                 Text(
-                                  "Search by name, email or location",
+                                  l10n.searchPageEmptyHint,
                                   style: TextStyle(color: Colors.grey.shade600),
                                 ),
                               ],
                             ),
                           )
                         : _results.isEmpty
-                            ? const Center(child: Text("No users found"))
+                            ? Center(child: Text(l10n.searchPageNoResults))
                             : Responsive.isDesktop(context)
                                 ? SingleChildScrollView(
                                     padding: const EdgeInsets.all(16),
@@ -429,6 +431,7 @@ class _AddressFilterSheetState extends State<_AddressFilterSheet> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final l10n = AppLocalizations.of(context)!;
 
     // The sheet is opened scroll-controlled, so on a short screen (landscape,
     // or portrait with the keyboard up) it has to scroll rather than run past
@@ -440,7 +443,7 @@ class _AddressFilterSheetState extends State<_AddressFilterSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Filter by location',
+            l10n.searchPageFilterByLocation,
             style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w600,
@@ -451,20 +454,20 @@ class _AddressFilterSheetState extends State<_AddressFilterSheet> {
           TextField(
             controller: _cityCtrl,
             textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'City',
-              prefixIcon: Icon(Icons.location_city_rounded),
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.searchPageCityLabel,
+              prefixIcon: const Icon(Icons.location_city_rounded),
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _stateCtrl,
             textInputAction: TextInputAction.next,
-            decoration: const InputDecoration(
-              labelText: 'State / Region',
-              prefixIcon: Icon(Icons.map_outlined),
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.searchPageStateLabel,
+              prefixIcon: const Icon(Icons.map_outlined),
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 12),
@@ -472,10 +475,10 @@ class _AddressFilterSheetState extends State<_AddressFilterSheet> {
             controller: _countryCtrl,
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => _apply(),
-            decoration: const InputDecoration(
-              labelText: 'Country',
-              prefixIcon: Icon(Icons.public_rounded),
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: l10n.searchPageCountryLabel,
+              prefixIcon: const Icon(Icons.public_rounded),
+              border: const OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 20),
@@ -484,7 +487,7 @@ class _AddressFilterSheetState extends State<_AddressFilterSheet> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: _clear,
-                  child: const Text('Clear'),
+                  child: Text(l10n.searchPageClear),
                 ),
               ),
               const SizedBox(width: 12),
@@ -495,7 +498,7 @@ class _AddressFilterSheetState extends State<_AddressFilterSheet> {
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                   ),
-                  child: const Text('Apply'),
+                  child: Text(l10n.searchPageApply),
                 ),
               ),
             ],

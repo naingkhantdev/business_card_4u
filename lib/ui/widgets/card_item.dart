@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../theme/app_page_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../network/image_url.dart';
 import '../../providers/card/card_provider.dart';
 import '../../data/vos/business_card_model.dart';
@@ -96,7 +98,7 @@ class _CardItemState extends ConsumerState<CardItem> {
           borderRadius: BorderRadius.circular(Wallet.radiusCard),
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => CardDetailPage(card: card)),
+            AppPageRoute(builder: (_) => CardDetailPage(card: card)),
           ),
           child: Padding(
             padding: const EdgeInsets.all(14),
@@ -188,18 +190,21 @@ class _CardItemState extends ConsumerState<CardItem> {
   }
 
   Future<void> _sendRequest() async {
+    final l10n = AppLocalizations.of(context)!;
     final result =
         await ref.read(cardProvider.notifier).addFriend(widget.card.id);
     if (!mounted) return;
     if (result.isSuccess) {
       setState(() => _friendRequestStatus = 'pending_sent');
-      _showToast('Friend request sent');
+      _showToast(l10n.cardItemFriendRequestSent);
     } else {
-      _showToast(result.message ?? 'Failed to send request', isError: true);
+      _showToast(result.message ?? l10n.cardItemFriendRequestSendFailed,
+          isError: true);
     }
   }
 
   Future<void> _accept() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _isProcessing = true);
     final result = await ref
         .read(cardProvider.notifier)
@@ -214,13 +219,14 @@ class _CardItemState extends ConsumerState<CardItem> {
     });
     _showToast(
       result.isSuccess
-          ? 'Friend request accepted'
-          : (result.message ?? 'Failed to accept request'),
+          ? l10n.cardItemFriendRequestAccepted
+          : (result.message ?? l10n.cardItemFriendRequestAcceptFailed),
       isError: !result.isSuccess,
     );
   }
 
   Future<void> _decline() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _isProcessing = true);
     final result = await ref
         .read(cardProvider.notifier)
@@ -235,8 +241,8 @@ class _CardItemState extends ConsumerState<CardItem> {
     });
     _showToast(
       result.isSuccess
-          ? 'Friend request declined'
-          : (result.message ?? 'Failed to decline request'),
+          ? l10n.cardItemFriendRequestDeclined
+          : (result.message ?? l10n.cardItemFriendRequestDeclineFailed),
       isError: !result.isSuccess,
     );
   }
@@ -452,6 +458,7 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final IconData ic;
     final String label;
     final Color tone;
@@ -459,19 +466,19 @@ class _StatusChip extends StatelessWidget {
     if (isPending) {
       tone = Wallet.pending;
       ic = Icons.schedule_rounded;
-      label = 'Pending';
+      label = l10n.cardItemStatusPending;
     } else if (isFriend) {
       tone = Wallet.success;
       ic = Icons.check_rounded;
-      label = 'Friend';
+      label = l10n.cardItemStatusFriend;
     } else if (isSaved) {
       tone = Wallet.accentOf(isDark);
       ic = Icons.bookmark_rounded;
-      label = 'Saved';
+      label = l10n.cardItemStatusSaved;
     } else {
       tone = Wallet.accentOf(isDark);
       ic = Icons.person_rounded;
-      label = 'Profile';
+      label = l10n.cardItemStatusProfile;
     }
 
     return Container(

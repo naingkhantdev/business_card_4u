@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../../providers/company/company_provider.dart';
 import '../responsive/responsive.dart';
 import '../theme/app_colors.dart';
@@ -110,7 +111,7 @@ class _CompanyFormPageState extends ConsumerState<CompanyFormPage> {
     } else {
       final errorMsg = result.message ??
           ref.read(companyProvider).valueOrNull?.errorMessage ??
-          'Failed to save company details';
+          AppLocalizations.of(context)!.companyFormSaveFailed;
       AppToast.show(
         context,
         errorMsg,
@@ -158,6 +159,7 @@ class _CompanyFormPageState extends ConsumerState<CompanyFormPage> {
     final saving = ref.watch(companyProvider).valueOrNull?.isSaving ?? false;
     final isEdit = widget.company != null;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: isDark ? Wallet.darkGround : AppColors.surface,
       appBar: AppBar(
@@ -165,7 +167,7 @@ class _CompanyFormPageState extends ConsumerState<CompanyFormPage> {
         elevation: 0,
         centerTitle: true,
         title: Text(
-          isEdit ? 'Edit Company' : 'New Company',
+          isEdit ? l10n.companyFormEditTitle : l10n.companyFormNewTitle,
           style: TextStyle(
             color: isDark ? Colors.white : Wallet.ink,
             fontWeight: FontWeight.bold,
@@ -192,7 +194,7 @@ class _CompanyFormPageState extends ConsumerState<CompanyFormPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Company Profile",
+                    l10n.companyFormProfileTitle,
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -201,7 +203,7 @@ class _CompanyFormPageState extends ConsumerState<CompanyFormPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    "Fill in the details below to create a premium business profile.",
+                    l10n.companyFormProfileSubtitle,
                     style: TextStyle(
                       color: isDark ? Wallet.darkMuted : Colors.black54,
                       fontSize: 13,
@@ -210,8 +212,8 @@ class _CompanyFormPageState extends ConsumerState<CompanyFormPage> {
                   const SizedBox(height: 24),
                   TextFormField(
                     controller: _nameCtrl,
-                    decoration: _inputDecoration('Company Name *', Icons.business_rounded),
-                    validator: (v) => v == null || v.trim().isEmpty ? 'Name is required' : null,
+                    decoration: _inputDecoration(l10n.companyFormNameLabel, Icons.business_rounded),
+                    validator: (v) => v == null || v.trim().isEmpty ? l10n.companyFormNameRequired : null,
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -219,16 +221,16 @@ class _CompanyFormPageState extends ConsumerState<CompanyFormPage> {
                       Expanded(
                         child: TextFormField(
                           controller: _industryCtrl,
-                          decoration: _inputDecoration('Industry *', Icons.category_rounded),
-                          validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
+                          decoration: _inputDecoration(l10n.companyFormIndustryLabel, Icons.category_rounded),
+                          validator: (v) => v == null || v.trim().isEmpty ? l10n.companyFormFieldRequired : null,
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: TextFormField(
                           controller: _businessTypeCtrl,
-                          decoration: _inputDecoration('Type *', Icons.work_outline_rounded),
-                          validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
+                          decoration: _inputDecoration(l10n.companyFormTypeLabel, Icons.work_outline_rounded),
+                          validator: (v) => v == null || v.trim().isEmpty ? l10n.companyFormFieldRequired : null,
                         ),
                       ),
                     ],
@@ -236,12 +238,12 @@ class _CompanyFormPageState extends ConsumerState<CompanyFormPage> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _descriptionCtrl,
-                    decoration: _inputDecoration('Description', Icons.description_outlined),
+                    decoration: _inputDecoration(l10n.companyFormDescriptionLabel, Icons.description_outlined),
                     maxLines: 3,
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    "Contact Information",
+                    l10n.companyFormContactInfo,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -251,12 +253,12 @@ class _CompanyFormPageState extends ConsumerState<CompanyFormPage> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _addressCtrl,
-                    decoration: _inputDecoration('Physical Address', Icons.location_on_outlined),
+                    decoration: _inputDecoration(l10n.companyFormAddressLabel, Icons.location_on_outlined),
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _websiteCtrl,
-                    decoration: _inputDecoration('Website URL', Icons.language_rounded),
+                    decoration: _inputDecoration(l10n.companyFormWebsiteLabel, Icons.language_rounded),
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -264,21 +266,21 @@ class _CompanyFormPageState extends ConsumerState<CompanyFormPage> {
                       Expanded(
                         child: TextFormField(
                           controller: _phoneCtrl,
-                          decoration: _inputDecoration('Phone', Icons.phone_android_rounded),
+                          decoration: _inputDecoration(l10n.companyFormPhoneLabel, Icons.phone_android_rounded),
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: TextFormField(
                           controller: _emailCtrl,
-                          decoration: _inputDecoration('Email', Icons.email_outlined),
+                          decoration: _inputDecoration(l10n.companyFormEmailLabel, Icons.email_outlined),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 40),
                   AppPrimaryButton(
-                    text: isEdit ? 'UPDATE COMPANY' : 'CREATE COMPANY',
+                    text: isEdit ? l10n.companyFormUpdateButton : l10n.companyFormCreateButton,
                     loading: saving,
                     onPressed: saving ? null : _save,
                     height: 56,

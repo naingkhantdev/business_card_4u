@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../theme/app_colors.dart';
 import '../../data/vos/company_model.dart';
 import '../responsive/responsive.dart';
@@ -13,6 +14,7 @@ class CompanyDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: isDark ? Wallet.darkGround : const Color(0xFFF8FAFD),
       body: CustomScrollView(
@@ -32,17 +34,17 @@ class CompanyDetailPage extends StatelessWidget {
                     children: [
                       _buildMainInfo(context),
                       const SizedBox(height: 24),
-                      _buildSectionTitle(context, "Contact Details"),
+                      _buildSectionTitle(context, l10n.companyDetailContactDetails),
                       _buildContactCard(context),
                       const SizedBox(height: 24),
                       if (company.description != null &&
                           company.description!.isNotEmpty) ...[
-                        _buildSectionTitle(context, "About Company"),
+                        _buildSectionTitle(context, l10n.companyDetailAboutCompany),
                         _buildAboutCard(context),
                         const SizedBox(height: 24),
                       ],
                       if (company.socials.isNotEmpty) ...[
-                        _buildSectionTitle(context, "Social Presence"),
+                        _buildSectionTitle(context, l10n.companyDetailSocialPresence),
                         _buildSocialsCard(context),
                       ],
                     ],
@@ -108,6 +110,7 @@ class CompanyDetailPage extends StatelessWidget {
 
   Widget _buildMainInfo(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -126,9 +129,9 @@ class CompanyDetailPage extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _infoItem(context, Icons.category_rounded, company.industry ?? "General"),
+          _infoItem(context, Icons.category_rounded, company.industry ?? l10n.companyDetailGeneralFallback),
           const VerticalDivider(),
-          _infoItem(context, Icons.work_outline_rounded, company.businessType ?? "Corporate"),
+          _infoItem(context, Icons.work_outline_rounded, company.businessType ?? l10n.companyDetailCorporateFallback),
         ],
       ),
     );

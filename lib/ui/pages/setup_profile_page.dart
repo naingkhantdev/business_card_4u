@@ -2,18 +2,22 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import '../theme/app_page_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../data/vos/business_card_model.dart';
 import '../../data/vos/company_model.dart';
 import '../../data/vos/user_model.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../network/image_url.dart';
 import '../../providers/auth/auth_provider.dart';
 import '../../providers/card/card_provider.dart';
+import '../../providers/card/profession_provider.dart';
 import '../../providers/company/company_provider.dart';
 import '../../providers/ocr/card_scanner_provider.dart';
 import '../../data/vos/scanned_card_data.dart';
+import '../../utils/image_upload.dart';
 import '../theme/app_typography.dart';
 import '../theme/wallet_tokens.dart';
 import '../widgets/app_primary_button.dart';
@@ -21,6 +25,7 @@ import '../widgets/app_toast.dart';
 import '../widgets/image_source_sheet.dart';
 import '../widgets/onboarding_chrome.dart';
 import '../widgets/onboarding_step_scaffold.dart';
+import '../widgets/profession_picker.dart';
 import 'company_select_page.dart';
 
 /// Step two of sign-up: the profile behind the account, and photos of the
@@ -64,22 +69,14 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
   bool _isScanning = false;
   bool _isSaving = false;
 
-  /// Common roles, offered as taps instead of typing. The list is deliberately
-  /// short — a long one is just a second keyboard.
-  static const _positionSuggestions = [
-    'Founder',
-    'Manager',
-    'Engineer',
-    'Designer',
-    'Sales',
-    'Consultant',
-  ];
+  /// Picked in [ProfessionPicker]; what the card list's filter chips use.
+  String? _profession;
 
   @override
   void initState() {
     super.initState();
-    // The suggestion chips mirror the field, so typing has to redraw them —
-    // otherwise a chip stays lit after its text has been edited away.
+    // The profession picker suggests from the position as it's typed, so
+    // typing has to redraw it.
     _positionCtrl.addListener(_onPositionChanged);
     Future.microtask(_loadProfileCard);
   }
@@ -116,6 +113,7 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
         _positionCtrl.text = card.position;
       }
       if (card.phones.isNotEmpty) _phoneCtrl.text = card.phones.first;
+      _profession ??= card.profession;
       if (card.company != null) {
         _companyId = card.company!.id;
         _companyName = card.company!.name;
@@ -131,17 +129,25 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
     );
   }
 
-  Future<XFile?> _pick(String title, {String? subtitle}) async {
+  Future<XFile?> _pick(
+    String title, {
+    String? subtitle,
+    required UploadImageKind kind,
+  }) async {
     final source =
         await showImageSourceSheet(context, title: title, subtitle: subtitle);
     if (source == null || !mounted) return null;
     try {
-      return await ImagePicker().pickImage(source: source);
+      return await pickImageForUpload(source, kind);
     } catch (_) {
       if (!mounted) return null;
+      final l10n = AppLocalizations.of(context)!;
       _showToast(
-        'Could not open the '
-        '${source == ImageSource.camera ? 'camera' : 'gallery'}.',
+        l10n.setupProfileImageSourceError(
+          source == ImageSource.camera
+              ? l10n.setupProfileSourceCamera
+              : l10n.setupProfileSourceGallery,
+        ),
         isError: true,
       );
       return null;
@@ -149,9 +155,11 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
   }
 
   Future<void> _pickProfileImage() async {
+    final l10n = AppLocalizations.of(context)!;
     final picked = await _pick(
-      'Profile photo',
-      subtitle: 'This is the face people see when they find your card.',
+      l10n.setupProfileImageSheetTitle,
+      subtitle: l10n.setupProfileImageSheetSubtitle,
+      kind: UploadImageKind.avatar,
     );
     if (picked == null) return;
 
@@ -164,11 +172,13 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
   }
 
   Future<void> _pickCardImage({required bool isFront}) async {
+    final l10n = AppLocalizations.of(context)!;
     final picked = await _pick(
-      isFront ? 'Front of your card' : 'Back of your card',
+      isFront ? l10n.setupProfileFrontSheetTitle : l10n.setupProfileBackSheetTitle,
       subtitle: isFront
-          ? 'We read it and fill in the details below.'
-          : 'Often where the address and extra numbers live.',
+          ? l10n.setupProfileFrontSheetSubtitle
+          : l10n.setupProfileBackSheetSubtitle,
+      kind: UploadImageKind.card,
     );
     if (picked == null) return;
 
@@ -197,12 +207,12 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
     try {
       final scanned = await ref.read(cardScannerProvider).scan(front.path);
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
 
       if (scanned.isEmpty) {
         if (!silentWhenEmpty) {
           _showToast(
-            "Couldn't read that photo. Try better lighting, or type the "
-            'details in yourself.',
+            l10n.setupProfileOcrEmptyError,
             isError: true,
           );
         }
@@ -212,12 +222,12 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
       setState(() => _applyScanned(scanned));
       unawaited(_resolveScannedCompany(scanned.companyName));
       if (!silentWhenEmpty) {
-        _showToast('Filled in what we could read. Check it before saving.');
+        _showToast(l10n.setupProfileOcrFilledMessage);
       }
     } catch (_) {
       if (!mounted) return;
       if (!silentWhenEmpty) {
-        _showToast('Could not scan that photo. Please try again.',
+        _showToast(AppLocalizations.of(context)!.setupProfileOcrError,
             isError: true);
       }
     } finally {
@@ -251,7 +261,7 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
 
   Future<void> _pickCompany() async {
     final result = await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const CompanySelectPage()),
+      AppPageRoute(builder: (_) => const CompanySelectPage()),
     );
     if (result is CompanyModel) {
       setState(() {
@@ -266,15 +276,17 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
       _frontImage != null ||
       _backImage != null ||
       _positionCtrl.text.trim().isNotEmpty ||
+      _profession != null ||
       _phoneCtrl.text.trim().isNotEmpty ||
       _companyId != null;
 
   Future<void> _save() async {
     FocusScope.of(context).unfocus();
     if (!(_formKey.currentState?.validate() ?? false)) return;
+    final l10n = AppLocalizations.of(context)!;
 
     if (!_hasAnythingToSave) {
-      _finish('You can finish your card any time from the menu.');
+      _finish(l10n.setupProfileFinishLaterMessage);
       return;
     }
 
@@ -297,6 +309,7 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
         ? await notifier.updateCard(
             card.id,
             position: position.isEmpty ? null : position,
+            profession: _profession,
             phones: phone.isEmpty ? null : [phone],
             companyId: _companyId,
             imageFile: _profileImage,
@@ -310,6 +323,7 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
             name: user?.name,
             emails: [widget.email],
             position: position.isEmpty ? null : position,
+            profession: _profession,
             phones: phone.isEmpty ? null : [phone],
             companyId: _companyId,
             imageFile: _profileImage,
@@ -322,17 +336,19 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
     setState(() => _isSaving = false);
 
     if (result.isSuccess) {
-      _finish('Your card is ready. Share it any time from the QR button.');
+      // A newly typed profession is now on the server's list.
+      ref.invalidate(professionsProvider);
+      _finish(l10n.setupProfileSavedMessage);
     } else {
       _showToast(
-        result.message ?? 'Could not save your card. Please try again.',
+        result.message ?? l10n.setupProfileSaveError,
         isError: true,
       );
     }
   }
 
   void _skip() {
-    _finish('You can finish your card any time from the menu.');
+    _finish(AppLocalizations.of(context)!.setupProfileFinishLaterMessage);
   }
 
   /// Leaves sign-up for the app. The toast rides the root overlay, so it
@@ -347,27 +363,27 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).valueOrNull?.currentUser;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
 
     return OnboardingStepScaffold(
       step: 2,
       totalSteps: 2,
-      label: 'Your card',
-      completed: 'Account created',
-      headline: 'Complete your card',
-      subhead: 'This is what people see when they scan you. '
-          'Everything here is optional.',
+      label: l10n.setupProfileYourCardLabel,
+      completed: l10n.setupProfileAccountCreated,
+      headline: l10n.setupProfileHeadline,
+      subhead: l10n.setupProfileSubhead,
       exitIcon: Icons.close_rounded,
       onExit: _isSaving ? null : _skip,
       busy: _isSaving,
       action: AppPrimaryButton(
-        text: 'Save My Card',
+        text: l10n.setupProfileSaveButton,
         loading: _isSaving,
         onPressed: _isSaving ? null : _save,
       ),
       secondaryAction: TextButton(
         onPressed: _isSaving ? null : _skip,
         child: Text(
-          'Skip for now',
+          l10n.setupProfileSkipButton,
           style: AppTypography.secondary(TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w500,
@@ -379,20 +395,18 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
         // Photos first, deliberately. The scan fills the fields underneath,
         // so asking for the photo before the typing turns the whole section
         // below into something the user reviews rather than composes.
-        _buildCardPhotosSection(isDark),
-        _buildProfileSection(user, isDark),
+        _buildCardPhotosSection(l10n, isDark),
+        _buildProfileSection(l10n, user, isDark),
       ],
     );
   }
 
-  Widget _buildCardPhotosSection(bool isDark) {
+  Widget _buildCardPhotosSection(AppLocalizations l10n, bool isDark) {
     final hasFront = _frontImageBytes != null;
 
     return OnboardingSection(
-      title: 'Your printed card',
-      caption: hasFront
-          ? null
-          : 'Photograph the front and we read it into the form below.',
+      title: l10n.setupProfilePhotosTitle,
+      caption: hasFront ? null : l10n.setupProfilePhotosCaption,
       trailing: hasFront
           ? TextButton.icon(
               onPressed: _isScanning ? null : () => _runOcr(),
@@ -413,7 +427,7 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
                     )
                   : const Icon(Icons.auto_fix_high_rounded, size: 15),
               label: Text(
-                _isScanning ? 'READING' : 'RESCAN',
+                _isScanning ? l10n.setupProfileReadingLabel : l10n.setupProfileRescanLabel,
                 style: AppTypography.eyebrow(
                   color: Wallet.accentOf(isDark),
                   fontSize: 10,
@@ -427,7 +441,8 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
           children: [
             Expanded(
               child: _buildCardPhotoTile(
-                label: 'Front',
+                l10n,
+                label: l10n.setupProfileFrontLabel,
                 bytes: _frontImageBytes,
                 remoteUrl: ImageUrl.resolve(_profileCard?.frontImage),
                 isFront: true,
@@ -437,7 +452,8 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
             const SizedBox(width: 12),
             Expanded(
               child: _buildCardPhotoTile(
-                label: 'Back',
+                l10n,
+                label: l10n.setupProfileBackLabel,
                 bytes: _backImageBytes,
                 remoteUrl: ImageUrl.resolve(_profileCard?.backImage),
                 isFront: false,
@@ -450,13 +466,17 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
     );
   }
 
-  Widget _buildProfileSection(UserModel? user, bool isDark) {
+  Widget _buildProfileSection(AppLocalizations l10n, UserModel? user, bool isDark) {
     final name = user?.name ?? '';
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
     final existingAvatar = ImageUrl.resolve(_profileCard?.profileImage);
 
-    return OnboardingSection(
-      title: 'Profile',
+    // The Form _save() validates. Without it _formKey.currentState was null,
+    // validation read as failed, and Save silently did nothing.
+    return Form(
+      key: _formKey,
+      child: OnboardingSection(
+      title: l10n.setupProfileProfileTitle,
       children: [
         Row(
           children: [
@@ -467,7 +487,7 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    name.isEmpty ? 'Your card' : name,
+                    name.isEmpty ? l10n.setupProfileYourCardLabel : name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTypography.primary(TextStyle(
@@ -478,7 +498,9 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    (_profileImageBytes != null ? 'PHOTO ADDED' : 'ADD A PHOTO'),
+                    (_profileImageBytes != null
+                        ? l10n.setupProfilePhotoAdded
+                        : l10n.setupProfileAddPhoto),
                     style: AppTypography.eyebrow(
                       color: _profileImageBytes != null
                           ? Wallet.success
@@ -496,43 +518,29 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
         OnboardingTextField(
           controller: _positionCtrl,
           enabled: !_isSaving,
-          hintText: 'Position — e.g. Product Designer',
+          hintText: l10n.setupProfilePositionHint,
           prefixIcon: Icons.work_outline_rounded,
           textInputAction: TextInputAction.next,
         ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final suggestion in _positionSuggestions)
-              OnboardingChoiceChip(
-                label: suggestion,
-                selected: _positionCtrl.text.trim().toLowerCase() ==
-                    suggestion.toLowerCase(),
-                onTap: _isSaving
-                    ? null
-                    : () => setState(() {
-                          final selected =
-                              _positionCtrl.text.trim().toLowerCase() ==
-                                  suggestion.toLowerCase();
-                          _positionCtrl.text = selected ? '' : suggestion;
-                        }),
-              ),
-          ],
+        const SizedBox(height: 16),
+        ProfessionPicker(
+          value: _profession,
+          position: _positionCtrl.text,
+          enabled: !_isSaving,
+          onChanged: (value) => setState(() => _profession = value),
         ),
         const SizedBox(height: 16),
         OnboardingTextField(
           controller: _phoneCtrl,
           enabled: !_isSaving,
-          hintText: 'Phone number',
+          hintText: l10n.setupProfilePhoneHint,
           prefixIcon: Icons.phone_outlined,
           keyboardType: TextInputType.phone,
           textInputAction: TextInputAction.done,
           validator: (v) {
             final value = (v ?? '').trim();
             if (value.isEmpty) return null;
-            if (value.length < 6) return 'Phone must be at least 6 digits';
+            if (value.length < 6) return l10n.setupProfilePhoneMinLength;
             return null;
           },
         ),
@@ -540,11 +548,12 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
         OnboardingPickerRow(
           icon: Icons.business_outlined,
           value: _companyName,
-          placeholder: 'Company (optional)',
-          actionLabel: _companyName != null ? 'Change' : 'Choose',
+          placeholder: l10n.setupProfileCompanyPlaceholder,
+          actionLabel: _companyName != null ? l10n.setupProfileChangeLabel : l10n.setupProfileChooseLabel,
           onTap: _isSaving ? null : _pickCompany,
         ),
       ],
+      ),
     );
   }
 
@@ -632,7 +641,8 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
     );
   }
 
-  Widget _buildCardPhotoTile({
+  Widget _buildCardPhotoTile(
+    AppLocalizations l10n, {
     required String label,
     required Uint8List? bytes,
     required String? remoteUrl,
@@ -672,10 +682,10 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
                   remoteUrl,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) =>
-                      _buildCardPhotoPlaceholder(label, isFront, isDark),
+                      _buildCardPhotoPlaceholder(l10n, label, isFront, isDark),
                 )
               else
-                _buildCardPhotoPlaceholder(label, isFront, isDark),
+                _buildCardPhotoPlaceholder(l10n, label, isFront, isDark),
               if (hasImage) ...[
                 Positioned(
                   left: 8,
@@ -725,7 +735,8 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
     );
   }
 
-  Widget _buildCardPhotoPlaceholder(String label, bool isFront, bool isDark) {
+  Widget _buildCardPhotoPlaceholder(
+      AppLocalizations l10n, String label, bool isFront, bool isDark) {
     final accent = Wallet.accentOf(isDark);
 
     return Column(
@@ -744,7 +755,7 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
         if (isFront) ...[
           const SizedBox(height: 3),
           Text(
-            'Fills the form',
+            l10n.setupProfileFillsFormHint,
             style: AppTypography.secondary(TextStyle(
               fontSize: 10.5,
               color: Wallet.mutedOf(isDark),

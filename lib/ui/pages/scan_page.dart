@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import '../theme/app_page_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import '../../l10n/generated/app_localizations.dart';
 import '../../providers/card/card_provider.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/loading_view.dart';
@@ -42,12 +44,12 @@ class _ScanPageState extends ConsumerState<ScanPage> {
       if (card != null) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => CardDetailPage(card: card)),
+          AppPageRoute(builder: (_) => CardDetailPage(card: card)),
         );
       } else {
         AppToast.show(
           context,
-          "Card not found for this QR code",
+          AppLocalizations.of(context)!.scanPageCardNotFound,
           type: AppToastType.error,
         );
         setState(() => _isProcessing = false);
@@ -56,7 +58,7 @@ class _ScanPageState extends ConsumerState<ScanPage> {
       if (mounted) {
         AppToast.show(
           context,
-          "Error scanning QR code",
+          AppLocalizations.of(context)!.scanPageErrorScanning,
           type: AppToastType.error,
         );
         setState(() => _isProcessing = false);
@@ -75,7 +77,7 @@ class _ScanPageState extends ConsumerState<ScanPage> {
       backgroundColor: isDark ? Wallet.darkGround : Colors.black,
       appBar: AppBar(
         title: Text(
-          'Scan QR Code',
+          AppLocalizations.of(context)!.scanPageTitle,
           style: TextStyle(
             color: isDark ? Colors.white : Wallet.ink,
             fontWeight: FontWeight.w800,

@@ -100,12 +100,21 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     }
   }
 
+  /// Bumped by [cancelLoading]. A login whose number no longer matches was
+  /// cancelled, and its answer is dropped when it lands — otherwise the
+  /// request would finish in the background and sign the user in anyway.
+  int _loginAttempt = 0;
+
+  static const _cancelled = AppResult(false, null, cancelled: true);
+
   Future<AppResult> login(String email, String password) async {
+    final attempt = ++_loginAttempt;
     // First, make sure state has data so we can copyWith
     final currentState = state.valueOrNull ?? AuthState();
     state = AsyncData(currentState.copyWith(isLoading: true));
     try {
       final firebaseToken = await PushNotificationService.getToken();
+      if (attempt != _loginAttempt) return _cancelled;
       final request = await _dataAgent.login(
         LoginRequest(
           email: email,
@@ -113,6 +122,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
           firebaseToken: firebaseToken,
         ),
       );
+      if (attempt != _loginAttempt) return _cancelled;
 
       await TokenStorage.save(request!.token);
       final user = UserModel.fromJson(request.user);
@@ -130,6 +140,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
       return AppResult(true, request.message);
     } catch (e) {
+      if (attempt != _loginAttempt) return _cancelled;
       final message = _errorMessage(e, 'Could not sign you in. Please try again.');
       state = AsyncData(AuthState(
         isLoggedIn: false,
@@ -144,7 +155,10 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   String _errorMessage(Object error, String fallback) =>
       friendlyErrorMessage(error, fallback);
 
+  /// Stops waiting on an in-flight [login]: the spinner goes away now, and the
+  /// request's answer is ignored when it arrives.
   void cancelLoading() {
+    _loginAttempt++;
     final currentState = state.valueOrNull ?? AuthState();
     state = AsyncData(currentState.copyWith(isLoading: false));
   }

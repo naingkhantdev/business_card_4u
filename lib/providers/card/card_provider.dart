@@ -45,12 +45,13 @@ final cardProvider =
     AsyncNotifierProvider<CardNotifier, CardState>(CardNotifier.new);
 
 class CardNotifier extends AsyncNotifier<CardState> {
-  late final BcaDataAgent _dataAgent;
+  // A getter, not a `late final` set in build(): Riverpod reruns build() on
+  // the same notifier after ref.invalidate (login/logout), and assigning a
+  // late final twice threw — build failed and the list never loaded.
+  BcaDataAgent get _dataAgent => ref.read(bcaDataAgentProvider);
 
   @override
   Future<CardState> build() async {
-    _dataAgent = ref.read(bcaDataAgentProvider);
-
     // Both lists are loaded here rather than by the pages. Riverpod assigns
     // this future's value to `state` wholesale when it resolves, so anything a
     // page fetched in parallel during the first build would be overwritten.
@@ -98,6 +99,7 @@ class CardNotifier extends AsyncNotifier<CardState> {
     String? name,
     int? companyId,
     String? position,
+    String? profession,
     List<String>? phones,
     List<String>? emails,
     List<AddressModel>? addresses,
@@ -117,6 +119,7 @@ class CardNotifier extends AsyncNotifier<CardState> {
         name: name,
         companyId: companyId,
         position: position,
+        profession: profession,
         phones: phones,
         emails: emails,
         addresses: addresses,
@@ -160,6 +163,7 @@ class CardNotifier extends AsyncNotifier<CardState> {
     String? name,
     int? companyId,
     String? position,
+    String? profession,
     List<String>? phones,
     List<String>? emails,
     List<AddressModel>? addresses,
@@ -179,6 +183,7 @@ class CardNotifier extends AsyncNotifier<CardState> {
         name: name,
         companyId: companyId,
         position: position,
+        profession: profession,
         phones: phones,
         emails: emails,
         addresses: addresses,
@@ -239,6 +244,28 @@ class CardNotifier extends AsyncNotifier<CardState> {
               CardState());
       return AppResult(
           false, friendlyErrorMessage(e, 'Could not delete the card. Please try again.'));
+    }
+  }
+
+  /// The card list narrowed on the server. Returns the matches without
+  /// touching `state`, so the full list stays loaded (and on screen) while a
+  /// filter is in flight, and clearing the filter needs no refetch.
+  /// Returns null when the request fails, so the caller can tell "no
+  /// matches" apart from "couldn't ask".
+  Future<List<BusinessCardModel>?> filterCards({
+    String? query,
+    int? companyId,
+    String? profession,
+  }) async {
+    try {
+      final res = await _dataAgent.getCards(
+        query: query,
+        companyId: companyId,
+        profession: profession,
+      );
+      return res?.cards ?? [];
+    } catch (e) {
+      return null;
     }
   }
 

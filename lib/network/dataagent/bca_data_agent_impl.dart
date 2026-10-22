@@ -127,8 +127,28 @@ class BcaDataAgentImpl implements BcaDataAgent {
 
   // ================= BUSINESS CARDS =================
   @override
-  Future<CardResponse?> getCards() async {
-    return await _guard(() => _bcaApi.getCards());
+  Future<List<String>> getProfessions() async {
+    final response = await _guard(() => _bcaApi.getProfessions());
+    if (response is Map<String, dynamic> && response['data'] is List) {
+      return (response['data'] as List)
+          .map((e) => e?.toString().trim() ?? '')
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+    return [];
+  }
+
+  @override
+  Future<CardResponse?> getCards({
+    String? query,
+    int? companyId,
+    String? profession,
+  }) async {
+    return await _guard(() => _bcaApi.getCards(
+          query: query,
+          companyId: companyId,
+          profession: profession,
+        ));
   }
 
   // Dedicated for saved cards page: card_type=saved_card + created_by == current user

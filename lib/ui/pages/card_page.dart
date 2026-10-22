@@ -1,15 +1,18 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../theme/app_page_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../theme/app_theme.dart';
+import '../theme/app_typography.dart';
 
+import '../../l10n/generated/app_localizations.dart';
 import '../../providers/auth/auth_provider.dart';
 import '../../providers/card/card_provider.dart';
 import '../responsive/responsive.dart';
 import '../theme/app_colors.dart';
 import '../../data/vos/business_card_model.dart';
+import '../../utils/image_upload.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/loading_view.dart';
 import '../widgets/card_item.dart';
@@ -17,6 +20,7 @@ import '../widgets/image_source_sheet.dart';
 import '../widgets/my_qr_panel.dart';
 import '../widgets/app_primary_button.dart';
 import '../widgets/search_icon_button.dart';
+import '../widgets/profession_picker.dart';
 import '../../utils/user_drawer.dart';
 import 'add_card_page.dart';
 import 'scan_page.dart'; // Added import
@@ -38,6 +42,18 @@ class _CardPageState extends ConsumerState<CardPage>
   bool _isSearchFocused = false;
   final FocusNode _searchFocusNode = FocusNode();
   String? _selectedCompanyFilter; // null means "All"
+  String? _selectedProfession; // null means "All"
+
+  /// The server's answer for the active filters, or null when there is none
+  /// yet (no filter, request still in flight, or the request failed) — in
+  /// which case the list falls back to filtering what's already loaded.
+  List<BusinessCardModel>? _apiResults;
+  bool _isFiltering = false;
+
+  /// Bumped on every new filter request, so an older response that lands
+  /// after a newer one was sent is dropped instead of overwriting it.
+  int _filterRequestId = 0;
+  Timer? _queryDebounce;
   String? _lastShownMessage;
   TabController? _tabController;
   late final AnimationController _bellController;
@@ -83,6 +99,8 @@ class _CardPageState extends ConsumerState<CardPage>
           _searchController.clear();
           _searchFocusNode.unfocus();
           _selectedCompanyFilter = null;
+          _selectedProfession = null;
+          _dropApiResults();
         });
       }
     });
@@ -90,6 +108,7 @@ class _CardPageState extends ConsumerState<CardPage>
 
   @override
   void dispose() {
+    _queryDebounce?.cancel();
     _bellController.dispose();
     _tabController?.dispose();
     _searchController.dispose();
@@ -97,7 +116,96 @@ class _CardPageState extends ConsumerState<CardPage>
     super.dispose();
   }
 
-  List<BusinessCardModel> _filterCards(List<BusinessCardModel> cards) {
+  static bool _isSavedTabCard(BusinessCardModel c, int? currentUserId) {
+    if (c.cardType != 'saved_card') return false;
+    if (currentUserId == null) return true;
+    final creatorId = c.createdBy ?? c.user?.id;
+    return creatorId == currentUserId;
+  }
+
+  static bool _isFriendsTabCard(BusinessCardModel c, int? currentUserId) {
+    if (c.cardType != 'user_card') return false;
+    if (!c.isFriend) return false;
+    if (currentUserId != null && c.user?.id == currentUserId) return false;
+    return true;
+  }
+
+  /// What one tab shows: [cards] is that tab's full list, [onTab] says
+  /// whether a card belongs on it. With a filter active, the server's
+  /// matches are used once they arrive; until then (or if the request
+  /// failed) the loaded cards are filtered on the device.
+  List<BusinessCardModel> _filterCards(List<BusinessCardModel> cards,
+      bool Function(BusinessCardModel) onTab) {
+    if (!_hasActiveFilter) return cards;
+    final apiResults = _apiResults;
+    if (apiResults != null) return apiResults.where(onTab).toList();
+    return _filterLocally(cards);
+  }
+
+  /// Forgets any server answer and cancels whatever request is in flight —
+  /// for every place that resets the filters. Call inside setState.
+  void _dropApiResults() {
+    _queryDebounce?.cancel();
+    _filterRequestId++;
+    _apiResults = null;
+    _isFiltering = false;
+  }
+
+  int? _selectedCompanyId() {
+    final name = _selectedCompanyFilter;
+    if (name == null) return null;
+    final cards = ref.read(cardProvider).valueOrNull?.cards ?? const [];
+    for (final c in cards) {
+      if (c.company?.name == name) return c.company!.id;
+    }
+    return null;
+  }
+
+  /// Asks the server for the cards matching the current filters. The list
+  /// shows the on-device result straight away and swaps in the server's
+  /// answer when it lands; the full list stays loaded throughout, so there
+  /// is no spinner and nothing to refetch when the filter is cleared.
+  Future<void> _runFilter() async {
+    _queryDebounce?.cancel();
+    final requestId = ++_filterRequestId;
+    final companyId = _selectedCompanyId();
+
+    // No filter, or a company we can't resolve to an id: nothing to ask the
+    // server — filter locally rather than send a query that ignores it.
+    if (!_hasActiveFilter ||
+        (_selectedCompanyFilter != null && companyId == null)) {
+      setState(() {
+        _apiResults = null;
+        _isFiltering = false;
+      });
+      return;
+    }
+
+    setState(() {
+      _apiResults = null;
+      _isFiltering = true;
+    });
+
+    final query = _query.trim();
+    final results = await ref.read(cardProvider.notifier).filterCards(
+          query: query.isEmpty ? null : query,
+          companyId: companyId,
+          profession: _selectedProfession,
+        );
+    if (!mounted || requestId != _filterRequestId) return;
+    setState(() {
+      _apiResults = results; // null on failure → local fallback
+      _isFiltering = false;
+    });
+  }
+
+  void _onQueryChanged(String value) {
+    setState(() => _query = value);
+    _queryDebounce?.cancel();
+    _queryDebounce = Timer(const Duration(milliseconds: 350), _runFilter);
+  }
+
+  List<BusinessCardModel> _filterLocally(List<BusinessCardModel> cards) {
     var filtered = cards;
 
     // 1. Company Filter
@@ -107,11 +215,21 @@ class _CardPageState extends ConsumerState<CardPage>
           .toList();
     }
 
-    // 2. Search Query
-    if (_query.isEmpty) return filtered;
+    // 2. Profession Filter
+    final profession = _selectedProfession?.toLowerCase();
+    if (profession != null) {
+      filtered = filtered
+          .where((c) => c.profession?.toLowerCase() == profession)
+          .toList();
+    }
+
+    // 3. Search Query — name or position, same as the server's.
+    final query = _query.trim().toLowerCase();
+    if (query.isEmpty) return filtered;
     return filtered
         .where((card) =>
-            card.fullName.toLowerCase().contains(_query.toLowerCase()))
+            card.fullName.toLowerCase().contains(query) ||
+            card.position.toLowerCase().contains(query))
         .toList();
   }
 
@@ -125,6 +243,21 @@ class _CardPageState extends ConsumerState<CardPage>
       ..sort();
   }
 
+  /// Recomputes this tab's card list straight from whatever `cardProvider`
+  /// holds right now — used right after a refresh so the filter sheet's
+  /// company list reflects what was just fetched rather than whatever
+  /// build() last saw. Mirrors the tab split in build(); kept separate
+  /// because that method also needs both tabs' lists at once for the
+  /// TabBarView, not just the active one.
+  List<BusinessCardModel> _currentTabCards() {
+    final cardState = ref.read(cardProvider).valueOrNull ?? CardState();
+    final userId = ref.read(authProvider).valueOrNull?.currentUser?.id;
+    final onTab = (_tabController?.index ?? 0) == 0
+        ? (BusinessCardModel c) => _isFriendsTabCard(c, userId)
+        : (BusinessCardModel c) => _isSavedTabCard(c, userId);
+    return cardState.cards.where(onTab).toList();
+  }
+
   /// States which company the list is filtered to, since the search bar's
   /// filter icon only shows *that* something is filtered (a badge dot), not
   /// *what*. Tapping the pill itself reopens the sheet to change it; the ✕
@@ -133,7 +266,7 @@ class _CardPageState extends ConsumerState<CardPage>
       bool isDark, List<BusinessCardModel> currentTabCards) {
     final name = _selectedCompanyFilter!;
     return GestureDetector(
-      onTap: () => _showCompanyFilterSheet(_companyNamesFor(currentTabCards)),
+      onTap: _showCompanyFilterSheet,
       child: Container(
         padding: const EdgeInsets.fromLTRB(10, 6, 6, 6),
         decoration: BoxDecoration(
@@ -162,7 +295,10 @@ class _CardPageState extends ConsumerState<CardPage>
             ),
             const SizedBox(width: 6),
             GestureDetector(
-              onTap: () => setState(() => _selectedCompanyFilter = null),
+              onTap: () {
+                setState(() => _selectedCompanyFilter = null);
+                _runFilter();
+              },
               child: Container(
                 padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
@@ -179,13 +315,17 @@ class _CardPageState extends ConsumerState<CardPage>
     );
   }
 
-  Future<void> _showCompanyFilterSheet(List<String> companies) async {
+  /// Opens straight from the cards already in memory. It used to refetch
+  /// first, which put the whole list back into its loading state and made
+  /// every tap on the filter wait on the network; pull-to-refresh is the
+  /// place to pick up companies added elsewhere.
+  Future<void> _showCompanyFilterSheet() async {
     final result = await showModalBottomSheet<_CompanyFilterResult>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (_) => _CompanyFilterSheet(
-        companies: companies,
+        companies: _companyNamesFor(_currentTabCards()),
         selected: _selectedCompanyFilter,
       ),
     );
@@ -193,46 +333,181 @@ class _CardPageState extends ConsumerState<CardPage>
     // null and should leave the filter exactly as it was.
     if (result == null || !mounted) return;
     setState(() => _selectedCompanyFilter = result.company);
+    _runFilter();
   }
+
+  bool get _hasActiveFilter =>
+      _query.isNotEmpty ||
+      _selectedCompanyFilter != null ||
+      _selectedProfession != null;
+
+  /// One-tap profession chips under the search bar, built from the
+  /// professions the cards on this tab actually have — so a profession
+  /// someone adds at sign-up gets a chip as soon as a card carries it. Each
+  /// shows its count, most common first, and none can lead to an empty list.
+  Widget _buildProfessionChips(
+      bool isDark, List<BusinessCardModel> currentTabCards) {
+    final l10n = AppLocalizations.of(context)!;
+    final countsByKey = <String, int>{};
+    final spelling = <String, String>{};
+    for (final c in currentTabCards) {
+      final name = c.profession?.trim() ?? '';
+      if (name.isEmpty) continue;
+      final key = name.toLowerCase();
+      countsByKey[key] = (countsByKey[key] ?? 0) + 1;
+      spelling.putIfAbsent(key, () => name);
+    }
+    if (countsByKey.isEmpty) return const SizedBox.shrink();
+    final counts = {
+      for (final key in countsByKey.keys.toList()
+        ..sort((a, b) => countsByKey[b]!.compareTo(countsByKey[a]!)))
+        spelling[key]!: countsByKey[key]!,
+    };
+
+    Widget chip({
+      required String label,
+      required IconData icon,
+      required bool selected,
+      required VoidCallback onTap,
+      int? count,
+    }) {
+      final fg = selected
+          ? Colors.white
+          : (isDark ? Wallet.darkInk : Wallet.ink);
+      return Padding(
+        padding: const EdgeInsets.only(right: 8),
+        child: Material(
+          color: selected
+              ? AppColors.primary
+              : (isDark ? Wallet.darkSurface : Colors.white),
+          borderRadius: BorderRadius.circular(999),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(999),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: selected
+                      ? AppColors.primary
+                      : (isDark
+                          ? Wallet.darkLine
+                          : Colors.grey.withOpacity(.2)),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 15, color: fg),
+                  const SizedBox(width: 6),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: fg,
+                    ),
+                  ),
+                  if (count != null) ...[
+                    const SizedBox(width: 5),
+                    Text(
+                      '$count',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: selected
+                            ? Colors.white.withOpacity(.8)
+                            : (isDark ? Wallet.darkFaint : Colors.grey.shade500),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 34,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        children: [
+          chip(
+            label: l10n.cardPageAllProfessions,
+            icon: Icons.grid_view_rounded,
+            selected: _selectedProfession == null,
+            onTap: () {
+              setState(() => _selectedProfession = null);
+              _runFilter();
+            },
+          ),
+          for (final entry in counts.entries)
+            chip(
+              label: professionLabel(l10n, entry.key),
+              icon: professionIcon(entry.key),
+              count: entry.value,
+              selected: _selectedProfession?.toLowerCase() ==
+                  entry.key.toLowerCase(),
+              // Tapping the selected chip again clears it.
+              onTap: () {
+                final isSelected = _selectedProfession?.toLowerCase() ==
+                    entry.key.toLowerCase();
+                setState(() =>
+                    _selectedProfession = isSelected ? null : entry.key);
+                _runFilter();
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// A thin bar while the server is filtering — the list itself stays put.
+  /// Same height either way, so the list doesn't jump when it appears.
+  Widget _buildFilterProgress() => SizedBox(
+        height: 2,
+        child: _isFiltering
+            ? const LinearProgressIndicator(
+                minHeight: 2,
+                backgroundColor: Colors.transparent,
+                color: AppColors.primary,
+              )
+            : null,
+      );
 
   Widget _buildCardList(
     List<BusinessCardModel> cards,
     bool isLoading,
+    bool Function(BusinessCardModel) onTab,
   ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
     if (isLoading) {
       return const Center(
         child: LoadingView(size: 90),
       );
     }
 
-    final filtered = _filterCards(cards);
-
-    // Auto-clear active filters if they are hiding all cards for this tab
-    // (so the user sees the cards without having to manually clear)
-    if (cards.isNotEmpty && filtered.isEmpty && (_query.isNotEmpty || _selectedCompanyFilter != null)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {
-            _query = "";
-            _searchController.clear();
-            _searchFocusNode.unfocus();
-            _selectedCompanyFilter = null;
-          });
-        }
-      });
-    }
+    // No auto-clear here. This runs for both tabs on every build, including
+    // the one off screen, so a filter that matched nothing on the hidden tab
+    // used to reset the filter just picked on the visible one. build() does
+    // the auto-clear, for the current tab only.
+    final filtered = _filterCards(cards, onTab);
 
     final scrollChildren = <Widget>[];
 
     if (filtered.isEmpty) {
-      final hasActiveFilter = _query.isNotEmpty || _selectedCompanyFilter != null;
+      final hasActiveFilter = _hasActiveFilter;
       final title = hasActiveFilter
-          ? 'No matching cards'
-          : (cards.isNotEmpty ? 'No cards match this tab' : 'No cards yet');
+          ? l10n.cardPageNoMatchingCardsTitle
+          : (cards.isNotEmpty ? l10n.cardPageNoCardsThisTabTitle : l10n.cardPageNoCardsYetTitle);
       final subtitle = hasActiveFilter
-          ? 'There are cards in the database, but your current search or company filter is hiding them.\nClear the filter to see them.'
-          : 'Pull down to refresh or add new cards.';
+          ? l10n.cardPageFilterHidingCardsSubtitle
+          : l10n.cardPagePullToRefreshSubtitle;
 
       scrollChildren.add(
         Center(
@@ -305,21 +580,38 @@ class _CardPageState extends ConsumerState<CardPage>
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: () async {
-        ref.invalidate(cardProvider);
-        await ref.read(cardProvider.future);
-      },
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        children: scrollChildren,
+    return ShaderMask(
+      shaderCallback: (bounds) => const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Colors.transparent,
+          Colors.black,
+          Colors.black,
+          Colors.transparent,
+        ],
+        stops: [0.0, 0.04, 0.94, 1.0],
+      ).createShader(bounds),
+      blendMode: BlendMode.dstIn,
+      child: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(cardProvider);
+          await ref.read(cardProvider.future);
+          // The server's filtered answer is as stale as the list was.
+          if (mounted && _hasActiveFilter) _runFilter();
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          children: scrollChildren,
+        ),
       ),
     );
   }
 
   void _showMyQrCode(BuildContext context, BusinessCardModel? myProfileCard) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -356,7 +648,7 @@ class _CardPageState extends ConsumerState<CardPage>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'My QR Code',
+                    l10n.cardPageMyQrCodeTitle,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 22,
@@ -368,7 +660,7 @@ class _CardPageState extends ConsumerState<CardPage>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Open this when someone wants to scan your card.',
+                    l10n.cardPageMyQrCodeSubtitle,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13.5,
@@ -386,12 +678,12 @@ class _CardPageState extends ConsumerState<CardPage>
                   if (myProfileCard == null) ...[
                     const SizedBox(height: 20),
                     AppPrimaryButton(
-                      text: 'Create My Profile Card',
+                      text: l10n.cardPageCreateProfileCard,
                       loading: false,
                       onPressed: () {
                         Navigator.of(ctx).pop();
                         Navigator.of(context)
-                            .push(MaterialPageRoute(
+                            .push(AppPageRoute(
                               builder: (_) => const AddCardPage(cardType: 'user_card'),
                             ))
                             .then((created) {
@@ -401,7 +693,7 @@ class _CardPageState extends ConsumerState<CardPage>
                               if (context.mounted) {
                                 AppToast.show(
                                   context,
-                                  'Profile card created successfully',
+                                  l10n.cardPageProfileCardCreatedSuccess,
                                   type: AppToastType.success,
                                 );
                               }
@@ -425,6 +717,7 @@ class _CardPageState extends ConsumerState<CardPage>
   /// retyping it, and the manual form is still one tap away.
   void _showNewCardOptions() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       backgroundColor: isDark ? Wallet.darkSurface : Colors.white,
@@ -455,7 +748,7 @@ class _CardPageState extends ConsumerState<CardPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Add a card',
+                      l10n.cardPageAddACardTitle,
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -466,7 +759,7 @@ class _CardPageState extends ConsumerState<CardPage>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Snap the card or pick a photo — we fill in the details.',
+                      l10n.cardPageAddACardSubtitle,
                       style: TextStyle(
                         fontSize: 13,
                         color: isDark
@@ -492,27 +785,27 @@ class _CardPageState extends ConsumerState<CardPage>
                       color: AppColors.primary,
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: const Row(
+                    child: Row(
                       children: [
-                        Icon(Icons.document_scanner_outlined,
+                        const Icon(Icons.document_scanner_outlined,
                             color: Colors.white),
-                        SizedBox(width: 14),
+                        const SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Scan a business card',
-                                style: TextStyle(
+                                l10n.cardPageScanBusinessCard,
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
-                              SizedBox(height: 2),
+                              const SizedBox(height: 2),
                               Text(
-                                'Fastest — reads front and back for you',
-                                style: TextStyle(
+                                l10n.cardPageScanFastestSubtitle,
+                                style: const TextStyle(
                                   color: Colors.white70,
                                   fontSize: 12,
                                 ),
@@ -520,7 +813,7 @@ class _CardPageState extends ConsumerState<CardPage>
                             ],
                           ),
                         ),
-                        Icon(Icons.arrow_forward_ios,
+                        const Icon(Icons.arrow_forward_ios,
                             size: 14, color: Colors.white),
                       ],
                     ),
@@ -533,7 +826,7 @@ class _CardPageState extends ConsumerState<CardPage>
                   Icons.edit_note,
                   color: isDark ? Wallet.darkMuted : Colors.grey[600],
                 ),
-                title: const Text('Enter details manually'),
+                title: Text(l10n.cardPageEnterDetailsManually),
                 onTap: () {
                   Navigator.of(sheetContext).pop();
                   _openAddCard();
@@ -555,9 +848,10 @@ class _CardPageState extends ConsumerState<CardPage>
   /// user is still holding the card at this exact moment. Skipping is one tap,
   /// and the form can still add a back photo later either way.
   Future<void> _startCardScan() async {
+    final l10n = AppLocalizations.of(context)!;
     final front = await _captureCardSide(
-      title: 'Scan the front',
-      subtitle: 'Step 1 of 2 — we read the card and fill in the details for you.',
+      title: l10n.cardPageScanFrontTitle,
+      subtitle: l10n.cardPageScanFrontSubtitle,
     );
     if (front == null || !mounted) return;
 
@@ -565,8 +859,8 @@ class _CardPageState extends ConsumerState<CardPage>
     if (await _askForCardBack()) {
       if (!mounted) return;
       back = await _captureCardSide(
-        title: 'Scan the back',
-        subtitle: 'Step 2 of 2 — whatever we find here joins the same card.',
+        title: l10n.cardPageScanBackTitle,
+        subtitle: l10n.cardPageScanBackSubtitle,
       );
     }
     if (!mounted) return;
@@ -588,14 +882,17 @@ class _CardPageState extends ConsumerState<CardPage>
     if (source == null || !mounted) return null;
 
     try {
-      return await ImagePicker().pickImage(source: source);
+      return await pickImageForUpload(source, UploadImageKind.card);
     } catch (e) {
       if (!mounted) return null;
+      final l10n = AppLocalizations.of(context)!;
       AppToast.show(
         context,
-        'Could not open the '
-        '${source == ImageSource.camera ? 'camera' : 'gallery'}. '
-        'You can still enter the card manually.',
+        l10n.cardPageImageSourceOpenFailed(
+          source == ImageSource.camera
+              ? l10n.cardPageSourceCamera
+              : l10n.cardPageSourceGallery,
+        ),
         type: AppToastType.error,
       );
       return null;
@@ -607,6 +904,7 @@ class _CardPageState extends ConsumerState<CardPage>
   /// front-only card is a perfectly good result.
   Future<bool> _askForCardBack() async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
     final wantsBack = await showModalBottomSheet<bool>(
       context: context,
       backgroundColor: isDark ? Wallet.darkSurface : Colors.white,
@@ -641,7 +939,7 @@ class _CardPageState extends ConsumerState<CardPage>
                             size: 16, color: AppColors.primary),
                         const SizedBox(width: 6),
                         Text(
-                          'Front captured',
+                          l10n.cardPageFrontCapturedLabel,
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
@@ -655,7 +953,7 @@ class _CardPageState extends ConsumerState<CardPage>
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'Add the back?',
+                      l10n.cardPageAddBackQuestion,
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -666,8 +964,7 @@ class _CardPageState extends ConsumerState<CardPage>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'The back usually carries the address, extra numbers, and '
-                      'social links the front leaves off.',
+                      l10n.cardPageAddBackSubtitle,
                       style: TextStyle(
                         fontSize: 13,
                         color: isDark
@@ -690,26 +987,26 @@ class _CardPageState extends ConsumerState<CardPage>
                       color: AppColors.primary,
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: const Row(
+                    child: Row(
                       children: [
-                        Icon(Icons.flip_to_back, color: Colors.white),
-                        SizedBox(width: 14),
+                        const Icon(Icons.flip_to_back, color: Colors.white),
+                        const SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Scan the back too',
-                                style: TextStyle(
+                                l10n.cardPageScanBackTooTitle,
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
-                              SizedBox(height: 2),
+                              const SizedBox(height: 2),
                               Text(
-                                'Recommended — catches what the front misses',
-                                style: TextStyle(
+                                l10n.cardPageScanBackTooSubtitle,
+                                style: const TextStyle(
                                   color: Colors.white70,
                                   fontSize: 12,
                                 ),
@@ -717,7 +1014,7 @@ class _CardPageState extends ConsumerState<CardPage>
                             ],
                           ),
                         ),
-                        Icon(Icons.arrow_forward_ios,
+                        const Icon(Icons.arrow_forward_ios,
                             size: 14, color: Colors.white),
                       ],
                     ),
@@ -730,7 +1027,7 @@ class _CardPageState extends ConsumerState<CardPage>
                   Icons.skip_next_outlined,
                   color: isDark ? Wallet.darkMuted : Colors.grey[600],
                 ),
-                title: const Text('Skip — front only'),
+                title: Text(l10n.cardPageSkipFrontOnly),
                 onTap: () => Navigator.of(sheetContext).pop(false),
               ),
               const SizedBox(height: 8),
@@ -745,8 +1042,9 @@ class _CardPageState extends ConsumerState<CardPage>
 
   /// Opens the add-card form and refreshes the Saved Cards tab on success.
   void _openAddCard({XFile? frontImageFile, XFile? backImageFile}) {
+    final l10n = AppLocalizations.of(context)!;
     Navigator.of(context)
-        .push(MaterialPageRoute(
+        .push(AppPageRoute(
           builder: (_) => AddCardPage(
             frontImageFile: frontImageFile,
             backImageFile: backImageFile,
@@ -761,6 +1059,8 @@ class _CardPageState extends ConsumerState<CardPage>
       _searchController.clear();
       _searchFocusNode.unfocus();
       _selectedCompanyFilter = null;
+      _selectedProfession = null;
+      _dropApiResults();
 
       // Make sure we are on the Saved Cards tab (in case navigation context changed)
       _tabController?.animateTo(1);
@@ -772,7 +1072,7 @@ class _CardPageState extends ConsumerState<CardPage>
         if (!mounted) return;
         AppToast.show(
           context,
-          'Business card created successfully',
+          l10n.cardPageBusinessCardCreatedSuccess,
           type: AppToastType.success,
         );
       });
@@ -781,6 +1081,7 @@ class _CardPageState extends ConsumerState<CardPage>
 
   void _showAddOptions(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       backgroundColor: isDark ? Wallet.darkSurface : Colors.white,
@@ -799,7 +1100,7 @@ class _CardPageState extends ConsumerState<CardPage>
                   leading:
                       const Icon(Icons.qr_code_scanner, color: AppColors.primary),
                   title: Text(
-                    'Scan QR Code',
+                    l10n.cardPageScanQrCodeTitle,
                     style: TextStyle(
                       color: isDark
                           ? Wallet.darkInk
@@ -807,7 +1108,7 @@ class _CardPageState extends ConsumerState<CardPage>
                     ),
                   ),
                   subtitle: Text(
-                    'Add friend by scanning their QR code',
+                    l10n.cardPageScanQrCodeSubtitle,
                     style: TextStyle(
                       color: isDark ? Wallet.darkMuted : Colors.black54,
                     ),
@@ -816,14 +1117,14 @@ class _CardPageState extends ConsumerState<CardPage>
                     Navigator.pop(ctx);
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const ScanPage()),
+                      AppPageRoute(builder: (_) => const ScanPage()),
                     );
                   },
                 ),
                 ListTile(
                   leading: const Icon(Icons.search, color: AppColors.primary),
                   title: Text(
-                    'Search Users',
+                    l10n.cardPageSearchUsersTitle,
                     style: TextStyle(
                       color: isDark
                           ? Wallet.darkInk
@@ -831,7 +1132,7 @@ class _CardPageState extends ConsumerState<CardPage>
                     ),
                   ),
                   subtitle: Text(
-                    'Find users by name or company',
+                    l10n.cardPageSearchUsersSubtitle,
                     style: TextStyle(
                       color: isDark ? Wallet.darkMuted : Colors.black54,
                     ),
@@ -840,7 +1141,7 @@ class _CardPageState extends ConsumerState<CardPage>
                     Navigator.pop(ctx);
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const SearchPage()),
+                      AppPageRoute(builder: (_) => const SearchPage()),
                     );
                   },
                 ),
@@ -859,6 +1160,7 @@ class _CardPageState extends ConsumerState<CardPage>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
     if (_tabController == null) {
       _initTabController();
     }
@@ -950,27 +1252,27 @@ class _CardPageState extends ConsumerState<CardPage>
 
     // 2. My Saved Cards -> Manual entries created by me ('saved_card')
     // Show only if type = saved_card AND (createdBy or user.id) matches the logged-in user.
-    final mySavedCards = cardState.cards.where((c) {
-      if (c.cardType != 'saved_card') return false;
-      if (currentUser == null) return true;
-      final creatorId = c.createdBy ?? c.user?.id;
-      return creatorId == currentUser.id;
-    }).toList();
+    final userId = currentUser?.id;
+    bool onSavedTab(BusinessCardModel c) => _isSavedTabCard(c, userId);
+    bool onFriendsTab(BusinessCardModel c) => _isFriendsTabCard(c, userId);
+
+    final mySavedCards = cardState.cards.where(onSavedTab).toList();
 
     // 3. My Friend's Cards -> user_card that have accepted friendship status
     // (card_type == 'user_card' AND has accepted relation in friendships table)
-    final myFriendsCards = cardState.cards.where((c) {
-      if (c.cardType != 'user_card') return false;
-      if (!c.isFriend) return false;
-      if (currentUser != null && c.user?.id == currentUser.id) return false;
-      return true;
-    }).toList();
+    final myFriendsCards = cardState.cards.where(onFriendsTab).toList();
 
     // Auto-clear filters if they would hide all cards for the current tab
-    // (prevents cards from DB not appearing due to leftover filter)
-    final currentTabList = (_tabController?.index ?? 0) == 0 ? myFriendsCards : mySavedCards;
-    final filteredCurrent = _filterCards(currentTabList);
-    if (currentTabList.isNotEmpty && filteredCurrent.isEmpty && (_query.isNotEmpty || _selectedCompanyFilter != null)) {
+    // (prevents cards from DB not appearing due to leftover filter). Not
+    // while the server is still answering — the list is mid-update then.
+    final isFriendsTab = (_tabController?.index ?? 0) == 0;
+    final currentTabList = isFriendsTab ? myFriendsCards : mySavedCards;
+    final filteredCurrent = _filterCards(
+        currentTabList, isFriendsTab ? onFriendsTab : onSavedTab);
+    if (currentTabList.isNotEmpty &&
+        filteredCurrent.isEmpty &&
+        _hasActiveFilter &&
+        !_isFiltering) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           setState(() {
@@ -978,6 +1280,8 @@ class _CardPageState extends ConsumerState<CardPage>
             _searchController.clear();
             _searchFocusNode.unfocus();
             _selectedCompanyFilter = null;
+            _selectedProfession = null;
+            _dropApiResults();
           });
         }
       });
@@ -1024,6 +1328,11 @@ class _CardPageState extends ConsumerState<CardPage>
             child: TabBar(
               controller: _tabController,
               isScrollable: true,
+              // Start at the page's 16px margin rather than Material 3's
+              // default 52px offset, with room between the two tabs.
+              tabAlignment: TabAlignment.start,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              labelPadding: const EdgeInsets.symmetric(horizontal: 18),
               labelColor: AppColors.primary,
               unselectedLabelColor:
                   isDark ? Wallet.darkFaint : Colors.grey,
@@ -1040,13 +1349,15 @@ class _CardPageState extends ConsumerState<CardPage>
                 color: AppColors.primary.withOpacity(.12),
               ),
               indicatorSize: TabBarIndicatorSize.tab,
+              // The pill spans nearly the whole tab, so the label has ~16px
+              // of air on each side instead of hugging its edges.
               indicatorPadding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  const EdgeInsets.symmetric(horizontal: 2, vertical: 7),
               dividerColor: Colors.transparent,
               overlayColor: WidgetStateProperty.all(Colors.transparent),
-              tabs: const [
-                Tab(text: "Friend's Cards"),
-                Tab(text: "Saved Cards"),
+              tabs: [
+                Tab(text: l10n.cardPageFriendsCardsTab),
+                Tab(text: l10n.cardPageSavedCardsTab),
               ],
             ),
           ),
@@ -1058,13 +1369,13 @@ class _CardPageState extends ConsumerState<CardPage>
               Icons.qr_code_2_rounded,
               color: isDark ? Colors.white : Colors.black87,
             ),
-            tooltip: 'My QR Code',
+            tooltip: l10n.cardPageMyQrCodeTitle,
           ),
           IconButton(
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
+                AppPageRoute(
                   builder: (_) => const FriendRequestsPage(),
                 ),
               ).then((_) {
@@ -1184,14 +1495,14 @@ class _CardPageState extends ConsumerState<CardPage>
                           child: TextField(
                             controller: _searchController,
                             focusNode: _searchFocusNode,
-                            onChanged: (val) => setState(() => _query = val),
+                            onChanged: _onQueryChanged,
                             style: TextStyle(
                               fontSize: 14.5,
                               color: isDark ? Wallet.darkInk : Wallet.ink,
                               fontWeight: FontWeight.w500,
                             ),
                             decoration: InputDecoration(
-                              hintText: "Search cards...",
+                              hintText: l10n.cardPageSearchHint,
                               hintStyle: TextStyle(
                                 color: isDark
                                     ? Wallet.darkFaint
@@ -1220,6 +1531,7 @@ class _CardPageState extends ConsumerState<CardPage>
                             onTap: () {
                               _searchController.clear();
                               setState(() => _query = "");
+                              _runFilter();
                               _searchFocusNode.unfocus();
                             },
                             child: Padding(
@@ -1255,11 +1567,9 @@ class _CardPageState extends ConsumerState<CardPage>
                   isLabelVisible: _selectedCompanyFilter != null,
                   smallSize: 10,
                   child: SearchIconButton(
-                    onTap: () => _showCompanyFilterSheet(
-                      _companyNamesFor(currentTabList),
-                    ),
+                    onTap: _showCompanyFilterSheet,
                     isDark: isDark,
-                    tooltip: 'Filter by company',
+                    tooltip: l10n.cardPageFilterByCompanyTooltip,
                     active: _selectedCompanyFilter != null,
                     icon: Icons.tune_rounded,
                   ),
@@ -1267,6 +1577,12 @@ class _CardPageState extends ConsumerState<CardPage>
               ],
             ),
           ),
+
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: _buildProfessionChips(isDark, currentTabList),
+          ),
+          _buildFilterProgress(),
 
           if (_selectedCompanyFilter != null)
             Padding(
@@ -1282,8 +1598,8 @@ class _CardPageState extends ConsumerState<CardPage>
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildCardList(myFriendsCards, isCardLoading),
-                _buildCardList(mySavedCards, isCardLoading),
+                _buildCardList(myFriendsCards, isCardLoading, onFriendsTab),
+                _buildCardList(mySavedCards, isCardLoading, onSavedTab),
               ],
             ),
           ),
@@ -1297,7 +1613,7 @@ class _CardPageState extends ConsumerState<CardPage>
         elevation: 4,
         icon: const Icon(Icons.add, color: Colors.white),
         label: Text(
-          _tabController?.index == 0 ? 'Add Friend' : 'New Card',
+          _tabController?.index == 0 ? l10n.cardPageAddFriendFabLabel : l10n.cardPageNewCardFabLabel,
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w700,
@@ -1326,11 +1642,9 @@ class _CompanyFilterResult {
 
 /// The "Filter by Company" sheet opened from the Cards page search bar.
 ///
-/// A letter avatar per company (stable per name, not per rebuild) gives rows
-/// something to visually anchor on beyond a line of text — the wrap-of-chips
-/// this replaced had no such landmark and read as a plain settings list. A
-/// search field only earns its place once there's enough companies to be
-/// worth searching.
+/// As little as possible: a small title, a search field only once there are
+/// enough companies to need one, and a bare list of names. Only the chosen
+/// row is marked (accent text and a check); picking a row applies it.
 class _CompanyFilterSheet extends StatefulWidget {
   final List<String> companies;
   final String? selected;
@@ -1347,22 +1661,6 @@ class _CompanyFilterSheetState extends State<_CompanyFilterSheet> {
   final _searchCtrl = TextEditingController();
   String _query = '';
 
-  // A handful of accent tints, cycled by a hash of the name so a company's
-  // avatar color is stable across rebuilds and repeat openings rather than
-  // reshuffling — the letter is what varies row to row, not the palette.
-  static const _avatarTints = [
-    Wallet.accentLight,
-    Color(0xFF2563EB),
-    Color(0xFF0D9488),
-    Color(0xFFB45309),
-    Color(0xFFBE185D),
-  ];
-
-  Color _avatarTint(String name) {
-    final hash = name.codeUnits.fold<int>(0, (sum, c) => sum + c);
-    return _avatarTints[hash % _avatarTints.length];
-  }
-
   @override
   void dispose() {
     _searchCtrl.dispose();
@@ -1375,6 +1673,12 @@ class _CompanyFilterSheetState extends State<_CompanyFilterSheet> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
+    final ink = Wallet.inkOf(isDark);
+    final faint = Wallet.faintOf(isDark);
+    final line = Wallet.lineOf(isDark);
+    final accent = Wallet.accentOf(isDark);
+
     final companies = widget.companies;
     final query = _query.trim().toLowerCase();
     final filtered = query.isEmpty
@@ -1382,304 +1686,204 @@ class _CompanyFilterSheetState extends State<_CompanyFilterSheet> {
         : companies.where((c) => c.toLowerCase().contains(query)).toList();
     final showSearch = companies.length > _searchThreshold;
 
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * .78,
-      ),
+    Widget message(String text) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+          child: Center(
+            child: Text(
+              text,
+              textAlign: TextAlign.center,
+              style: AppTypography.secondary(
+                TextStyle(fontSize: 14, color: faint),
+              ),
+            ),
+          ),
+        );
+
+    // At most 60% of the screen, however many companies there are — the
+    // list scrolls inside. With the keyboard up (searching), the sheet sits
+    // on top of it and shrinks to whatever room is left above it.
+    final media = MediaQuery.of(context);
+    final keyboard = media.viewInsets.bottom;
+    final roomAboveKeyboard =
+        media.size.height - keyboard - media.padding.top - 24;
+    final maxHeight = keyboard > 0
+        ? roomAboveKeyboard
+        : media.size.height * .6;
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: keyboard),
+      child: Container(
+      constraints: BoxConstraints(maxHeight: maxHeight),
       decoration: BoxDecoration(
         color: Wallet.surfaceOf(isDark),
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(Wallet.radiusPanel),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? .45 : .12),
-            blurRadius: 32,
-            offset: const Offset(0, -8),
-          ),
-        ],
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Container(
-            width: 40,
+            width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: isDark ? Wallet.darkLine : Colors.grey.shade300,
+              color: line,
               borderRadius: BorderRadius.circular(999),
             ),
           ),
+
+          // Header: the title, and Clear when there's something to clear.
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 18, 20, 0),
+            padding: const EdgeInsets.fromLTRB(24, 14, 12, 4),
             child: Row(
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(isDark ? .18 : .1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.apartment_rounded,
-                      color: AppColors.primary, size: 20),
-                ),
-                const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Filter by Company',
-                        style: AppTheme.withFontStack(TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                          color: isDark ? Wallet.darkInk : Wallet.ink,
-                        )),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        companies.length == 1
-                            ? '1 company'
-                            : '${companies.length} companies',
-                        style: AppTheme.withFontStack(TextStyle(
-                          fontSize: 12.5,
-                          color: isDark ? Wallet.darkFaint : Colors.grey.shade500,
-                        )),
-                      ),
-                    ],
+                  child: Text(
+                    l10n.cardPageFilterByCompanySheetTitle,
+                    style: AppTypography.primary(TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: ink,
+                    )),
                   ),
                 ),
                 if (widget.selected != null)
                   TextButton(
                     onPressed: () => _choose(null),
                     style: TextButton.styleFrom(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      foregroundColor: accent,
+                      visualDensity: VisualDensity.compact,
                     ),
                     child: Text(
-                      'Clear',
-                      style: AppTheme.withFontStack(const TextStyle(
-                        fontSize: 13.5,
+                      l10n.cardPageClearFilter,
+                      style: const TextStyle(
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
-                      )),
+                      ),
                     ),
                   ),
               ],
             ),
           ),
+
           if (showSearch)
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-              child: Container(
-                height: 42,
-                decoration: BoxDecoration(
-                  color: isDark ? Wallet.darkGround : const Color(0xFFF4F7FB),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isDark ? Wallet.darkLine : Colors.grey.withOpacity(.15),
-                  ),
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+              child: TextField(
+                controller: _searchCtrl,
+                onChanged: (v) => setState(() => _query = v),
+                style: AppTypography.secondary(
+                  TextStyle(fontSize: 14.5, color: ink),
                 ),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 12),
-                    Icon(Icons.search_rounded,
-                        size: 18,
-                        color: isDark ? Wallet.darkFaint : Colors.grey.shade400),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: _searchCtrl,
-                        onChanged: (v) => setState(() => _query = v),
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDark ? Wallet.darkInk : Wallet.ink,
+                decoration: InputDecoration(
+                  hintText: l10n.cardPageSearchCompaniesHint,
+                  hintStyle: AppTypography.secondary(
+                    TextStyle(fontSize: 14.5, color: faint),
+                  ),
+                  prefixIcon:
+                      Icon(Icons.search_rounded, size: 20, color: faint),
+                  suffixIcon: _query.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: Icon(Icons.close_rounded,
+                              size: 18, color: faint),
+                          onPressed: () {
+                            _searchCtrl.clear();
+                            setState(() => _query = '');
+                          },
                         ),
-                        decoration: InputDecoration(
-                          hintText: 'Search companies',
-                          hintStyle: TextStyle(
-                            fontSize: 14,
-                            color: isDark ? Wallet.darkFaint : Colors.grey.shade400,
-                          ),
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          disabledBorder: InputBorder.none,
-                          filled: false,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                      ),
-                    ),
-                    if (_query.isNotEmpty)
-                      GestureDetector(
-                        onTap: () {
-                          _searchCtrl.clear();
-                          setState(() => _query = '');
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          child: Icon(Icons.close_rounded,
-                              size: 16,
-                              color:
-                                  isDark ? Wallet.darkMuted : Colors.grey.shade500),
-                        ),
-                      )
-                    else
-                      const SizedBox(width: 12),
-                  ],
+                  // A soft tint, no border — the quietest way to say
+                  // "type here".
+                  filled: true,
+                  fillColor: Wallet.tintOf(isDark),
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
               ),
             ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
+
           Flexible(
             child: companies.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 28),
-                    child: Center(
-                      child: Text(
-                        'No companies available',
-                        style: AppTheme.withFontStack(TextStyle(
-                          color: isDark ? Wallet.darkFaint : Colors.grey.shade400,
-                        )),
-                      ),
-                    ),
-                  )
+                ? message(l10n.cardPageNoCompaniesAvailable)
                 : ListView(
                     shrinkWrap: true,
-                    padding: EdgeInsets.fromLTRB(
-                      12,
-                      4,
-                      12,
-                      MediaQuery.of(context).padding.bottom + 16,
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).padding.bottom + 12,
                     ),
                     children: [
                       _row(
                         isDark: isDark,
-                        label: 'All Companies',
+                        label: l10n.cardPageAllCompaniesLabel,
                         isSelected: widget.selected == null,
                         onTap: () => _choose(null),
-                        leading: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? Wallet.darkLine
-                                : Colors.grey.withOpacity(.12),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(Icons.grid_view_rounded,
-                              size: 18,
-                              color:
-                                  isDark ? Wallet.darkMuted : Colors.grey.shade600),
-                        ),
                       ),
                       if (query.isNotEmpty && filtered.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 24),
-                          child: Center(
-                            child: Text(
-                              'No companies match "${_query.trim()}"',
-                              textAlign: TextAlign.center,
-                              style: AppTheme.withFontStack(TextStyle(
-                                color: isDark
-                                    ? Wallet.darkFaint
-                                    : Colors.grey.shade400,
-                              )),
-                            ),
-                          ),
-                        )
+                        message(
+                            l10n.cardPageNoCompaniesMatchQuery(_query.trim()))
                       else
-                        ...filtered.map((company) => _row(
-                              isDark: isDark,
-                              label: company,
-                              isSelected: widget.selected == company,
-                              onTap: () => _choose(company),
-                              leading: Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  color: _avatarTint(company)
-                                      .withOpacity(isDark ? .22 : .12),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  company.isNotEmpty
-                                      ? company[0].toUpperCase()
-                                      : '?',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w800,
-                                    color: _avatarTint(company),
-                                  ),
-                                ),
-                              ),
-                            )),
+                        for (final company in filtered)
+                          _row(
+                            isDark: isDark,
+                            label: company,
+                            isSelected: widget.selected == company,
+                            onTap: () => _choose(company),
+                          ),
                     ],
                   ),
           ),
         ],
       ),
+      ),
     );
   }
 
+  /// One bare row: just the name. The chosen one turns accent and gets a
+  /// check; the rest carry nothing extra.
   Widget _row({
     required bool isDark,
     required String label,
     required bool isSelected,
     required VoidCallback onTap,
-    required Widget leading,
   }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          margin: const EdgeInsets.symmetric(vertical: 3),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? AppColors.primary.withOpacity(isDark ? .16 : .08)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(14),
-          ),
+    final accent = Wallet.accentOf(isDark);
+
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: SizedBox(
+          height: 48,
           child: Row(
             children: [
-              leading,
-              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 14.5,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                    color: isSelected
-                        ? (isDark ? Colors.white : AppColors.primary)
-                        : (isDark ? Wallet.darkInk : Wallet.ink),
-                  ),
+                  style: AppTypography.secondary(TextStyle(
+                    fontSize: 15,
+                    fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.w400,
+                    color: isSelected ? accent : Wallet.inkOf(isDark),
+                  )),
                 ),
               ),
-              SizedBox(
-                width: 22,
-                height: 22,
-                child: isSelected
-                    ? Container(
-                        decoration: const BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.check_rounded,
-                            size: 14, color: Colors.white),
-                      )
-                    : null,
-              ),
+              if (isSelected) ...[
+                const SizedBox(width: 12),
+                Icon(Icons.check_rounded, size: 20, color: accent),
+              ],
             ],
           ),
         ),

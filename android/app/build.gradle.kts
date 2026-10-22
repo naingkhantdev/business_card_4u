@@ -1,7 +1,7 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    // id("com.google.gms.google-services") // Temporarily disabled for local dev (no google-services.json)
+    id("com.google.gms.google-services") // reads android/app/google-services.json
     // Flutter Gradle Plugin (must be last)
     id("dev.flutter.flutter-gradle-plugin")
 }
