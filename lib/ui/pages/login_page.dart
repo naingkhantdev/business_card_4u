@@ -269,7 +269,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                                     }
                                   },
                             height: 52,
-                            borderRadius: BorderRadius.circular(26),
+                            borderRadius:
+                                BorderRadius.circular(Wallet.radiusControl),
                           ),
                           const SizedBox(height: 16),
                           TextButton(
@@ -350,7 +351,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
         Text(
           l10n.loginPageSubtitle,
           style: AppTypography.secondary(
-            const TextStyle(color: Color(0xFF5B6473)),
+            const TextStyle(color: Wallet.muted),
           ),
         ),
         const SizedBox(height: 32),
@@ -430,7 +431,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     Widget? suffix,
   }) {
     OutlineInputBorder outline(Color color, double width) => OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(Wallet.radiusControl),
           borderSide: BorderSide(color: color, width: width),
         );
 
@@ -441,7 +442,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     // the same light/dark tokens as the rest of the app.
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(Wallet.radiusControl),
         boxShadow: Wallet.shadowOf(isDark),
       ),
       child: TextFormField(

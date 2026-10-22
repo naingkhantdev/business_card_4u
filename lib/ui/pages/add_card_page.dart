@@ -517,15 +517,15 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
 
     return Scaffold(
       backgroundColor:
-          isDark ? Wallet.darkGround : const Color(0xFFF8FAFD),
+          Wallet.groundOf(isDark),
       appBar: AppBar(
         title: Text(isEditing ? l10n.addCardEditTitle : l10n.addCardAddTitle,
             style: TextStyle(
-                color: isDark ? Colors.white : Colors.black87,
+                color: Wallet.inkOf(isDark),
                 fontWeight: FontWeight.w600)),
-        backgroundColor: isDark ? Wallet.darkGround : Colors.white,
+        backgroundColor: Wallet.groundOf(isDark),
         elevation: 0,
-        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black87),
+        iconTheme: IconThemeData(color: Wallet.inkOf(isDark)),
       ),
       bottomNavigationBar: _buildSubmitBar(isCreating, isDark),
       body: Stack(
@@ -664,6 +664,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
   Widget _buildCardPhotosPanel() {
     final hasFront = _frontImageBytes != null || _frontImageUrl != null;
     final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return _buildSection(
       icon: Icons.credit_card_outlined,
@@ -679,7 +680,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
           ? TextButton.icon(
               onPressed: _isRescanning ? null : () => _runOcr(),
               style: TextButton.styleFrom(
-                foregroundColor: AppColors.primary,
+                foregroundColor: Wallet.accentOf(isDark),
                 visualDensity: VisualDensity.compact,
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 textStyle: const TextStyle(
@@ -735,20 +736,10 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
       decoration: BoxDecoration(
-        color: isDark ? Wallet.darkSurface : Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: isDark ? Wallet.darkLine : Wallet.ground,
-        ),
-        boxShadow: isDark
-            ? null
-            : const [
-                BoxShadow(
-                  color: Color(0x0D101828),
-                  blurRadius: 18,
-                  offset: Offset(0, 6),
-                ),
-              ],
+        color: Wallet.surfaceOf(isDark),
+        borderRadius: BorderRadius.circular(Wallet.radiusCard),
+        border: Wallet.borderOf(isDark),
+        boxShadow: Wallet.shadowOf(isDark),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -758,13 +749,13 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(isDark ? 0.18 : 0.08),
+                  color: Wallet.tintOf(isDark),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   icon,
                   size: 18,
-                  color: isDark ? AppColors.primaryLight : AppColors.primary,
+                  color: Wallet.accentOf(isDark),
                 ),
               ),
               const SizedBox(width: 12),
@@ -790,9 +781,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                         style: TextStyle(
                           fontSize: 12,
                           height: 1.35,
-                          color: isDark
-                              ? const Color(0xFF8C9DBA)
-                              : const Color(0xFF6B7688),
+                          color: Wallet.mutedOf(isDark),
                         ),
                       ),
                     ],
@@ -816,10 +805,10 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
       padding: EdgeInsets.fromLTRB(
           20, 12, 20, 12 + MediaQuery.of(context).padding.bottom),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF080E1C) : Colors.white,
+        color: Wallet.surfaceOf(isDark),
         border: Border(
           top: BorderSide(
-            color: isDark ? Wallet.darkLine : Wallet.ground,
+            color: Wallet.lineOf(isDark),
           ),
         ),
       ),
@@ -861,11 +850,9 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                   width: 72,
                   height: 72,
                   padding: const EdgeInsets.all(3),
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [AppColors.primary, AppColors.secondary],
-                    ),
+                    color: Wallet.accentOf(isDark),
                   ),
                   child: ClipOval(
                     child: bytes != null
@@ -886,12 +873,10 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                   child: Container(
                     padding: const EdgeInsets.all(5),
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
+                      color: Wallet.accentOf(isDark),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: isDark
-                            ? Wallet.darkSurface
-                            : Colors.white,
+                        color: Wallet.surfaceOf(isDark),
                         width: 2,
                       ),
                     ),
@@ -900,7 +885,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                           ? Icons.edit_rounded
                           : Icons.add_a_photo_rounded,
                       size: 12,
-                      color: Colors.white,
+                      color: Wallet.onAccentOf(isDark),
                     ),
                   ),
                 ),
@@ -928,9 +913,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                   style: TextStyle(
                     fontSize: 12,
                     height: 1.35,
-                    color: isDark
-                        ? const Color(0xFF8C9DBA)
-                        : const Color(0xFF6B7688),
+                    color: Wallet.mutedOf(isDark),
                   ),
                 ),
               ],
@@ -943,14 +926,14 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
 
   Widget _buildAvatarFallback(String initial, bool isDark) {
     return Container(
-      color: isDark ? Wallet.darkSurface : const Color(0xFFF1ECFF),
+      color: Wallet.tintOf(isDark),
       alignment: Alignment.center,
       child: Text(
         initial,
         style: TextStyle(
           fontSize: 26,
           fontWeight: FontWeight.w900,
-          color: isDark ? AppColors.primaryLight : AppColors.primary,
+          color: Wallet.accentOf(isDark),
         ),
       ),
     );
@@ -974,12 +957,12 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         aspectRatio: 1.7,
         child: Container(
           decoration: BoxDecoration(
-            color: isDark ? Wallet.darkSurface : Colors.white,
+            color: Wallet.surfaceOf(isDark),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: hasImage
-                  ? (isDark ? Wallet.darkLine : Colors.grey.shade300)
-                  : AppColors.primary.withOpacity(0.4),
+                  ? Wallet.lineOf(isDark)
+                  : Wallet.accentOf(isDark).withOpacity(0.4),
               width: hasImage ? 1 : 1.5,
               style: BorderStyle.solid,
             ),
@@ -1054,7 +1037,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
           Icon(
             Icons.add_a_photo_outlined,
             size: 22,
-            color: isDark ? Wallet.accentDark : AppColors.primary,
+            color: Wallet.accentOf(isDark),
           ),
           const SizedBox(height: 6),
           Text(
@@ -1069,7 +1052,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
             label == 'Back' ? l10n.addCardOptional : l10n.addCardRequiredToScan,
             style: TextStyle(
               fontSize: 11,
-              color: isDark ? Wallet.darkMuted : Colors.grey[600],
+              color: Wallet.mutedOf(isDark),
             ),
           ),
         ],
@@ -1121,12 +1104,12 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(isDark ? 0.14 : 0.07),
+            color: Wallet.tintOf(isDark),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
             children: [
-              Icon(icon, size: 15, color: AppColors.primary),
+              Icon(icon, size: 15, color: Wallet.accentOf(isDark)),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -1142,10 +1125,10 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
               if (!_isResolvingCompany)
                 Text(
                   needsChoice ? l10n.addCardChoose : l10n.addCardChange,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
+                    color: Wallet.accentOf(isDark),
                   ),
                 ),
             ],
@@ -1160,14 +1143,14 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
   /// inside the input, where it used to crowd long values like emails.
   Widget _buildScannedBadge() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final tint = isDark ? AppColors.primaryLight : AppColors.primary;
+    final tint = Wallet.accentOf(isDark);
     return Container(
       padding: const EdgeInsets.fromLTRB(7, 3, 9, 3),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(isDark ? 0.20 : 0.09),
+        color: tint.withOpacity(isDark ? 0.20 : 0.09),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
-          color: AppColors.primary.withOpacity(isDark ? 0.40 : 0.20),
+          color: tint.withOpacity(isDark ? 0.40 : 0.20),
         ),
       ),
       child: Row(
@@ -1201,14 +1184,10 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         margin: EdgeInsets.only(top: i == 0 ? 0 : 14),
         padding: const EdgeInsets.fromLTRB(14, 12, 14, 16),
         decoration: BoxDecoration(
-          color: isDark
-              ? const Color(0xFF0A0F1C)
-              : const Color(0xFFFBFCFE),
+          color: Wallet.groundOf(isDark),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: isDark
-                ? Wallet.darkLine
-                : Wallet.ground,
+            color: Wallet.lineOf(isDark),
           ),
         ),
         child: Column(
@@ -1222,9 +1201,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: isDark
-                          ? Wallet.darkMuted
-                          : Colors.grey[600],
+                      color: Wallet.mutedOf(isDark),
                     ),
                   ),
                 ),
@@ -1237,7 +1214,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                       });
                     },
                     icon: const Icon(Icons.delete_outline,
-                        size: 20, color: Colors.redAccent),
+                        size: 20, color: Wallet.danger),
                   ),
               ],
             ),
@@ -1335,12 +1312,12 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     final isScanned = fieldKey != null && _scannedFields.contains(fieldKey);
 
     final idle = isScanned
-        ? AppColors.primary.withOpacity(isDark ? 0.38 : 0.26)
-        : (isDark ? const Color(0xFF232F4C) : const Color(0xFFE2E8F2));
+        ? Wallet.accentOf(isDark).withOpacity(isDark ? 0.38 : 0.26)
+        : Wallet.lineOf(isDark);
     final fill = isScanned
-        ? AppColors.primary.withOpacity(isDark ? 0.10 : 0.04)
-        : (isDark ? Wallet.darkSurface : const Color(0xFFF9FAFC));
-    const error = Color(0xFFDC2626);
+        ? Wallet.accentOf(isDark).withOpacity(isDark ? 0.10 : 0.04)
+        : (isDark ? Wallet.darkSurface : AppColors.surfaceSoft);
+    const error = Wallet.danger;
 
     OutlineInputBorder outline(Color color, double width) => OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -1359,7 +1336,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.2,
                 color:
-                    isDark ? const Color(0xFF9FB0CC) : const Color(0xFF5B6779),
+                    Wallet.mutedOf(isDark),
               ),
             ),
             if (isScanned) ...[
@@ -1381,16 +1358,14 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
             hintText: hint,
             hintStyle: TextStyle(
               fontSize: 14,
-              color: isDark ? Wallet.darkFaint : const Color(0xFFA3ADBD),
+              color: Wallet.faintOf(isDark),
             ),
             prefixIcon: icon != null
                 ? Icon(icon,
                     size: 20,
                     color: isScanned
-                        ? AppColors.primary.withOpacity(isDark ? 0.85 : 0.7)
-                        : (isDark
-                            ? const Color(0xFF7A8AA8)
-                            : const Color(0xFF9AA5B5)))
+                        ? Wallet.accentOf(isDark).withOpacity(.85)
+                        : Wallet.faintOf(isDark))
                 : null,
             prefixIconConstraints:
                 const BoxConstraints(minWidth: 44, minHeight: 0),
@@ -1399,7 +1374,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
             isDense: true,
             contentPadding: EdgeInsets.fromLTRB(icon != null ? 0 : 14, 14, 14, 14),
             enabledBorder: outline(idle, 1),
-            focusedBorder: outline(AppColors.primary, 1.6),
+            focusedBorder: outline(Wallet.accentOf(isDark), 1.6),
             errorBorder: outline(error, 1),
             focusedErrorBorder: outline(error, 1.6),
             errorStyle: const TextStyle(fontSize: 11.5, color: error),
@@ -1425,7 +1400,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
             fontSize: 12.5,
             fontWeight: FontWeight.w600,
             letterSpacing: 0.2,
-            color: isDark ? const Color(0xFF9FB0CC) : const Color(0xFF5B6779),
+            color: Wallet.mutedOf(isDark),
           ),
         ),
         const SizedBox(height: 7),
@@ -1435,14 +1410,10 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             decoration: BoxDecoration(
-              color: isDark
-                  ? Wallet.darkSurface
-                  : const Color(0xFFF9FAFC),
+              color: isDark ? Wallet.darkSurface : AppColors.surfaceSoft,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isDark
-                    ? Wallet.darkLine
-                    : const Color(0xFFE2E8F2),
+                color: Wallet.lineOf(isDark),
               ),
             ),
             child: Row(
@@ -1450,15 +1421,13 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                 Container(
                   padding: const EdgeInsets.all(9),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(isDark ? 0.18 : 0.08),
+                    color: Wallet.tintOf(isDark),
                     borderRadius: BorderRadius.circular(9),
                   ),
                   child: Icon(
                     Icons.business_outlined,
                     size: 20,
-                    color: isDark
-                        ? AppColors.primaryLight
-                        : AppColors.primary,
+                    color: Wallet.accentOf(isDark),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1473,18 +1442,14 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                           ? (isDark
                               ? Wallet.darkInk
                               : Wallet.ink)
-                          : (isDark
-                              ? Wallet.darkFaint
-                              : const Color(0xFFA3ADBD)),
+                          : (Wallet.faintOf(isDark)),
                     ),
                   ),
                 ),
                 Icon(
                   Icons.arrow_forward_ios,
                   size: 14,
-                  color: isDark
-                      ? const Color(0xFF7A8AA8)
-                      : const Color(0xFF9AA5B5),
+                  color: Wallet.faintOf(isDark),
                 ),
               ],
             ),

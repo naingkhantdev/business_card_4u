@@ -12,6 +12,7 @@ import 'network/consts.dart';
 import 'providers/locale/locale_provider.dart';
 import 'services/navigation/app_navigator.dart';
 import 'ui/theme/app_theme.dart';
+import 'ui/theme/app_typography.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -66,6 +67,9 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final locale = ref.watch(localeProvider);
+    // The themes below bake eyebrow styles (input labels, chips, tabs), so the
+    // script has to be known before they are built, not just in the builder.
+    AppTypography.setLocale(locale);
 
     return MaterialApp(
       navigatorKey: appNavigatorKey,
@@ -80,12 +84,28 @@ class MyApp extends ConsumerWidget {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       home: const AuthGate(),
       builder: (context, child) {
+        // The builder sits under Localizations, so this is the first place the
+        // resolved locale (including "follow the system") is known. Myanmar
+        // needs looser leading and no tracking; see AppTypography.
+        AppTypography.setLocale(Localizations.localeOf(context));
+        final theme = Theme.of(context);
+
         // Force font stack on all raw TextStyle across the app
-        return DefaultTextStyle(
+        final content = DefaultTextStyle(
           style: AppTheme.withFontStack(
-            Theme.of(context).textTheme.bodyMedium ?? const TextStyle(),
+            theme.textTheme.bodyMedium ?? const TextStyle(),
           ),
           child: child ?? const SizedBox.shrink(),
+        );
+
+        if (!AppTypography.isMyanmar) return content;
+        return Theme(
+          data: theme.copyWith(
+            textTheme: AppTypography.forScriptTheme(theme.textTheme),
+            primaryTextTheme:
+                AppTypography.forScriptTheme(theme.primaryTextTheme),
+          ),
+          child: content,
         );
       },
     );

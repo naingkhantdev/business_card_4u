@@ -21,7 +21,7 @@ class RegisterPage extends ConsumerStatefulWidget {
 
 class _RegisterPageState extends ConsumerState<RegisterPage> {
   static const _text = Wallet.ink;
-  static const _muted = Color(0xFF5B6473);
+  static const _muted = Wallet.muted;
 
   final _emailController = TextEditingController();
 
@@ -219,7 +219,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   Widget _emailField(AuthState authState, bool isDark) {
     final l10n = AppLocalizations.of(context)!;
     OutlineInputBorder outline(Color color, double width) => OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(Wallet.radiusControl),
           borderSide: BorderSide(color: color, width: width),
         );
 
@@ -334,7 +334,7 @@ class _BackButton extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(4, 8, 12, 8),
         minimumSize: const Size(0, 40),
         tapTargetSize: MaterialTapTargetSize.padded,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Wallet.radiusTile)),
       ),
       icon: const Icon(Icons.arrow_back_rounded, size: 18),
       label: Text(

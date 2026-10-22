@@ -14,6 +14,7 @@ import '../../data/vos/company_model.dart';
 import '../../utils/full_image_viewer.dart';
 import '../responsive/responsive.dart';
 import '../widgets/app_toast.dart';
+import '../theme/app_typography.dart';
 import '../theme/wallet_tokens.dart';
 import '../widgets/my_qr_panel.dart';
 import '../widgets/profession_picker.dart';
@@ -46,36 +47,9 @@ class CardDetailPage extends ConsumerStatefulWidget {
 
   const CardDetailPage({super.key, required this.card});
 
-  // Palette lives in Wallet so the list and this page cannot drift apart.
-  // These aliases keep the existing call sites unchanged.
-  static const primary = Wallet.accentLight;
-  static const secondary = Color(0xFFC4B5FD);
-  static const tertiary = Wallet.ground;
-
-  static const _ink = Wallet.ink;
-  static const _muted = Wallet.muted;
-  static const _primary = Wallet.accentLight;
-  static const _border = Wallet.line;
-  static const _accentSoft = Wallet.accentSoft;
-
-  static const _darkSurface = Wallet.darkSurface;
-  static const _darkBorder = Wallet.darkLine;
-  static const _darkInk = Wallet.darkInk;
-  static const _darkMuted = Wallet.darkMuted;
-  static const _accentDark = Wallet.accentDark;
-
-  static List<BoxShadow>? surfaceShadow(bool isDark) => Wallet.shadowOf(isDark);
-  static Color surface(bool isDark) => Wallet.surfaceOf(isDark);
-  static Color accent(bool isDark) => Wallet.accentOf(isDark);
-  static Color ink(bool isDark) => Wallet.inkOf(isDark);
-  static Color muted(bool isDark) => Wallet.mutedOf(isDark);
-  static Color faint(bool isDark) => Wallet.faintOf(isDark);
-  static Color line(bool isDark) => Wallet.lineOf(isDark);
-
   /// The page's only framing: a hairline, no shadow. Shadows on every block
   /// made the page read as a stack of floating cards rather than one sheet.
-  static Border hairline(bool isDark) =>
-      Border.all(color: isDark ? _darkBorder : line(isDark));
+  static Border hairline(bool isDark) => Wallet.borderOf(isDark);
 
   // Typography using desired stack (Helvetica Neue / Inter / Arial fallback)
   // These inherit the app's fontFamily + fallback from ThemeData
@@ -84,14 +58,14 @@ class CardDetailPage extends ConsumerStatefulWidget {
   static TextStyle bodyStyle(bool isDark) => TextStyle(
         fontSize: 15,
         fontWeight: FontWeight.w500,
-        color: isDark ? _darkInk : _ink,
+        color: isDark ? Wallet.darkInk : Wallet.ink,
         height: 1.55,
       );
 
   static TextStyle smallMutedStyle(bool isDark) => TextStyle(
         fontSize: 11,
         fontWeight: FontWeight.w500,
-        color: isDark ? _darkMuted : _muted,
+        color: isDark ? Wallet.darkMuted : Wallet.muted,
       );
 
   @override
@@ -168,16 +142,16 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
       // Landscape leaves a dialog only a couple of hundred points of height,
       // and AlertDialog does not scroll its content on its own.
       scrollable: true,
-      backgroundColor: isDark ? CardDetailPage._darkSurface : Colors.white,
-      surfaceTintColor: isDark ? CardDetailPage._darkSurface : Colors.white,
+      backgroundColor: Wallet.surfaceOf(isDark),
+      surfaceTintColor: Wallet.surfaceOf(isDark),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: isDark ? CardDetailPage._darkBorder : CardDetailPage._border),
+        side: BorderSide(color: isDark ? Wallet.darkLine : Wallet.line),
       ),
       title: Text(
         title,
         style: TextStyle(
-          color: isDark ? CardDetailPage._darkInk : CardDetailPage._ink,
+          color: isDark ? Wallet.darkInk : Wallet.ink,
           fontWeight: FontWeight.w700,
           fontSize: 16,
         ),
@@ -189,7 +163,7 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
           Text(
             content,
             style: TextStyle(
-              color: isDark ? CardDetailPage._darkMuted : CardDetailPage._muted,
+              color: isDark ? Wallet.darkMuted : Wallet.muted,
               height: 1.45,
               fontSize: 14,
             ),
@@ -205,7 +179,7 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
           onPressed: () => Navigator.pop(context, false),
           child: Text(
             AppLocalizations.of(context)!.cardDetailCancel,
-            style: TextStyle(color: isDark ? CardDetailPage._darkMuted : CardDetailPage._muted),
+            style: TextStyle(color: isDark ? Wallet.darkMuted : Wallet.muted),
           ),
         ),
         TextButton(
@@ -213,7 +187,7 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
           child: Text(
             confirmText,
             style: TextStyle(
-              color: destructive ? Colors.redAccent : CardDetailPage._primary,
+              color: destructive ? Wallet.danger : Wallet.accentOf(isDark),
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -260,13 +234,13 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
         expand: false,
         builder: (_, sc) => Container(
           decoration: BoxDecoration(
-            color: isDark ? CardDetailPage._darkSurface : Colors.white,
+            color: Wallet.surfaceOf(isDark),
             borderRadius:
                 const BorderRadius.vertical(top: Radius.circular(20)),
             border: Border.all(
               color: isDark
-                  ? CardDetailPage._darkBorder
-                  : CardDetailPage._border,
+                  ? Wallet.darkLine
+                  : Wallet.line,
             ),
           ),
           child: ListView(
@@ -279,8 +253,8 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                   height: 4,
                   decoration: BoxDecoration(
                     color: isDark
-                        ? CardDetailPage._darkBorder
-                        : CardDetailPage._border,
+                        ? Wallet.darkLine
+                        : Wallet.line,
                     borderRadius: BorderRadius.circular(100),
                   ),
                 ),
@@ -292,8 +266,8 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
                   color: isDark
-                      ? CardDetailPage._darkInk
-                      : CardDetailPage._ink,
+                      ? Wallet.darkInk
+                      : Wallet.ink,
                   letterSpacing: -0.3,
                 ),
                 textAlign: TextAlign.center,
@@ -346,12 +320,12 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
     // One plain sheet, not boxes on a tinted ground — sections are told apart
     // by their captions and hairlines alone.
     return Scaffold(
-      backgroundColor: CardDetailPage.surface(isDark),
+      backgroundColor: Wallet.surfaceOf(isDark),
       appBar: AppBar(
-        backgroundColor: CardDetailPage.surface(isDark),
+        backgroundColor: Wallet.surfaceOf(isDark),
         elevation: 0,
         scrolledUnderElevation: 0,
-        foregroundColor: isDark ? CardDetailPage._darkInk : CardDetailPage._ink,
+        foregroundColor: isDark ? Wallet.darkInk : Wallet.ink,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => Navigator.pop(context),
@@ -365,11 +339,11 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
               padding: const EdgeInsets.only(right: 8),
               child: PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert_rounded),
-                color: isDark ? CardDetailPage._darkSurface : Colors.white,
-                surfaceTintColor: isDark ? CardDetailPage._darkSurface : Colors.white,
+                color: Wallet.surfaceOf(isDark),
+                surfaceTintColor: Wallet.surfaceOf(isDark),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: isDark ? CardDetailPage._darkBorder : CardDetailPage._border),
+                  side: BorderSide(color: isDark ? Wallet.darkLine : Wallet.line),
                 ),
                 elevation: 2,
                 onSelected: (value) async {
@@ -441,18 +415,14 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                         children: [
                           Icon(Icons.qr_code_2_rounded,
                               size: 19,
-                              color: isDark
-                                  ? CardDetailPage._darkInk
-                                  : Colors.black87),
+                              color: Wallet.inkOf(isDark)),
                           const SizedBox(width: 12),
                           Text(
                             isMyProfileCard
                                 ? l10n.cardDetailShareMyCard
                                 : l10n.cardDetailShare,
                             style: TextStyle(
-                                color: isDark
-                                    ? CardDetailPage._darkInk
-                                    : Colors.black87),
+                                color: Wallet.inkOf(isDark)),
                           ),
                         ],
                       ),
@@ -464,16 +434,12 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                         children: [
                           Icon(Icons.edit_outlined,
                               size: 19,
-                              color: isDark
-                                  ? CardDetailPage._darkInk
-                                  : Colors.black87),
+                              color: Wallet.inkOf(isDark)),
                           const SizedBox(width: 12),
                           Text(
                             l10n.cardDetailEdit,
                             style: TextStyle(
-                                color: isDark
-                                    ? CardDetailPage._darkInk
-                                    : Colors.black87),
+                                color: Wallet.inkOf(isDark)),
                           ),
                         ],
                       ),
@@ -484,13 +450,13 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                       child: Row(
                         children: [
                           const Icon(Icons.delete_outline,
-                              size: 19, color: Colors.redAccent),
+                              size: 19, color: Wallet.danger),
                           const SizedBox(width: 12),
                           Text(
                             isMyProfileCard
                                 ? l10n.cardDetailDeactivateAccount
                                 : l10n.cardDetailDelete,
-                            style: const TextStyle(color: Colors.redAccent),
+                            style: const TextStyle(color: Wallet.danger),
                           ),
                         ],
                       ),
@@ -821,10 +787,10 @@ class _PremiumHero extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: isDark
-                ? CardDetailPage._accentDark.withOpacity(.16)
-                : CardDetailPage._accentSoft,
+                ? Wallet.accentDark.withOpacity(.16)
+                : Wallet.accentSoft,
             border: Border.all(
-              color: CardDetailPage.accent(isDark).withOpacity(.25),
+              color: Wallet.accentOf(isDark).withOpacity(.25),
               width: 1.5,
             ),
           ),
@@ -882,7 +848,7 @@ class _PremiumHero extends StatelessWidget {
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.45,
                               height: 1.15,
-                              color: CardDetailPage.ink(isDark),
+                              color: Wallet.inkOf(isDark),
                             ),
                           ),
                           if (subtitle.isNotEmpty) ...[
@@ -895,7 +861,7 @@ class _PremiumHero extends StatelessWidget {
                                 fontSize: 13,
                                 height: 1.3,
                                 fontWeight: FontWeight.w500,
-                                color: CardDetailPage.muted(isDark),
+                                color: Wallet.mutedOf(isDark),
                               ),
                             ),
                           ],
@@ -941,14 +907,14 @@ class _PremiumHero extends StatelessWidget {
                     l10n.cardDetailAddedOn(_formatDate(createdAt)),
                     style: TextStyle(
                       fontSize: 11,
-                      color: isDark ? Wallet.darkFaint : Colors.grey.shade400,
+                      color: Wallet.faintOf(isDark),
                     ),
                   ),
                 ],
               ],
             ),
           ),
-          Divider(height: 1, thickness: 1, color: CardDetailPage.line(isDark)),
+          Divider(height: 1, thickness: 1, color: Wallet.lineOf(isDark)),
         ],
       ),
     );
@@ -975,11 +941,11 @@ class _QuickActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = CardDetailPage.accent(isDark);
+    final accent = Wallet.accentOf(isDark);
     return Material(
       color: isDark
-          ? CardDetailPage._accentDark.withOpacity(.14)
-          : CardDetailPage._accentSoft,
+          ? Wallet.accentDark.withOpacity(.14)
+          : Wallet.accentSoft,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: action.onTap,
@@ -1022,17 +988,16 @@ class _Chip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
         decoration: BoxDecoration(
           color: isDark
-              ? CardDetailPage._accentDark.withOpacity(.14)
-              : CardDetailPage._accentSoft,
+              ? Wallet.accentDark.withOpacity(.14)
+              : Wallet.accentSoft,
           borderRadius: BorderRadius.circular(999),
         ),
         child: Text(
           label.toUpperCase(),
-          style: TextStyle(
+          style: AppTypography.eyebrow(
+            color: Wallet.accentOf(isDark),
             fontSize: 9,
             fontWeight: FontWeight.w700,
-            letterSpacing: 1.0,
-            color: CardDetailPage.accent(isDark),
           ),
         ),
       );
@@ -1049,16 +1014,16 @@ class _AvatarFallback extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         alignment: Alignment.center,
         color: isDark
-            ? CardDetailPage._accentDark.withOpacity(.16)
-            : CardDetailPage._accentSoft,
+            ? Wallet.accentDark.withOpacity(.16)
+            : Wallet.accentSoft,
         child: icon != null
-            ? Icon(icon, size: 26, color: CardDetailPage.accent(isDark))
+            ? Icon(icon, size: 26, color: Wallet.accentOf(isDark))
             : Text(
                 letter!,
                 style: TextStyle(
                   fontSize: 19,
                   fontWeight: FontWeight.w700,
-                  color: CardDetailPage.accent(isDark),
+                  color: Wallet.accentOf(isDark),
                 ),
               ),
       );
@@ -1076,11 +1041,10 @@ class _SectionLabel extends StatelessWidget {
         padding: const EdgeInsets.only(left: 2, bottom: 8),
         child: Text(
           title.toUpperCase(),
-          style: TextStyle(
+          style: AppTypography.eyebrow(
+            color: Wallet.faintOf(isDark),
             fontSize: 10,
             fontWeight: FontWeight.w700,
-            letterSpacing: 1.25,
-            color: CardDetailPage.faint(isDark),
           ),
         ),
       );
@@ -1117,7 +1081,7 @@ class _GroupCard extends StatelessWidget {
                 // clear the icon tile everywhere else, so it reads as
                 // continuing the same group rather than ending it.
                 indent: children[i] is _InlineHeader ? 0 : 32,
-                color: CardDetailPage.line(isDark),
+                color: Wallet.lineOf(isDark),
               ),
             children[i],
           ],
@@ -1153,7 +1117,7 @@ class _DetailRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: CardDetailPage.muted(isDark)),
+            Icon(icon, size: 18, color: Wallet.mutedOf(isDark)),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -1166,7 +1130,7 @@ class _DetailRow extends StatelessWidget {
                       fontWeight: FontWeight.w500,
                       letterSpacing: -0.1,
                       height: 1.3,
-                      color: CardDetailPage.ink(isDark),
+                      color: Wallet.inkOf(isDark),
                     ),
                   ),
                   const SizedBox(height: 1),
@@ -1174,7 +1138,7 @@ class _DetailRow extends StatelessWidget {
                     label,
                     style: TextStyle(
                       fontSize: 11.5,
-                      color: CardDetailPage.faint(isDark),
+                      color: Wallet.faintOf(isDark),
                     ),
                   ),
                 ],
@@ -1208,7 +1172,7 @@ class _PrimaryButton extends StatelessWidget {
     return Opacity(
       opacity: enabled ? 1 : .55,
       child: Material(
-        color: CardDetailPage.accent(isDark),
+        color: Wallet.accentOf(isDark),
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: onTap,
@@ -1265,12 +1229,12 @@ class _SecondaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = destructive
-        ? const Color(0xFFDC2626)
-        : CardDetailPage.ink(isDark);
+        ? Wallet.danger
+        : Wallet.inkOf(isDark);
     return Opacity(
       opacity: onTap == null ? .55 : 1,
       child: Material(
-        color: CardDetailPage.surface(isDark),
+        color: Wallet.surfaceOf(isDark),
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: onTap,
@@ -1589,7 +1553,7 @@ class _InlineHeader extends StatelessWidget {
             fontSize: 10,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.1,
-            color: CardDetailPage.faint(isDark),
+            color: Wallet.faintOf(isDark),
           ),
         ),
       );
@@ -1614,7 +1578,7 @@ class _InlineTextRow extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             height: 1.5,
-            color: CardDetailPage.muted(isDark),
+            color: Wallet.mutedOf(isDark),
           ),
         ),
       );
@@ -1646,7 +1610,7 @@ class _CompanyHeaderRow extends StatelessWidget {
         child: Row(
           children: [
             Icon(Icons.apartment_rounded,
-                size: 18, color: CardDetailPage.muted(isDark)),
+                size: 18, color: Wallet.mutedOf(isDark)),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -1659,7 +1623,7 @@ class _CompanyHeaderRow extends StatelessWidget {
                       fontWeight: FontWeight.w600,
                       letterSpacing: -0.2,
                       height: 1.3,
-                      color: CardDetailPage.ink(isDark),
+                      color: Wallet.inkOf(isDark),
                     ),
                   ),
                   if (meta.isNotEmpty) ...[
@@ -1668,7 +1632,7 @@ class _CompanyHeaderRow extends StatelessWidget {
                       meta,
                       style: TextStyle(
                         fontSize: 12,
-                        color: CardDetailPage.muted(isDark),
+                        color: Wallet.mutedOf(isDark),
                       ),
                     ),
                   ],
@@ -1677,7 +1641,7 @@ class _CompanyHeaderRow extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Icon(Icons.chevron_right_rounded,
-                size: 18, color: CardDetailPage.faint(isDark)),
+                size: 18, color: Wallet.faintOf(isDark)),
           ],
         ),
       ),
@@ -1791,7 +1755,7 @@ class _CardCarouselState extends State<_CardCarousel> {
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
-                  color: CardDetailPage.surface(isDark),
+                  color: Wallet.surfaceOf(isDark),
                   border: CardDetailPage.hairline(isDark),
                 ),
                 clipBehavior: Clip.antiAlias,
@@ -1799,10 +1763,10 @@ class _CardCarouselState extends State<_CardCarousel> {
                   image: _provider(entries[i].value),
                   fit: BoxFit.contain,
                   errorBuilder: (_, __, ___) => Container(
-                    color: CardDetailPage.surface(isDark),
+                    color: Wallet.surfaceOf(isDark),
                     alignment: Alignment.center,
                     child: Icon(Icons.broken_image_outlined,
-                        color: CardDetailPage.faint(isDark)),
+                        color: Wallet.faintOf(isDark)),
                   ),
                 ),
               ),
@@ -1822,8 +1786,8 @@ class _CardCarouselState extends State<_CardCarousel> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(999),
                     color: i == _index
-                        ? CardDetailPage.accent(isDark)
-                        : CardDetailPage.accent(isDark).withOpacity(.22),
+                        ? Wallet.accentOf(isDark)
+                        : Wallet.accentOf(isDark).withOpacity(.22),
                   ),
                 ),
               const Spacer(),
@@ -1835,7 +1799,7 @@ class _CardCarouselState extends State<_CardCarousel> {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 11,
-                    color: CardDetailPage.faint(isDark),
+                    color: Wallet.faintOf(isDark),
                   ),
                 ),
               ),

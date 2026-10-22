@@ -143,7 +143,7 @@ class NeumorphicField extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AuthWebCard._ground,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(Wallet.radiusControl),
         boxShadow: const [
           BoxShadow(
             color: AuthWebCard._shadowDark,
@@ -179,15 +179,15 @@ class NeumorphicField extends StatelessWidget {
           suffixIcon: suffix,
           filled: false,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(Wallet.radiusControl),
             borderSide: BorderSide.none,
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(Wallet.radiusControl),
             borderSide: const BorderSide(color: AppColors.primary, width: 1.2),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(Wallet.radiusControl),
             borderSide: BorderSide.none,
           ),
         ),
@@ -217,7 +217,7 @@ class NeumorphicButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: disabled ? null : onPressed,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(Wallet.radiusControl),
         child: Container(
           width: double.infinity,
           height: 52,
@@ -226,7 +226,7 @@ class NeumorphicButton extends StatelessWidget {
             color: disabled
                 ? AppColors.primary.withOpacity(.5)
                 : AppColors.primary,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(Wallet.radiusControl),
             boxShadow: disabled
                 ? null
                 : [

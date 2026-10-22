@@ -79,14 +79,14 @@ class _ScanPageState extends ConsumerState<ScanPage> {
         title: Text(
           AppLocalizations.of(context)!.scanPageTitle,
           style: TextStyle(
-            color: isDark ? Colors.white : Wallet.ink,
+            color: Wallet.inkOf(isDark),
             fontWeight: FontWeight.w800,
           ),
         ),
         backgroundColor: isDark ? Wallet.darkGround : Colors.white,
         elevation: 0,
         surfaceTintColor: isDark ? Wallet.darkGround : Colors.white,
-        iconTheme: IconThemeData(color: isDark ? Colors.white : Colors.black87),
+        iconTheme: IconThemeData(color: Wallet.inkOf(isDark)),
       ),
       body: Stack(
         children: [
@@ -100,10 +100,10 @@ class _ScanPageState extends ConsumerState<ScanPage> {
               height: frameSize,
               decoration: BoxDecoration(
                 border: Border.all(
-                  color: isDark ? Colors.white : const Color(0xFFDBE4F5),
+                  color: Colors.white,
                   width: 2,
                 ),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(Wallet.radiusCard),
                 boxShadow: isDark
                     ? [
                         BoxShadow(

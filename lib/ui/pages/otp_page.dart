@@ -10,7 +10,7 @@ import '../../providers/auth/auth_provider.dart';
 import '../../utils/app_result.dart';
 import '../responsive/auth_web_card.dart';
 import '../responsive/responsive.dart';
-import '../theme/app_colors.dart';
+import '../theme/glass.dart';
 import '../widgets/app_primary_button.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/loading_view.dart';
@@ -162,7 +162,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
       backgroundColor: Wallet.groundOf(isDark),
       body: Stack(
         children: [
-          _PremiumBackground(isDark: isDark),
+          const Positioned.fill(child: GlassBackdrop()),
 
           SafeArea(
             child: GestureDetector(
@@ -252,7 +252,8 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                             loading: authState.isLoading,
                             onPressed: authState.isLoading ? null : _verifyOtp,
                             height: 54,
-                            borderRadius: BorderRadius.circular(18),
+                            borderRadius:
+                                BorderRadius.circular(Wallet.radiusControl),
                             fontSize: 15.5,
                           ),
 
@@ -348,7 +349,7 @@ class _OtpPageState extends ConsumerState<OtpPage> {
         const SizedBox(height: 8),
         Text(
           l10n.otpPageSentCodeTo,
-          style: TextStyle(fontSize: 14, color: Colors.black.withOpacity(.55)),
+          style: const TextStyle(fontSize: 14, color: Wallet.muted),
         ),
         const SizedBox(height: 4),
         Text(
@@ -386,8 +387,8 @@ class _OtpPageState extends ConsumerState<OtpPage> {
               style: TextStyle(
                 fontWeight: FontWeight.w500,
                 color: (_secondsRemaining == 0 && !authState.isLoading)
-                    ? const Color(0xFF1E3C72)
-                    : Colors.black.withOpacity(.35),
+                    ? Wallet.accentLight
+                    : Wallet.faint,
               ),
             ),
           ),
@@ -395,16 +396,16 @@ class _OtpPageState extends ConsumerState<OtpPage> {
         const SizedBox(height: 18),
         Row(
           children: [
-            Icon(Icons.lock_outline_rounded,
-                size: 18, color: Colors.black.withOpacity(.45)),
+            const Icon(Icons.lock_outline_rounded,
+                size: 18, color: Wallet.faint),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 l10n.otpPageFooterTip,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 12.5,
                   height: 1.35,
-                  color: Colors.black.withOpacity(.50),
+                  color: Wallet.muted,
                 ),
               ),
             ),
@@ -417,71 +418,8 @@ class _OtpPageState extends ConsumerState<OtpPage> {
 
 /* ===================== Premium UI Widgets ===================== */
 
-class _PremiumBackground extends StatelessWidget {
-  final bool isDark;
-  const _PremiumBackground({required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // Base
-        Container(color: Wallet.groundOf(isDark)),
-
-        // Gradient blobs. The third one was a plain white glow — fine
-        // floating over a light ground, a stray bright patch over a dark
-        // one — so dark mode gets a second accent-tinted blob instead.
-        Positioned(
-          top: -120,
-          left: -60,
-          child: _BlurBlob(
-            size: 260,
-            color: AppColors.secondary.withOpacity(isDark ? .16 : .22),
-          ),
-        ),
-        Positioned(
-          bottom: -140,
-          right: -80,
-          child: _BlurBlob(
-            size: 320,
-            color: isDark
-                ? Wallet.accentDark.withOpacity(.14)
-                : AppColors.secondaryLight.withOpacity(.18),
-          ),
-        ),
-        Positioned(
-          top: 220,
-          right: -40,
-          child: _BlurBlob(
-            size: 180,
-            color: isDark
-                ? Wallet.accentDark.withOpacity(.10)
-                : Colors.white.withOpacity(.35),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _BlurBlob extends StatelessWidget {
-  final double size;
-  final Color color;
-  const _BlurBlob({required this.size, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return ImageFiltered(
-      imageFilter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      ),
-    );
-  }
-}
-
+/// The form's surface. Opaque on purpose: glass is reserved for what floats
+/// above the page (see `glass.dart`), and this card is the page's content.
 class _GlassCard extends StatelessWidget {
   final Widget child;
   final bool isDark;
@@ -489,31 +427,15 @@ class _GlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(26),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(26),
-            color: (isDark ? Wallet.darkSurface : Colors.white)
-                .withOpacity(.75),
-            // A faint white rim reads as a glass highlight in both modes —
-            // just far fainter in dark, where a bright rim would look like a
-            // stray outline rather than a highlight.
-            border: Border.all(color: Colors.white.withOpacity(isDark ? .10 : .55)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(isDark ? .28 : .08),
-                blurRadius: 24,
-                offset: const Offset(0, 14),
-              ),
-            ],
-          ),
-          child: child,
-        ),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(Wallet.radiusPanel),
+        color: Wallet.surfaceOf(isDark),
+        border: Wallet.borderOf(isDark),
+        boxShadow: Wallet.shadowOf(isDark),
       ),
+      child: child,
     );
   }
 }
@@ -532,21 +454,14 @@ class _CircleIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(Wallet.radiusControl),
       child: Container(
-        width: 44,
-        height: 44,
+        width: 48,
+        height: 48,
         decoration: BoxDecoration(
-          color: (isDark ? Wallet.darkSurface : Colors.white).withOpacity(.75),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withOpacity(isDark ? .10 : .6)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isDark ? .3 : .06),
-              blurRadius: 18,
-              offset: const Offset(0, 10),
-            ),
-          ],
+          color: Wallet.surfaceOf(isDark),
+          borderRadius: BorderRadius.circular(Wallet.radiusControl),
+          border: Wallet.borderOf(isDark),
         ),
         child: Icon(icon, color: Wallet.inkOf(isDark)),
       ),
@@ -569,9 +484,9 @@ class _TimerPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: (isDark ? Wallet.darkSurface : Colors.white).withOpacity(.75),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withOpacity(isDark ? .10 : .6)),
+        color: Wallet.surfaceOf(isDark),
+        borderRadius: BorderRadius.circular(Wallet.radiusControl),
+        border: Wallet.borderOf(isDark),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -579,14 +494,14 @@ class _TimerPill extends StatelessWidget {
           Icon(
             Icons.timer_outlined,
             size: 18,
-            color: isExpired ? AppColors.errorBg : AppColors.secondary,
+            color: isExpired ? Wallet.danger : Wallet.accentOf(isDark),
           ),
           const SizedBox(width: 8),
           Text(
             timeText,
             style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: isExpired ? AppColors.errorBg : AppColors.secondary,
+              color: isExpired ? Wallet.danger : Wallet.accentOf(isDark),
             ),
           ),
         ],
@@ -612,7 +527,7 @@ class _LoadingGlassOverlay extends StatelessWidget {
               decoration: BoxDecoration(
                 color: (isDark ? Wallet.darkSurface : Colors.white)
                     .withOpacity(.88),
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(Wallet.radiusControl),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(isDark ? .35 : .12),
@@ -735,22 +650,14 @@ class _OtpPinFieldState extends State<_OtpPinField> {
                   height: boxHeight,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: (isDark ? Wallet.darkSurface : Colors.white)
-                        .withOpacity(.85),
-                    borderRadius: BorderRadius.circular(16),
+                    color: Wallet.surfaceOf(isDark),
+                    borderRadius: BorderRadius.circular(Wallet.radiusControl),
                     border: Border.all(
                       color: isActive
                           ? Wallet.accentOf(isDark)
                           : Wallet.lineOf(isDark),
                       width: isActive ? 1.6 : 1,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(isDark ? .3 : .06),
-                        blurRadius: 14,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
                   ),
                   child: Text(
                     char.isEmpty ? "•" : char,

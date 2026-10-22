@@ -270,15 +270,15 @@ class _CardPageState extends ConsumerState<CardPage>
       child: Container(
         padding: const EdgeInsets.fromLTRB(10, 6, 6, 6),
         decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(isDark ? .16 : .08),
+          color: Wallet.accentOf(isDark).withOpacity(isDark ? .16 : .08),
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: AppColors.primary.withOpacity(.35)),
+          border: Border.all(color: Wallet.accentOf(isDark).withOpacity(.35)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.apartment_rounded,
-                size: 13, color: AppColors.primary),
+                size: 13, color: Wallet.accentOf(isDark)),
             const SizedBox(width: 6),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 160),
@@ -289,7 +289,7 @@ class _CardPageState extends ConsumerState<CardPage>
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : AppColors.primary,
+                  color: Wallet.accentOf(isDark),
                 ),
               ),
             ),
@@ -302,11 +302,11 @@ class _CardPageState extends ConsumerState<CardPage>
               child: Container(
                 padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(.18),
+                  color: Wallet.accentOf(isDark).withOpacity(.18),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.close_rounded,
-                    size: 11, color: AppColors.primary),
+                child: Icon(Icons.close_rounded,
+                    size: 11, color: Wallet.accentOf(isDark)),
               ),
             ),
           ],
@@ -372,14 +372,14 @@ class _CardPageState extends ConsumerState<CardPage>
       int? count,
     }) {
       final fg = selected
-          ? Colors.white
+          ? Wallet.onAccentOf(isDark)
           : (isDark ? Wallet.darkInk : Wallet.ink);
       return Padding(
         padding: const EdgeInsets.only(right: 8),
         child: Material(
           color: selected
-              ? AppColors.primary
-              : (isDark ? Wallet.darkSurface : Colors.white),
+              ? Wallet.accentOf(isDark)
+              : (Wallet.surfaceOf(isDark)),
           borderRadius: BorderRadius.circular(999),
           child: InkWell(
             onTap: onTap,
@@ -390,10 +390,8 @@ class _CardPageState extends ConsumerState<CardPage>
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(
                   color: selected
-                      ? AppColors.primary
-                      : (isDark
-                          ? Wallet.darkLine
-                          : Colors.grey.withOpacity(.2)),
+                      ? Wallet.accentOf(isDark)
+                      : (Wallet.lineOf(isDark)),
                 ),
               ),
               child: Row(
@@ -417,8 +415,8 @@ class _CardPageState extends ConsumerState<CardPage>
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: selected
-                            ? Colors.white.withOpacity(.8)
-                            : (isDark ? Wallet.darkFaint : Colors.grey.shade500),
+                            ? Wallet.onAccentOf(isDark).withOpacity(.8)
+                            : (Wallet.faintOf(isDark)),
                       ),
                     ),
                   ],
@@ -471,10 +469,10 @@ class _CardPageState extends ConsumerState<CardPage>
   Widget _buildFilterProgress() => SizedBox(
         height: 2,
         child: _isFiltering
-            ? const LinearProgressIndicator(
+            ? LinearProgressIndicator(
                 minHeight: 2,
                 backgroundColor: Colors.transparent,
-                color: AppColors.primary,
+                color: Wallet.accentOf(Theme.of(context).brightness == Brightness.dark),
               )
             : null,
       );
@@ -520,14 +518,12 @@ class _CardPageState extends ConsumerState<CardPage>
                 height: 80,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isDark
-                      ? Wallet.darkSurface
-                      : AppColors.primary.withOpacity(.07),
+                  color: Wallet.tintOf(isDark),
                 ),
                 child: Icon(
                   hasActiveFilter ? Icons.filter_list_off_rounded : Icons.style_outlined,
                   size: 36,
-                  color: AppColors.primary.withOpacity(.5),
+                  color: Wallet.accentOf(isDark).withOpacity(.5),
                 ),
               ),
               const SizedBox(height: 16),
@@ -546,7 +542,7 @@ class _CardPageState extends ConsumerState<CardPage>
                 subtitle,
                 style: TextStyle(
                   fontSize: 13,
-                  color: isDark ? Wallet.darkFaint : Colors.black38,
+                  color: Wallet.faintOf(isDark),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -626,9 +622,9 @@ class _CardPageState extends ConsumerState<CardPage>
             return Container(
               decoration: BoxDecoration(
                 color:
-                    isDark ? Wallet.darkGround : const Color(0xFFF4F7FB),
+                    Wallet.groundOf(isDark),
                 borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(28)),
+                    const BorderRadius.vertical(top: Radius.circular(Wallet.radiusPanel)),
               ),
               child: ListView(
                 controller: scrollController,
@@ -639,9 +635,7 @@ class _CardPageState extends ConsumerState<CardPage>
                       width: 48,
                       height: 5,
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? Wallet.darkLine
-                            : const Color(0xFFD5DDEA),
+                        color: Wallet.lineOf(isDark),
                         borderRadius: BorderRadius.circular(999),
                       ),
                     ),
@@ -664,7 +658,7 @@ class _CardPageState extends ConsumerState<CardPage>
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13.5,
-                      color: isDark ? Wallet.darkMuted : Colors.black54,
+                      color: Wallet.mutedOf(isDark),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -720,9 +714,10 @@ class _CardPageState extends ConsumerState<CardPage>
     final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDark ? Wallet.darkSurface : Colors.white,
+      backgroundColor: Wallet.surfaceOf(isDark),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(Wallet.radiusPanel)),
       ),
       // Scroll-controlled, or the default 9/16-of-the-screen cap cuts this off
       // in landscape.
@@ -737,7 +732,7 @@ class _CardPageState extends ConsumerState<CardPage>
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: isDark ? Wallet.darkLine : Colors.grey[300],
+                  color: Wallet.lineOf(isDark),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -762,9 +757,7 @@ class _CardPageState extends ConsumerState<CardPage>
                       l10n.cardPageAddACardSubtitle,
                       style: TextStyle(
                         fontSize: 13,
-                        color: isDark
-                            ? Wallet.darkMuted
-                            : Colors.grey[600],
+                        color: Wallet.mutedOf(isDark),
                       ),
                     ),
                   ],
@@ -782,13 +775,13 @@ class _CardPageState extends ConsumerState<CardPage>
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
+                      color: Wallet.accentOf(isDark),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.document_scanner_outlined,
-                            color: Colors.white),
+                        Icon(Icons.document_scanner_outlined,
+                            color: Wallet.onAccentOf(isDark)),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Column(
@@ -796,8 +789,8 @@ class _CardPageState extends ConsumerState<CardPage>
                             children: [
                               Text(
                                 l10n.cardPageScanBusinessCard,
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: Wallet.onAccentOf(isDark),
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -805,16 +798,16 @@ class _CardPageState extends ConsumerState<CardPage>
                               const SizedBox(height: 2),
                               Text(
                                 l10n.cardPageScanFastestSubtitle,
-                                style: const TextStyle(
-                                  color: Colors.white70,
+                                style: TextStyle(
+                                  color: Wallet.onAccentOf(isDark).withOpacity(.75),
                                   fontSize: 12,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const Icon(Icons.arrow_forward_ios,
-                            size: 14, color: Colors.white),
+                        Icon(Icons.arrow_forward_ios,
+                            size: 14, color: Wallet.onAccentOf(isDark)),
                       ],
                     ),
                   ),
@@ -824,7 +817,7 @@ class _CardPageState extends ConsumerState<CardPage>
               ListTile(
                 leading: Icon(
                   Icons.edit_note,
-                  color: isDark ? Wallet.darkMuted : Colors.grey[600],
+                  color: Wallet.mutedOf(isDark),
                 ),
                 title: Text(l10n.cardPageEnterDetailsManually),
                 onTap: () {
@@ -907,9 +900,10 @@ class _CardPageState extends ConsumerState<CardPage>
     final l10n = AppLocalizations.of(context)!;
     final wantsBack = await showModalBottomSheet<bool>(
       context: context,
-      backgroundColor: isDark ? Wallet.darkSurface : Colors.white,
+      backgroundColor: Wallet.surfaceOf(isDark),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(Wallet.radiusPanel)),
       ),
       // See above: the default sheet cap is too short for this in landscape.
       isScrollControlled: true,
@@ -923,7 +917,7 @@ class _CardPageState extends ConsumerState<CardPage>
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: isDark ? Wallet.darkLine : Colors.grey[300],
+                  color: Wallet.lineOf(isDark),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -935,8 +929,8 @@ class _CardPageState extends ConsumerState<CardPage>
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.check_circle,
-                            size: 16, color: AppColors.primary),
+                        Icon(Icons.check_circle,
+                            size: 16, color: Wallet.accentOf(isDark)),
                         const SizedBox(width: 6),
                         Text(
                           l10n.cardPageFrontCapturedLabel,
@@ -944,9 +938,7 @@ class _CardPageState extends ConsumerState<CardPage>
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.3,
-                            color: isDark
-                                ? Wallet.darkMuted
-                                : Colors.grey[600],
+                            color: Wallet.mutedOf(isDark),
                           ),
                         ),
                       ],
@@ -967,9 +959,7 @@ class _CardPageState extends ConsumerState<CardPage>
                       l10n.cardPageAddBackSubtitle,
                       style: TextStyle(
                         fontSize: 13,
-                        color: isDark
-                            ? Wallet.darkMuted
-                            : Colors.grey[600],
+                        color: Wallet.mutedOf(isDark),
                       ),
                     ),
                   ],
@@ -984,12 +974,12 @@ class _CardPageState extends ConsumerState<CardPage>
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
+                      color: Wallet.accentOf(isDark),
                       borderRadius: BorderRadius.circular(14),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.flip_to_back, color: Colors.white),
+                        Icon(Icons.flip_to_back, color: Wallet.onAccentOf(isDark)),
                         const SizedBox(width: 14),
                         Expanded(
                           child: Column(
@@ -997,8 +987,8 @@ class _CardPageState extends ConsumerState<CardPage>
                             children: [
                               Text(
                                 l10n.cardPageScanBackTooTitle,
-                                style: const TextStyle(
-                                  color: Colors.white,
+                                style: TextStyle(
+                                  color: Wallet.onAccentOf(isDark),
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -1006,16 +996,16 @@ class _CardPageState extends ConsumerState<CardPage>
                               const SizedBox(height: 2),
                               Text(
                                 l10n.cardPageScanBackTooSubtitle,
-                                style: const TextStyle(
-                                  color: Colors.white70,
+                                style: TextStyle(
+                                  color: Wallet.onAccentOf(isDark).withOpacity(.75),
                                   fontSize: 12,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const Icon(Icons.arrow_forward_ios,
-                            size: 14, color: Colors.white),
+                        Icon(Icons.arrow_forward_ios,
+                            size: 14, color: Wallet.onAccentOf(isDark)),
                       ],
                     ),
                   ),
@@ -1025,7 +1015,7 @@ class _CardPageState extends ConsumerState<CardPage>
               ListTile(
                 leading: Icon(
                   Icons.skip_next_outlined,
-                  color: isDark ? Wallet.darkMuted : Colors.grey[600],
+                  color: Wallet.mutedOf(isDark),
                 ),
                 title: Text(l10n.cardPageSkipFrontOnly),
                 onTap: () => Navigator.of(sheetContext).pop(false),
@@ -1084,9 +1074,10 @@ class _CardPageState extends ConsumerState<CardPage>
     final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDark ? Wallet.darkSurface : Colors.white,
+      backgroundColor: Wallet.surfaceOf(isDark),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(Wallet.radiusPanel)),
       ),
       // Two tiles with subtitles are taller than the default sheet cap allows
       // in landscape.
@@ -1098,7 +1089,7 @@ class _CardPageState extends ConsumerState<CardPage>
               children: [
                 ListTile(
                   leading:
-                      const Icon(Icons.qr_code_scanner, color: AppColors.primary),
+                      Icon(Icons.qr_code_scanner, color: Wallet.accentOf(isDark)),
                   title: Text(
                     l10n.cardPageScanQrCodeTitle,
                     style: TextStyle(
@@ -1110,7 +1101,7 @@ class _CardPageState extends ConsumerState<CardPage>
                   subtitle: Text(
                     l10n.cardPageScanQrCodeSubtitle,
                     style: TextStyle(
-                      color: isDark ? Wallet.darkMuted : Colors.black54,
+                      color: Wallet.mutedOf(isDark),
                     ),
                   ),
                   onTap: () {
@@ -1122,7 +1113,7 @@ class _CardPageState extends ConsumerState<CardPage>
                   },
                 ),
                 ListTile(
-                  leading: const Icon(Icons.search, color: AppColors.primary),
+                  leading: Icon(Icons.search, color: Wallet.accentOf(isDark)),
                   title: Text(
                     l10n.cardPageSearchUsersTitle,
                     style: TextStyle(
@@ -1134,7 +1125,7 @@ class _CardPageState extends ConsumerState<CardPage>
                   subtitle: Text(
                     l10n.cardPageSearchUsersSubtitle,
                     style: TextStyle(
-                      color: isDark ? Wallet.darkMuted : Colors.black54,
+                      color: Wallet.mutedOf(isDark),
                     ),
                   ),
                   onTap: () {
@@ -1295,7 +1286,7 @@ class _CardPageState extends ConsumerState<CardPage>
         elevation: 0,
         scrolledUnderElevation: 0,
         iconTheme: IconThemeData(
-          color: isDark ? Colors.white : Colors.black87,
+          color: Wallet.inkOf(isDark),
         ),
         title: RichText(
           text: TextSpan(
@@ -1303,12 +1294,12 @@ class _CardPageState extends ConsumerState<CardPage>
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : Wallet.ink,
+              color: Wallet.inkOf(isDark),
             ),
-            children: const [
+            children: [
               TextSpan(
                 text: "4U",
-                style: TextStyle(color: AppColors.primary),
+                style: TextStyle(color: Wallet.accentOf(isDark)),
               ),
             ],
           ),
@@ -1319,9 +1310,7 @@ class _CardPageState extends ConsumerState<CardPage>
             decoration: BoxDecoration(
               border: Border(
                 bottom: BorderSide(
-                  color: isDark
-                      ? Colors.white.withOpacity(.06)
-                      : Colors.black.withOpacity(.06),
+                  color: Wallet.lineOf(isDark),
                 ),
               ),
             ),
@@ -1333,9 +1322,9 @@ class _CardPageState extends ConsumerState<CardPage>
               tabAlignment: TabAlignment.start,
               padding: const EdgeInsets.symmetric(horizontal: 12),
               labelPadding: const EdgeInsets.symmetric(horizontal: 18),
-              labelColor: AppColors.primary,
+              labelColor: Wallet.accentOf(isDark),
               unselectedLabelColor:
-                  isDark ? Wallet.darkFaint : Colors.grey,
+                  Wallet.faintOf(isDark),
               labelStyle: const TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 13.5,
@@ -1346,7 +1335,7 @@ class _CardPageState extends ConsumerState<CardPage>
               ),
               indicator: BoxDecoration(
                 borderRadius: BorderRadius.circular(999),
-                color: AppColors.primary.withOpacity(.12),
+                color: Wallet.accentOf(isDark).withOpacity(.12),
               ),
               indicatorSize: TabBarIndicatorSize.tab,
               // The pill spans nearly the whole tab, so the label has ~16px
@@ -1367,7 +1356,7 @@ class _CardPageState extends ConsumerState<CardPage>
             onPressed: () => _showMyQrCode(context, myProfileCard),
             icon: Icon(
               Icons.qr_code_2_rounded,
-              color: isDark ? Colors.white : Colors.black87,
+              color: Wallet.inkOf(isDark),
             ),
             tooltip: l10n.cardPageMyQrCodeTitle,
           ),
@@ -1398,7 +1387,7 @@ class _CardPageState extends ConsumerState<CardPage>
                   },
                   child: Icon(
                     Icons.notifications_none_rounded,
-                    color: isDark ? Colors.white : Colors.black87,
+                    color: Wallet.inkOf(isDark),
                   ),
                 ),
                 if (notificationCount > 0)
@@ -1409,7 +1398,7 @@ class _CardPageState extends ConsumerState<CardPage>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 5, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.redAccent,
+                        color: Wallet.danger,
                         borderRadius: BorderRadius.circular(999),
                         border: Border.all(
                           color:
@@ -1452,20 +1441,18 @@ class _CardPageState extends ConsumerState<CardPage>
                     duration: const Duration(milliseconds: 200),
                     height: 48,
                     decoration: BoxDecoration(
-                      color: isDark ? Wallet.darkSurface : Colors.white,
+                      color: Wallet.surfaceOf(isDark),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: _isSearchFocused
-                            ? AppColors.primary.withOpacity(.5)
-                            : (isDark
-                                ? Wallet.darkLine
-                                : Colors.grey.withOpacity(.12)),
+                            ? Wallet.accentOf(isDark).withOpacity(.5)
+                            : (Wallet.lineOf(isDark)),
                         width: _isSearchFocused ? 1.5 : 1,
                       ),
                       boxShadow: [
                         BoxShadow(
                           color: _isSearchFocused
-                              ? AppColors.primary.withOpacity(.08)
+                              ? Wallet.accentOf(isDark).withOpacity(.08)
                               : Colors.black.withOpacity(isDark ? .18 : .05),
                           blurRadius: _isSearchFocused ? 20 : 16,
                           offset: const Offset(0, 4),
@@ -1484,10 +1471,8 @@ class _CardPageState extends ConsumerState<CardPage>
                             key: ValueKey(_isSearchFocused),
                             size: 20,
                             color: _isSearchFocused
-                                ? AppColors.primary
-                                : (isDark
-                                    ? Wallet.darkFaint
-                                    : Colors.grey.shade400),
+                                ? Wallet.accentOf(isDark)
+                                : (Wallet.faintOf(isDark)),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -1504,9 +1489,7 @@ class _CardPageState extends ConsumerState<CardPage>
                             decoration: InputDecoration(
                               hintText: l10n.cardPageSearchHint,
                               hintStyle: TextStyle(
-                                color: isDark
-                                    ? Wallet.darkFaint
-                                    : Colors.grey.shade400,
+                                color: Wallet.faintOf(isDark),
                                 fontSize: 14.5,
                               ),
                               // The app-wide InputDecorationTheme draws its
@@ -1542,16 +1525,12 @@ class _CardPageState extends ConsumerState<CardPage>
                                 height: 20,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: isDark
-                                      ? Wallet.darkLine
-                                      : Colors.grey.shade200,
+                                  color: isDark ? Wallet.darkLine : Wallet.iconSoft,
                                 ),
                                 child: Icon(
                                   Icons.close,
                                   size: 13,
-                                  color: isDark
-                                      ? Wallet.darkMuted
-                                      : Colors.grey.shade600,
+                                  color: Wallet.mutedOf(isDark),
                                 ),
                               ),
                             ),
@@ -1609,13 +1588,13 @@ class _CardPageState extends ConsumerState<CardPage>
       ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'action_fab',
-        backgroundColor: AppColors.primary,
+        backgroundColor: Wallet.accentOf(isDark),
         elevation: 4,
-        icon: const Icon(Icons.add, color: Colors.white),
+        icon: Icon(Icons.add, color: Wallet.onAccentOf(isDark)),
         label: Text(
           _tabController?.index == 0 ? l10n.cardPageAddFriendFabLabel : l10n.cardPageNewCardFabLabel,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: Wallet.onAccentOf(isDark),
             fontWeight: FontWeight.w700,
             fontSize: 14,
           ),
@@ -1716,7 +1695,7 @@ class _CompanyFilterSheetState extends State<_CompanyFilterSheet> {
       constraints: BoxConstraints(maxHeight: maxHeight),
       decoration: BoxDecoration(
         color: Wallet.surfaceOf(isDark),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(Wallet.radiusPanel)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
