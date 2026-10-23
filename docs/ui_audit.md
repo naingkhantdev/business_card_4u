@@ -306,3 +306,11 @@ Drafted alongside Phase 3 changes. Each is live in `lib/l10n/app_my.arb`; replac
 | `addCardDiscardBodyGeneric` | What you've entered will be lost. This can't be undone. | ထည့်သွင်းထားသမျှ ပျောက်ဆုံးသွားပါမည်။ ပြန်ယူ၍ မရပါ။ | ☐ |
 | `addCardKeepEditing` | Keep Editing | ဆက်လက်ပြင်ဆင်မည် | ☐ |
 | `addCardDiscard` | Discard | စွန့်ပစ်မည် | ☐ |
+| `addCardPhoneHint` | e.g. 09 123 456 789 | ဥပမာ- 09 123 456 789 | ☐ |
+| `addCardEmailHint` | e.g. mail@example.com | ဥပမာ- mail@example.com | ☐ |
+| `addCardAddPhone` | Add another phone | ဖုန်းနံပါတ် ထပ်ထည့်မည် | ☐ |
+| `addCardAddEmail` | Add another email | အီးမေးလ် ထပ်ထည့်မည် | ☐ |
+| `addCardAddNote` | Add a note | မှတ်စု ထည့်မည် | ☐ |
+| `addCardRemove` | Remove | ဖယ်ရှားမည် | ☐ |
+| `addCardReviewScannedFields` | Review {count} scanned fields | စကင်ဖတ်ထားသော အကွက် {count} ခုကို စစ်ဆေးပါ | ☐ |
+| `addCardReviewScannedFieldsSubtitle` | Read from the photo. Highlighted fields below are worth a quick check before you save. | ဓာတ်ပုံမှ ဖတ်ယူထားသည်။ မသိမ်းမီ အောက်ပါ အရောင်ပြထားသော အကွက်များကို စစ်ဆေးပါ။ | ☐ |

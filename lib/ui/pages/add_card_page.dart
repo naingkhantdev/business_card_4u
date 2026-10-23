@@ -61,10 +61,18 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
 
   final _nameCtrl = TextEditingController();
   final _positionCtrl = TextEditingController();
-  final _phonesCtrl = TextEditingController();
-  final _emailsCtrl = TextEditingController();
+  // One field per value, each with the right keyboard. There is always at
+  // least one of each, so the first is visible without a tap.
+  final List<TextEditingController> _phoneCtrls = [TextEditingController()];
+  final List<TextEditingController> _emailCtrls = [TextEditingController()];
+
+  /// Empty until the user adds an address or a scan finds one; the section
+  /// shows a single "Add address" row in the meantime.
   final List<_AddressEntry> _addressEntries = [];
   final _bioCtrl = TextEditingController();
+
+  /// The note field stays a one-line "Add note" row until it's wanted.
+  bool _showBio = false;
   final _profileImageCtrl = TextEditingController();
   int? _selectedCompanyId;
   String? _selectedCompanyName;
@@ -143,12 +151,13 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
       _nameCtrl.text = c.fullName;
       _positionCtrl.text = c.position;
       _profession = c.profession;
-      _phonesCtrl.text = c.phones.join(', ');
-      _emailsCtrl.text = c.emails.join(', ');
+      _setValues(_phoneCtrls, c.phones);
+      _setValues(_emailCtrls, c.emails);
       for (final address in c.addresses) {
         _addressEntries.add(_AddressEntry.fromModel(address));
       }
       _bioCtrl.text = c.bio ?? '';
+      _showBio = _bioCtrl.text.trim().isNotEmpty;
       _profileImageCtrl.text = c.profileImage ?? '';
       _frontImageUrl = ImageUrl.resolve(c.frontImage);
       _backImageUrl = ImageUrl.resolve(c.backImage);
@@ -163,13 +172,10 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         if (currentUser != null) {
           _nameCtrl.text = currentUser.name;
           if (currentUser.email != null) {
-            _emailsCtrl.text = currentUser.email!;
+            _emailCtrls.first.text = currentUser.email!;
           }
         }
       }
-    }
-    if (_addressEntries.isEmpty) {
-      _addressEntries.add(_AddressEntry());
     }
     // Taken before the scan's photos and fields are applied: those are work
     // the user would lose too.
@@ -218,17 +224,35 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
 
     fill('name', _nameCtrl, data.name);
     fill('position', _positionCtrl, data.position);
-    fill('phones', _phonesCtrl, data.phones.join(', '));
-    fill('emails', _emailsCtrl, data.emails.join(', '));
+    // A list is filled only when every field in it is still blank, so a
+    // rescan never mixes scanned numbers in among typed ones.
+    void fillList(String prefix, List<TextEditingController> ctrls,
+        List<String> values) {
+      final clean =
+          values.map((v) => v.trim()).where((v) => v.isNotEmpty).toList();
+      if (clean.isEmpty || ctrls.any((c) => c.text.trim().isNotEmpty)) return;
+      _setValues(ctrls, clean);
+      for (var i = 0; i < clean.length; i++) {
+        _scannedFields.add('$prefix$i');
+      }
+    }
+
+    fillList('phone', _phoneCtrls, data.phones);
+    fillList('email', _emailCtrls, data.emails);
 
     final address = data.address;
-    if (address != null && _addressEntries.first.isEmpty) {
+    if (address != null &&
+        (_addressEntries.isEmpty || _addressEntries.first.isEmpty)) {
+      if (_addressEntries.isEmpty) _addressEntries.add(_AddressEntry());
       final entry = _addressEntries.first;
       entry.street.text = address.street ?? '';
       entry.city.text = address.city ?? '';
       entry.state.text = address.state ?? '';
       entry.postalCode.text = address.postalCode ?? '';
-      entry.country.text = address.country ?? '';
+      // Keeps the Myanmar default when the card doesn't print a country.
+      if ((address.country ?? '').trim().isNotEmpty) {
+        entry.country.text = address.country!.trim();
+      }
       _scannedFields.add('address');
     }
 
@@ -346,8 +370,9 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
   void dispose() {
     _nameCtrl.dispose();
     _positionCtrl.dispose();
-    _phonesCtrl.dispose();
-    _emailsCtrl.dispose();
+    for (final c in [..._phoneCtrls, ..._emailCtrls]) {
+      c.dispose();
+    }
     for (final entry in _addressEntries) {
       entry.dispose();
     }
@@ -425,8 +450,9 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
   String _formSignature() => [
         _nameCtrl.text,
         _positionCtrl.text,
-        _phonesCtrl.text,
-        _emailsCtrl.text,
+        ..._valuesOf(_phoneCtrls),
+        '|',
+        ..._valuesOf(_emailCtrls),
         _bioCtrl.text,
         _profileImageCtrl.text,
         _selectedCompanyId,
@@ -580,6 +606,26 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         .toList();
   }
 
+  /// Every value across a list of fields. Each field is still split on
+  /// commas, so a pasted "a, b" keeps working.
+  List<String> _valuesOf(List<TextEditingController> ctrls) =>
+      [for (final c in ctrls) ..._splitToList(c.text)];
+
+  /// Puts one value in each field, growing or shrinking the list to fit and
+  /// always leaving at least one field.
+  void _setValues(List<TextEditingController> ctrls, List<String> values) {
+    final count = values.isEmpty ? 1 : values.length;
+    while (ctrls.length > count) {
+      ctrls.removeLast().dispose();
+    }
+    while (ctrls.length < count) {
+      ctrls.add(TextEditingController());
+    }
+    for (var i = 0; i < ctrls.length; i++) {
+      ctrls[i].text = i < values.length ? values[i] : '';
+    }
+  }
+
   String? _validateEmails(String? value) {
     final emails = _splitToList(value ?? '');
     final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
@@ -606,8 +652,8 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     final companyId = _selectedCompanyId;
     final name = _nameCtrl.text.trim();
     final position = _positionCtrl.text.trim();
-    final phones = _splitToList(_phonesCtrl.text);
-    final emails = _splitToList(_emailsCtrl.text);
+    final phones = _valuesOf(_phoneCtrls);
+    final emails = _valuesOf(_emailCtrls);
     final addresses = _addressEntries
         .where((e) => !e.isEmpty)
         .map((e) => e.toModel())
@@ -716,6 +762,10 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (_scannedFields.isNotEmpty) ...[
+                    _buildScanSummary(),
+                    const SizedBox(height: 16),
+                  ],
                   _buildCardPhotosPanel(),
                   const SizedBox(height: 16),
                   _buildSection(
@@ -775,47 +825,73 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                     title: l10n.addCardContactDetailsTitle,
                     subtitle: l10n.addCardContactDetailsSubtitle,
                     children: [
-                      _buildPremiumTextField(
-                        controller: _phonesCtrl,
-                        fieldKey: 'phones',
+                      ..._buildValueList(
+                        ctrls: _phoneCtrls,
+                        keyPrefix: 'phone',
                         label: l10n.addCardPhonesLabel,
-                        hint: l10n.addCardPhonesHint,
+                        hint: l10n.addCardPhoneHint,
+                        addLabel: l10n.addCardAddPhone,
                         icon: Icons.phone_outlined,
+                        keyboardType: TextInputType.phone,
+                        autofillHints: const [AutofillHints.telephoneNumber],
                         validator: _validatePhones,
                       ),
                       const SizedBox(height: 14),
-                      _buildPremiumTextField(
-                        controller: _emailsCtrl,
-                        fieldKey: 'emails',
+                      ..._buildValueList(
+                        ctrls: _emailCtrls,
+                        keyPrefix: 'email',
                         label: l10n.addCardEmailsLabel,
-                        hint: l10n.addCardEmailsHint,
+                        hint: l10n.addCardEmailHint,
+                        addLabel: l10n.addCardAddEmail,
                         icon: Icons.email_outlined,
+                        keyboardType: TextInputType.emailAddress,
+                        autofillHints: const [AutofillHints.email],
                         validator: _validateEmails,
                       ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  _buildSection(
-                    icon: Icons.place_outlined,
-                    title: l10n.addCardAddressesTitle,
-                    subtitle: l10n.addCardAddressesSubtitle,
-                    children: _buildAddressSection(),
-                  ),
-                  const SizedBox(height: 16),
-                  _buildSection(
-                    icon: Icons.notes_outlined,
-                    title: l10n.addCardMoreTitle,
-                    subtitle: l10n.addCardMoreSubtitle,
-                    children: [
-                      _buildPremiumTextField(
-                        controller: _bioCtrl,
-                        label: l10n.addCardBioLabel,
-                        hint: l10n.addCardBioHint,
-                        icon: Icons.info_outline,
-                        maxLines: 3,
-                      ),
-                    ],
-                  ),
+                  // Optional blocks stay one-line rows until they're wanted,
+                  // so the form doesn't open on five empty address fields.
+                  if (_addressEntries.isEmpty)
+                    _buildAddRow(
+                      icon: Icons.place_outlined,
+                      label: l10n.addCardAddAddress,
+                      subtitle: l10n.addCardAddressesSubtitle,
+                      onTap: () => setState(
+                          () => _addressEntries.add(_AddressEntry())),
+                    )
+                  else
+                    _buildSection(
+                      icon: Icons.place_outlined,
+                      title: l10n.addCardAddressesTitle,
+                      subtitle: l10n.addCardAddressesSubtitle,
+                      children: _buildAddressSection(),
+                    ),
+                  const SizedBox(height: 12),
+                  if (!_showBio)
+                    _buildAddRow(
+                      icon: Icons.notes_outlined,
+                      label: l10n.addCardAddNote,
+                      subtitle: l10n.addCardMoreSubtitle,
+                      onTap: () => setState(() => _showBio = true),
+                    )
+                  else
+                    _buildSection(
+                      icon: Icons.notes_outlined,
+                      title: l10n.addCardMoreTitle,
+                      subtitle: l10n.addCardMoreSubtitle,
+                      children: [
+                        _buildPremiumTextField(
+                          controller: _bioCtrl,
+                          label: l10n.addCardBioLabel,
+                          hint: l10n.addCardBioHint,
+                          icon: Icons.info_outline,
+                          maxLines: 3,
+                          autofocus: _bioCtrl.text.isEmpty,
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),
@@ -1347,6 +1423,221 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     );
   }
 
+  /// The first thing on the form after a scan: how many fields OCR filled and
+  /// which ones, so checking them is one glance instead of a hunt for badges.
+  Widget _buildScanSummary() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
+    final accent = Wallet.accentOf(isDark);
+
+    String labelFor(String key) {
+      if (key.startsWith('phone')) return l10n.addCardPhonesLabel;
+      if (key.startsWith('email')) return l10n.addCardEmailsLabel;
+      return switch (key) {
+        'name' => l10n.addCardFullNameLabel,
+        'position' => l10n.addCardPositionLabel,
+        'address' => l10n.addCardAddressesTitle,
+        _ => key,
+      };
+    }
+
+    // Two scanned phone numbers are one "Phones" chip.
+    final labels = <String>{for (final k in _scannedFields) labelFor(k)};
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      decoration: BoxDecoration(
+        color: accent.withOpacity(isDark ? .12 : .06),
+        borderRadius: BorderRadius.circular(Wallet.radiusCard),
+        border: Border.all(color: accent.withOpacity(isDark ? .38 : .24)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_awesome, size: 18, color: accent),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  l10n.addCardReviewScannedFields(_scannedFields.length),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: Wallet.inkOf(isDark),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.only(left: 28),
+            child: Text(
+              l10n.addCardReviewScannedFieldsSubtitle,
+              style: TextStyle(
+                fontSize: 12.5,
+                height: 1.4,
+                color: Wallet.mutedOf(isDark),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.only(left: 28),
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                for (final label in labels)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Wallet.surfaceOf(isDark),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: accent.withOpacity(.3)),
+                    ),
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: accent,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// A collapsed optional block: one tappable row that opens the full
+  /// section. Lighter than a panel, so the required parts keep the weight.
+  Widget _buildAddRow({
+    required IconData icon,
+    required String label,
+    String? subtitle,
+    required VoidCallback onTap,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = Wallet.accentOf(isDark);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(Wallet.radiusCard),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(Wallet.radiusCard),
+            border: Border.all(color: Wallet.lineOf(isDark)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Wallet.tintOf(isDark),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 18, color: accent),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w600,
+                        color: Wallet.inkOf(isDark),
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Wallet.mutedOf(isDark),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Icon(Icons.add_rounded, size: 22, color: accent),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// One field per phone or email, a remove button on each once there are
+  /// two, and an "Add another" button under the last.
+  List<Widget> _buildValueList({
+    required List<TextEditingController> ctrls,
+    required String keyPrefix,
+    required String label,
+    required String hint,
+    required String addLabel,
+    required IconData icon,
+    required TextInputType keyboardType,
+    required List<String> autofillHints,
+    required String? Function(String?) validator,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
+    return [
+      for (var i = 0; i < ctrls.length; i++) ...[
+        if (i > 0) const SizedBox(height: 10),
+        _buildPremiumTextField(
+          // Keyed by controller so removing a middle row doesn't hand its
+          // scanned styling or error text to the row below.
+          key: ObjectKey(ctrls[i]),
+          controller: ctrls[i],
+          fieldKey: '$keyPrefix$i',
+          // Only the first row carries the label; the rest line up under it.
+          label: i == 0 ? label : null,
+          hint: hint,
+          icon: icon,
+          keyboardType: keyboardType,
+          autofillHints: autofillHints,
+          validator: validator,
+          onRemove: ctrls.length > 1
+              ? () => setState(() {
+                    ctrls.removeAt(i).dispose();
+                    // Scanned markers are positional; drop them all rather
+                    // than leave one pointing at the wrong row.
+                    _scannedFields
+                        .removeWhere((k) => k.startsWith(keyPrefix));
+                  })
+              : null,
+          removeTooltip: l10n.addCardRemove,
+        ),
+      ],
+      Align(
+        alignment: Alignment.centerLeft,
+        child: TextButton.icon(
+          onPressed: () =>
+              setState(() => ctrls.add(TextEditingController())),
+          icon: const Icon(Icons.add, size: 18),
+          label: Text(addLabel),
+          style: TextButton.styleFrom(minimumSize: const Size(0, 44)),
+        ),
+      ),
+    ];
+  }
+
   List<Widget> _buildAddressSection() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
@@ -1379,12 +1670,14 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                     ),
                   ),
                 ),
-                if (_addressEntries.length > 1)
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
+                // Removing the last one folds the section back into its
+                // "Add address" row.
+                IconButton(
+                    tooltip: l10n.addCardRemove,
                     onPressed: () {
                       setState(() {
                         _addressEntries.removeAt(i).dispose();
+                        if (i == 0) _scannedFields.remove('address');
                       });
                     },
                     icon: const Icon(Icons.delete_outline,
@@ -1474,13 +1767,19 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
   /// [InputDecoration] rather than a wrapping container so focus, error, and
   /// scanned states are all visible without tracking focus by hand.
   Widget _buildPremiumTextField({
+    Key? key,
     required TextEditingController controller,
-    required String label,
+    required String? label,
     String? hint,
     IconData? icon,
     String? Function(String?)? validator,
     int maxLines = 1,
     String? fieldKey,
+    TextInputType? keyboardType,
+    Iterable<String>? autofillHints,
+    bool autofocus = false,
+    VoidCallback? onRemove,
+    String? removeTooltip,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isScanned = fieldKey != null && _scannedFields.contains(fieldKey);
@@ -1499,31 +1798,40 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         );
 
     return Column(
+      key: key,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.2,
-                color:
-                    Wallet.mutedOf(isDark),
-              ),
-            ),
-            if (isScanned) ...[
-              const SizedBox(width: 8),
-              _buildScannedBadge(),
+        if (label != null || isScanned) ...[
+          Row(
+            children: [
+              if (label != null)
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.2,
+                    color:
+                        Wallet.mutedOf(isDark),
+                  ),
+                ),
+              if (isScanned) ...[
+                if (label != null) const SizedBox(width: 8),
+                _buildScannedBadge(),
+              ],
             ],
-          ],
-        ),
-        const SizedBox(height: 7),
+          ),
+          const SizedBox(height: 7),
+        ],
         TextFormField(
           controller: controller,
           validator: validator,
           maxLines: maxLines,
+          keyboardType: keyboardType,
+          autofillHints: autofillHints,
+          autofocus: autofocus,
+          textInputAction:
+              maxLines == 1 ? TextInputAction.next : TextInputAction.newline,
           style: TextStyle(
             fontSize: 15,
             color: isDark ? Wallet.darkInk : Wallet.ink,
@@ -1543,6 +1851,14 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
                 : null,
             prefixIconConstraints:
                 const BoxConstraints(minWidth: 44, minHeight: 0),
+            suffixIcon: onRemove != null
+                ? IconButton(
+                    tooltip: removeTooltip,
+                    onPressed: onRemove,
+                    icon: Icon(Icons.remove_circle_outline,
+                        size: 20, color: Wallet.faintOf(isDark)),
+                  )
+                : null,
             filled: true,
             fillColor: fill,
             isDense: true,
@@ -1641,7 +1957,11 @@ class _AddressEntry {
   final city = TextEditingController();
   final state = TextEditingController();
   final postalCode = TextEditingController();
-  final country = TextEditingController();
+  final country = TextEditingController(text: defaultCountry);
+
+  /// Most cards in this app are Myanmar ones, so a new address starts there
+  /// and the user changes it only for the exceptions.
+  static const defaultCountry = 'Myanmar';
 
   _AddressEntry();
 
@@ -1658,7 +1978,11 @@ class _AddressEntry {
   List<TextEditingController> get _controllers =>
       [street, city, state, postalCode, country];
 
-  bool get isEmpty => _controllers.every((c) => c.text.trim().isEmpty);
+  /// Country is left out: with it pre-filled, an untouched entry would
+  /// otherwise count as an address and trip the city-required check.
+  bool get isEmpty => _controllers
+      .where((c) => c != country)
+      .every((c) => c.text.trim().isEmpty);
 
   bool get hasCity => city.text.trim().isNotEmpty;
 

@@ -653,5 +653,20 @@
   },
   "addCardDiscardBodyGeneric": "What you've entered will be lost. This can't be undone.",
   "addCardKeepEditing": "Keep Editing",
-  "addCardDiscard": "Discard"
+  "addCardDiscard": "Discard",
+  "addCardPhoneHint": "e.g. 09 123 456 789",
+  "addCardEmailHint": "e.g. mail@example.com",
+  "addCardAddPhone": "Add another phone",
+  "addCardAddEmail": "Add another email",
+  "addCardAddNote": "Add a note",
+  "addCardRemove": "Remove",
+  "addCardReviewScannedFields": "{count, plural, =1{Review 1 scanned field} other{Review {count} scanned fields}}",
+  "@addCardReviewScannedFields": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addCardReviewScannedFieldsSubtitle": "Read from the photo. Highlighted fields below are worth a quick check before you save."
 }

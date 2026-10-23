@@ -438,5 +438,13 @@
   "addCardDiscardBodyItems": "{items} ပျောက်ဆုံးသွားပါမည်။ ပြန်ယူ၍ မရပါ။",
   "addCardDiscardBodyGeneric": "ထည့်သွင်းထားသမျှ ပျောက်ဆုံးသွားပါမည်။ ပြန်ယူ၍ မရပါ။",
   "addCardKeepEditing": "ဆက်လက်ပြင်ဆင်မည်",
-  "addCardDiscard": "စွန့်ပစ်မည်"
+  "addCardDiscard": "စွန့်ပစ်မည်",
+  "addCardPhoneHint": "ဥပမာ- 09 123 456 789",
+  "addCardEmailHint": "ဥပမာ- mail@example.com",
+  "addCardAddPhone": "ဖုန်းနံပါတ် ထပ်ထည့်မည်",
+  "addCardAddEmail": "အီးမေးလ် ထပ်ထည့်မည်",
+  "addCardAddNote": "မှတ်စု ထည့်မည်",
+  "addCardRemove": "ဖယ်ရှားမည်",
+  "addCardReviewScannedFields": "{count, plural, other{စကင်ဖတ်ထားသော အကွက် {count} ခုကို စစ်ဆေးပါ}}",
+  "addCardReviewScannedFieldsSubtitle": "ဓာတ်ပုံမှ ဖတ်ယူထားသည်။ မသိမ်းမီ အောက်ပါ အရောင်ပြထားသော အကွက်များကို စစ်ဆေးပါ။"
 }
