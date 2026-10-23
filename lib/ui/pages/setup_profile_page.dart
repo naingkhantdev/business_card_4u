@@ -366,8 +366,8 @@ class _SetupProfilePageState extends ConsumerState<SetupProfilePage> {
     final l10n = AppLocalizations.of(context)!;
 
     return OnboardingStepScaffold(
-      step: 2,
-      totalSteps: 2,
+      step: 4,
+      totalSteps: kSignUpSteps,
       label: l10n.setupProfileYourCardLabel,
       completed: l10n.setupProfileAccountCreated,
       headline: l10n.setupProfileHeadline,

@@ -7,6 +7,10 @@ import '../theme/glass.dart';
 import '../theme/wallet_tokens.dart';
 import 'loading_view.dart';
 
+/// Sign-up, end to end: Email · Verify · Account · Your card. Every screen in
+/// the flow passes its 1-based position against this total.
+const int kSignUpSteps = 4;
+
 /// The frame both sign-up steps are built in.
 ///
 /// Three things are deliberately inverted from the layout this replaces:
@@ -22,9 +26,10 @@ import 'loading_view.dart';
 /// it. It now lives in the footer and is reachable at every scroll position.
 ///
 /// **Progress is segmented.** A continuous bar hides how many steps there are.
-/// Discrete segments answer "how much is left" at a glance — and the first one
-/// is already filled, because verifying the email was real work and a bar that
-/// starts at zero throws that away.
+/// Discrete segments answer "how much is left" at a glance. Sign-up is the
+/// four steps in [kSignUpSteps], and the same [OnboardingProgress] rail runs
+/// across all of them — register and OTP included — so by the time this
+/// scaffold appears the user already sees two segments banked.
 class OnboardingStepScaffold extends StatelessWidget {
   final int step;
   final int totalSteps;
@@ -189,62 +194,128 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    // One segment more than there are steps: the email verification that got
-    // the user here counts, so the rail never starts empty.
-    final segments = totalSteps + 1;
-    final filled = (step + 1).clamp(0, segments);
-
     return GlassPanel(
       radius: 0,
       elevated: false,
       padding: const EdgeInsets.fromLTRB(12, 10, Wallet.margin, 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              _ExitButton(icon: exitIcon, onTap: onExit, isDark: isDark),
-              const SizedBox(width: 4),
-              Text(
-                l10n.onboardingStepCounter(step, totalSteps),
-                style: AppTypography.eyebrow(
-                  color: Wallet.accentOf(isDark),
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  label.toUpperCase(),
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.eyebrow(
-                    color: Wallet.faintOf(isDark),
-                    fontSize: 10.5,
-                  ),
-                ),
-              ),
-              if (completed != null) ...[
-                Icon(Icons.check_rounded, size: 13, color: Wallet.success),
-                const SizedBox(width: 5),
-                Flexible(
-                  child: Text(
-                    completed!.toUpperCase(),
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.eyebrow(
-                      color: Wallet.mutedOf(isDark),
-                      fontSize: 10.5,
-                    ),
-                  ),
-                ),
-              ],
-            ],
+      child: OnboardingProgress(
+        step: step,
+        totalSteps: totalSteps,
+        label: label,
+        completed: completed,
+        leading: _ExitButton(icon: exitIcon, onTap: onExit, isDark: isDark),
+      ),
+    );
+  }
+}
+
+/// The sign-up progress rail: "STEP 3 / 4", the step's name, what's already
+/// done, and one segment per step. The counter and the bar come from the
+/// same two numbers, so they can't disagree — segments up to and including
+/// the current step are filled.
+///
+/// Public so register and OTP, which don't use [OnboardingStepScaffold], can
+/// show the identical rail from step one.
+class OnboardingProgress extends StatelessWidget {
+  final int step;
+  final int totalSteps;
+  final String label;
+  final String? completed;
+
+  /// An optional control at the start of the counter row, e.g. back.
+  final Widget? leading;
+
+  /// Forces a palette, for surfaces that don't follow the theme — the
+  /// desktop-web auth card is always light. Null follows the theme.
+  final bool? isDark;
+
+  const OnboardingProgress({
+    super.key,
+    required this.step,
+    required this.totalSteps,
+    required this.label,
+    this.completed,
+    this.leading,
+    this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final isDark =
+        this.isDark ?? Theme.of(context).brightness == Brightness.dark;
+    final filled = step.clamp(0, totalSteps);
+
+    final counter = l10n.onboardingStepCounter(step, totalSteps);
+
+    final textRow = Row(
+      children: [
+        Text(
+          counter,
+          style: AppTypography.eyebrow(
+            color: Wallet.accentOf(isDark),
+            fontSize: 10.5,
+            fontWeight: FontWeight.w700,
           ),
-          const SizedBox(height: 12),
-          Row(
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label.toUpperCase(),
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.eyebrow(
+              color: Wallet.faintOf(isDark),
+              fontSize: 10.5,
+            ),
+          ),
+        ),
+        if (completed != null) ...[
+          Icon(Icons.check_rounded, size: 13, color: Wallet.success),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              completed!.toUpperCase(),
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.eyebrow(
+                color: Wallet.mutedOf(isDark),
+                fontSize: 10.5,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            if (leading != null) ...[
+              leading!,
+              const SizedBox(width: 4),
+            ],
+            // Read as one phrase rather than as separate eyebrow fragments;
+            // the leading control keeps its own semantics.
+            Expanded(
+              child: Semantics(
+                label: [
+                  counter,
+                  label,
+                  if (completed != null) completed!,
+                ].join(', '),
+                excludeSemantics: true,
+                child: textRow,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ExcludeSemantics(
+          child: Row(
             children: [
-              for (var i = 0; i < segments; i++) ...[
+              for (var i = 0; i < totalSteps; i++) ...[
                 if (i > 0) const SizedBox(width: 4),
                 Expanded(
                   child: AnimatedContainer(
@@ -262,8 +333,8 @@ class _Header extends StatelessWidget {
               ],
             ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -287,9 +358,10 @@ class _ExitButton extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         customBorder: const CircleBorder(),
+        // 48 dp: the minimum tap target (F11).
         child: SizedBox(
-          width: 40,
-          height: 40,
+          width: 48,
+          height: 48,
           child: Icon(icon, size: 20, color: Wallet.inkOf(isDark)),
         ),
       ),

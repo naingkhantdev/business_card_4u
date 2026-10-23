@@ -159,6 +159,22 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String cardDetailCallPerson(String name) {
+    return 'Call $name';
+  }
+
+  @override
+  String cardDetailEmailPerson(String name) {
+    return 'Email $name';
+  }
+
+  @override
+  String get cardDetailGetDirections => 'Get Directions';
+
+  @override
+  String get cardDetailVisitWebsite => 'Visit Website';
+
+  @override
   String get cardDetailPhone => 'Phone';
 
   @override
@@ -427,6 +443,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cardPageClearFilter => 'Clear';
 
   @override
+  String get cardPageEmptySavedTitle => 'Your card wallet is empty';
+
+  @override
+  String get cardPageEmptySavedSubtitle => 'Photograph a business card and we\'ll fill in the details for you.';
+
+  @override
+  String get cardPageEmptySavedScanCta => 'Scan Your First Card';
+
+  @override
+  String get cardPageEmptyFriendsTitle => 'No connections yet';
+
+  @override
+  String get cardPageEmptyFriendsSubtitle => 'Scan someone\'s QR code to connect, or search for people you know.';
+
+  @override
+  String get cardPageEmptyFriendsQrCta => 'Show My QR';
+
+  @override
+  String get cardPageEmptyFriendsSearchCta => 'Find People';
+
+  @override
+  String get cardPageNoMatchingCardsSubtitle => 'Nothing on this tab matches your search or filters.';
+
+  @override
+  String get cardPageClearFiltersCta => 'Clear Filters';
+
+  @override
   String get cardPageSearchCompaniesHint => 'Search companies';
 
   @override
@@ -516,7 +559,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deactivateAccountHeadline => 'Your account will be turned off now.';
 
   @override
-  String get deactivateAccountSubtext => 'You can get it back by logging in again within 7 days.';
+  String get deactivateAccountSubtext => 'You\'ll be signed out on every device. Log in again within 7 days to restore everything. After that, the account can only be restored by contacting support.';
 
   @override
   String get deactivateAccountPasswordLabel => 'Password';
@@ -1244,7 +1287,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get friendRequestsNowFriends => 'You are now friends';
 
   @override
-  String get friendRequestsReject => 'Reject';
+  String get friendRequestsReject => 'Decline';
+
+  @override
+  String friendRequestsWaiting(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count people want to connect',
+      one: '1 person wants to connect',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get friendRequestsEmptySubtitle => 'When someone scans your QR code or finds you in search, their request shows up here.';
 
   @override
   String get friendRequestsAccept => 'Accept';
@@ -1319,6 +1376,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get companyFormCreateButton => 'CREATE COMPANY';
 
   @override
+  String get companyFormLogoTitle => 'Company logo';
+
+  @override
+  String get companyFormLogoSheetSubtitle => 'Shown on every card that works at this company.';
+
+  @override
+  String get companyFormAddLogo => 'Add logo';
+
+  @override
+  String get companyFormChangeLogo => 'Change logo';
+
+  @override
+  String get companyFormRemoveLogo => 'Remove';
+
+  @override
+  String get companyFormLogoHelp => 'Shown in a circle, so a square logo looks best.';
+
+  @override
   String get saveToGalleryAccessDenied => 'Allow photo access in Settings to save images.';
 
   @override
@@ -1326,4 +1401,182 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get saveToGalleryError => 'Could not save image. Please try again.';
+
+  @override
+  String get addCardDiscardNewTitle => 'Discard this card?';
+
+  @override
+  String get addCardDiscardEditTitle => 'Discard your changes?';
+
+  @override
+  String addCardDiscardPhotoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count photos',
+      one: '1 photo',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String addCardDiscardScannedFieldCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count scanned fields',
+      one: '1 scanned field',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String addCardDiscardBoth(String photos, String fields) {
+    return '$photos and $fields';
+  }
+
+  @override
+  String addCardDiscardBodyItems(String items) {
+    return '$items will be lost. This can\'t be undone.';
+  }
+
+  @override
+  String get addCardDiscardBodyGeneric => 'What you\'ve entered will be lost. This can\'t be undone.';
+
+  @override
+  String get addCardKeepEditing => 'Keep Editing';
+
+  @override
+  String get addCardDiscard => 'Discard';
+
+  @override
+  String get addCardPhoneHint => 'e.g. 09 123 456 789';
+
+  @override
+  String get addCardEmailHint => 'e.g. mail@example.com';
+
+  @override
+  String get addCardAddPhone => 'Add another phone';
+
+  @override
+  String get addCardAddEmail => 'Add another email';
+
+  @override
+  String get addCardAddNote => 'Add a note';
+
+  @override
+  String get addCardRemove => 'Remove';
+
+  @override
+  String addCardReviewScannedFields(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Review $count scanned fields',
+      one: 'Review 1 scanned field',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get addCardReviewScannedFieldsSubtitle => 'Read from the photo. Highlighted fields below are worth a quick check before you save.';
+
+  @override
+  String addCardLookingUpCompany(String name) {
+    return 'Looking up \"$name\"…';
+  }
+
+  @override
+  String addCardAddScannedCompanyPrompt(String name) {
+    return 'Scanned \"$name\", which isn\'t on file yet. Add it as a new company?';
+  }
+
+  @override
+  String addCardCompanyAddedOnSave(String name) {
+    return '\"$name\" will be added as a new company when you save this card.';
+  }
+
+  @override
+  String addCardCompanyCreateFailed(String name) {
+    return 'Couldn\'t add \"$name\". Choose an existing company or try again.';
+  }
+
+  @override
+  String get addCardAddCompanyAction => 'Add Company';
+
+  @override
+  String get addCardChooseExistingCompany => 'Choose Existing';
+
+  @override
+  String get addCardUndo => 'Undo';
+
+  @override
+  String get scanPageHint => 'Point at someone\'s profile QR code';
+
+  @override
+  String get scanPageTorch => 'Light';
+
+  @override
+  String get scanPageFromPhoto => 'From Photo';
+
+  @override
+  String get scanPageScanFromPhoto => 'Scan From a Photo';
+
+  @override
+  String get scanPageShowMyQr => 'Show My QR Instead';
+
+  @override
+  String get scanPageNoQrInPhoto => 'No QR code found in that photo.';
+
+  @override
+  String get scanPageCameraDeniedTitle => 'Camera access is off';
+
+  @override
+  String get scanPageCameraDeniedBody => 'Allow camera access for this app in your phone\'s Settings, then tap Try Again. You can also scan a QR from a saved photo.';
+
+  @override
+  String get scanPageCameraErrorTitle => 'The camera couldn\'t start';
+
+  @override
+  String get scanPageCameraErrorBody => 'Try again, or scan a QR from a saved photo instead.';
+
+  @override
+  String get scanPageTryAgain => 'Try Again';
+
+  @override
+  String cardDetailDeleteNamedCardTitle(String name) {
+    return 'Delete $name\'s card?';
+  }
+
+  @override
+  String cardDetailDeleteCardBodyWithPhotos(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Its $count photos and contact details will be removed.',
+      one: 'Its photo and contact details will be removed.',
+    );
+    return '$_temp0 This can\'t be undone.';
+  }
+
+  @override
+  String get cardDetailDeleteCardBodyNoPhotos => 'Its contact details will be removed. This can\'t be undone.';
+
+  @override
+  String get cardDetailNoPhoneAppCopied => 'No app here can make calls. The number has been copied.';
+
+  @override
+  String get cardDetailNoMailAppCopied => 'No email app is set up. The address has been copied.';
+
+  @override
+  String get cardDetailLinkCopied => 'Couldn\'t open this link. It has been copied instead.';
+
+  @override
+  String get onboardingStepEmail => 'Email';
+
+  @override
+  String get onboardingStepVerify => 'Verify';
+
+  @override
+  String get onboardingStepEmailDone => 'Email entered';
 }

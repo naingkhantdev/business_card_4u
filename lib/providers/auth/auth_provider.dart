@@ -5,6 +5,7 @@ import '../../data/request/login_request.dart';
 import '../../data/vos/user_model.dart';
 import '../../services/storage/token_storage.dart';
 import '../../services/auth/auth_session.dart';
+import '../../exception/custom_exception.dart';
 import '../../utils/app_result.dart';
 import '../../utils/error_message.dart';
 import '../../fcm/push_notification_service.dart';
@@ -74,30 +75,66 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     return _checkLogin();
   }
 
+  /// How long the splash waits on the profile. The request's own budget is
+  /// 60s plus a retry (sized for cold-starting hosts), which held the splash
+  /// at its ~96% counter for minutes on a slow connection.
+  static const _profileCheckTimeout = Duration(seconds: 8);
+
   Future<AuthState> _checkLogin() async {
     state = const AsyncLoading();
+    final String? token;
     try {
-      final token = await TokenStorage.read();
-      if (token == null) {
-        return AuthState(
-          isLoggedIn: false,
-          isCheckingSession: false,
-        );
-      }
+      token = await TokenStorage.read();
+    } catch (e) {
+      return AuthState(isLoggedIn: false, isCheckingSession: false);
+    }
+    if (token == null) {
+      return AuthState(isLoggedIn: false, isCheckingSession: false);
+    }
 
-      final user = await _dataAgent.getProfile();
+    // Start the card list now, alongside the profile. It used to begin only
+    // once the card page appeared, so the user sat through the splash and
+    // then a second loader. cardProvider isn't autoDispose, so the result is
+    // still there when the page watches it.
+    ref.read(cardProvider);
+
+    try {
+      final user = await _dataAgent.getProfile().timeout(_profileCheckTimeout);
       return AuthState(
         isLoggedIn: true,
         currentUser: user,
         isCheckingSession: false,
       );
+    } on CustomException catch (e) {
+      // Only the server refusing the token ends the session.
+      if (e.statusCode == 401 || e.statusCode == 403) {
+        await TokenStorage.clear();
+        return AuthState(isLoggedIn: false, isCheckingSession: false);
+      }
+      return _signedInWithoutProfile();
     } catch (e) {
-      await TokenStorage.clear();
-      return AuthState(
-        isLoggedIn: false,
-        isCheckingSession: false,
-      );
+      // Timeout or no connection. Clearing the token here (as this used to)
+      // signed people out just for opening the app offline.
+      return _signedInWithoutProfile();
     }
+  }
+
+  /// Lets the user in on a token the server hasn't confirmed yet, and keeps
+  /// trying for the profile in the background. A rejected token still ends
+  /// up signed out, via [AuthSession.unauthorizedTick].
+  AuthState _signedInWithoutProfile() {
+    Future(() async {
+      try {
+        final user = await _dataAgent.getProfile();
+        final current = state.valueOrNull;
+        if (user != null && current != null && current.isLoggedIn) {
+          state = AsyncData(current.copyWith(currentUser: user));
+        }
+      } catch (_) {
+        // Still unreachable: screens already handle a null currentUser.
+      }
+    });
+    return AuthState(isLoggedIn: true, isCheckingSession: false);
   }
 
   /// Bumped by [cancelLoading]. A login whose number no longer matches was

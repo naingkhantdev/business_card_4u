@@ -15,6 +15,7 @@ import '../../data/vos/company_model.dart';
 import '../../utils/full_image_viewer.dart';
 import '../responsive/responsive.dart';
 import '../widgets/app_toast.dart';
+import '../widgets/company_logo.dart';
 import '../theme/app_typography.dart';
 import '../theme/wallet_tokens.dart';
 import '../widgets/my_qr_panel.dart';
@@ -860,6 +861,12 @@ class _PremiumHero extends StatelessWidget {
             color: isDark
                 ? Wallet.accentDark.withOpacity(.16)
                 : Wallet.accentSoft,
+          ),
+          // The ring is painted over the clipped content: as part of
+          // `decoration` the photo/fallback fill covered its inner half and
+          // left it looking smudged.
+          foregroundDecoration: BoxDecoration(
+            shape: BoxShape.circle,
             border: Border.all(
               color: Wallet.accentOf(isDark).withOpacity(.25),
               width: 1.5,
@@ -1109,7 +1116,7 @@ class _AvatarFallback extends StatelessWidget {
             : Text(
                 letter!,
                 style: TextStyle(
-                  fontSize: 19,
+                  fontSize: 26,
                   fontWeight: FontWeight.w700,
                   color: Wallet.accentOf(isDark),
                 ),
@@ -1488,10 +1495,6 @@ class _DetailsCard extends StatelessWidget {
       companyChildren
           .add(_InlineHeader(l10n.cardDetailCompanyHeader, isDark: isDark, isFirst: true));
       companyChildren.add(_CompanyHeaderRow(company: company, isDark: isDark));
-      if ((company.description ?? '').trim().isNotEmpty) {
-        companyChildren
-            .add(_InlineTextRow(company.description!.trim(), isDark: isDark));
-      }
       // Same row shape as the Contact section below, not a quieter,
       // non-tappable readout of the same kind of data — a phone number
       // should look and behave the same whether it's the company's or the
@@ -1643,31 +1646,6 @@ class _InlineHeader extends StatelessWidget {
       );
 }
 
-/// A plain paragraph inside [_GroupCard] — for the company's description,
-/// which doesn't fit the icon/label/value shape every other row here uses.
-class _InlineTextRow extends StatelessWidget {
-  final String text;
-  final bool isDark;
-
-  const _InlineTextRow(this.text, {required this.isDark});
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        // Left edge matches every other row's text (18 icon + 14 gap = 32) —
-        // flush left made the description jut out past the name/address/
-        // phone rows above and below it.
-        padding: const EdgeInsets.fromLTRB(32, 0, 0, 12),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 13,
-            height: 1.5,
-            color: Wallet.mutedOf(isDark),
-          ),
-        ),
-      );
-}
-
 /// The company's identity — same plain-icon/value shape as [_DetailRow]
 /// (not a bigger avatar-style block of its own), so it lines up
 /// with the contact and social rows under it instead of reading as a
@@ -1684,6 +1662,10 @@ class _CompanyHeaderRow extends StatelessWidget {
     final meta = [company.industry, company.businessType]
         .where((e) => e != null && e.isNotEmpty)
         .join('  ·  ');
+    // The description belongs to this row: as a row of its own it sat
+    // between dividers with no icon or label and read as a stray line.
+    // Clamped, since the full text is one tap away on the company page.
+    final description = (company.description ?? '').trim();
 
     return InkWell(
       onTap: () => Navigator.of(context).push(
@@ -1693,8 +1675,18 @@ class _CompanyHeaderRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(
           children: [
-            Icon(Icons.apartment_rounded,
-                size: 18, color: Wallet.mutedOf(isDark)),
+            // The logo when there is one. Without it, the plain icon keeps
+            // the name on the same text edge as the rows below.
+            if ((company.logo ?? '').isNotEmpty)
+              CompanyLogo(
+                name: company.name,
+                logo: company.logo,
+                size: 40,
+                isDark: isDark,
+              )
+            else
+              Icon(Icons.apartment_rounded,
+                  size: 18, color: Wallet.mutedOf(isDark)),
             const SizedBox(width: 14),
             Expanded(
               child: Column(
@@ -1716,6 +1708,19 @@ class _CompanyHeaderRow extends StatelessWidget {
                       meta,
                       style: TextStyle(
                         fontSize: 12,
+                        color: Wallet.mutedOf(isDark),
+                      ),
+                    ),
+                  ],
+                  if (description.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        height: 1.45,
                         color: Wallet.mutedOf(isDark),
                       ),
                     ),

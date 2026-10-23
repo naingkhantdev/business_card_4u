@@ -41,7 +41,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     });
   }
 
-  void _onSearch() async {
+  Future<void> _onSearch() async {
     final query = _searchCtrl.text.trim();
     if (query.isEmpty && !_hasActiveFilters) return;
 
@@ -299,7 +299,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             child: _isLoading
                 ? const Center(child: LoadingView(size: 80))
                 : _error != null
-                    ? Center(child: Text(_error!))
+                    ? _refreshable(_buildErrorState(isDark, l10n))
                     : !_hasSearched
                         ? Center(
                             child: Column(
@@ -317,7 +317,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                             ),
                           )
                         : _results.isEmpty
-                            ? Center(child: Text(l10n.searchPageNoResults))
+                            ? _refreshable(
+                                Center(child: Text(l10n.searchPageNoResults)))
                             : Responsive.isDesktop(context)
                                 ? SingleChildScrollView(
                                     padding: const EdgeInsets.all(16),
@@ -331,20 +332,91 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                                           .toList(),
                                     ),
                                   )
-                                : ListView.builder(
-                                    padding: const EdgeInsets.all(16),
-                                    itemCount: _results.length,
-                                    itemBuilder: (context, index) {
-                                      return Padding(
-                                        padding:
-                                            const EdgeInsets.only(bottom: 12),
-                                        child: CardItem(card: _results[index]),
-                                      );
-                                    },
+                                : RefreshIndicator(
+                                    color: AppColors.primary,
+                                    onRefresh: _onSearch,
+                                    child: ListView.builder(
+                                      physics:
+                                          const AlwaysScrollableScrollPhysics(),
+                                      padding: const EdgeInsets.all(16),
+                                      itemCount: _results.length,
+                                      itemBuilder: (context, index) {
+                                        return Padding(
+                                          padding:
+                                              const EdgeInsets.only(bottom: 12),
+                                          child:
+                                              CardItem(card: _results[index]),
+                                        );
+                                      },
+                                    ),
                                   ),
           ),
         ],
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Pull-to-refresh for the non-list states. RefreshIndicator only reacts to
+  /// an overscroll, so a centred message is put in a scrollable that always
+  /// fills the space.
+  Widget _refreshable(Widget child) {
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: _onSearch,
+      child: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(bool isDark, AppLocalizations l10n) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Wallet.danger.withOpacity(isDark ? .18 : .1),
+              ),
+              child: const Icon(Icons.wifi_off_rounded,
+                  size: 34, color: Wallet.danger),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+                color: isDark ? Wallet.darkInk : Wallet.ink,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: _onSearch,
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(l10n.scanPageTryAgain),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+              ),
+            ),
+          ],
         ),
       ),
     );

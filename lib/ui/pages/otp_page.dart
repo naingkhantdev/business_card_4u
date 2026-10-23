@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_page_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -14,6 +15,7 @@ import '../theme/glass.dart';
 import '../widgets/app_primary_button.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/loading_view.dart';
+import '../widgets/onboarding_step_scaffold.dart';
 import 'complete_register_page.dart';
 import '../theme/wallet_tokens.dart';
 
@@ -192,7 +194,17 @@ class _OtpPageState extends ConsumerState<OtpPage> {
                       ],
                     ),
 
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 16),
+                    // Same rail as every sign-up step; the email they just
+                    // entered is shown as banked progress.
+                    OnboardingProgress(
+                      step: 2,
+                      totalSteps: kSignUpSteps,
+                      label: l10n.onboardingStepVerify,
+                      completed: l10n.onboardingStepEmailDone,
+                    ),
+
+                    const SizedBox(height: 24),
 
                     Text(
                       l10n.otpPageTitle,
@@ -337,7 +349,15 @@ class _OtpPageState extends ConsumerState<OtpPage> {
             ),
           ],
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 12),
+        OnboardingProgress(
+          step: 2,
+          totalSteps: kSignUpSteps,
+          label: l10n.onboardingStepVerify,
+          completed: l10n.onboardingStepEmailDone,
+          isDark: false,
+        ),
+        const SizedBox(height: 18),
         Text(
           l10n.otpPageTitle,
           style: const TextStyle(
@@ -584,6 +604,9 @@ class _OtpPinFieldState extends State<_OtpPinField> {
   void initState() {
     super.initState();
     widget.controller.addListener(_onChanged);
+    // Without this the active-box highlight only moved on typing, so a tap
+    // gave no visible sign that the field had taken focus.
+    widget.focusNode.addListener(_onFocusChanged);
   }
 
   void _onChanged() {
@@ -592,9 +615,25 @@ class _OtpPinFieldState extends State<_OtpPinField> {
     if (mounted) setState(() {});
   }
 
+  void _onFocusChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _focusField() {
+    if (widget.focusNode.hasFocus) {
+      // Focus survives the keyboard being dismissed, and requestFocus on an
+      // already-focused node is a no-op — so the keyboard is asked for
+      // directly.
+      SystemChannels.textInput.invokeMethod('TextInput.show');
+    } else {
+      FocusScope.of(context).requestFocus(widget.focusNode);
+    }
+  }
+
   @override
   void dispose() {
     widget.controller.removeListener(_onChanged);
+    widget.focusNode.removeListener(_onFocusChanged);
     super.dispose();
   }
 
@@ -602,10 +641,13 @@ class _OtpPinFieldState extends State<_OtpPinField> {
   Widget build(BuildContext context) {
     final value = widget.controller.text;
 
-    return GestureDetector(
-      onTap: widget.enabled
-          ? () => FocusScope.of(context).requestFocus(widget.focusNode)
-          : null,
+    return MouseRegion(
+      cursor: widget.enabled ? SystemMouseCursors.text : MouseCursor.defer,
+      child: GestureDetector(
+      // Opaque so the gaps between boxes take the tap too, not just the
+      // boxes themselves.
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.enabled ? _focusField : null,
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -674,6 +716,7 @@ class _OtpPinFieldState extends State<_OtpPinField> {
             );
           }),
         ],
+      ),
       ),
     );
   }

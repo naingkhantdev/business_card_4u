@@ -12,6 +12,7 @@ import '../responsive/responsive.dart';
 import '../theme/app_colors.dart';
 import '../../data/vos/company_model.dart';
 import '../widgets/app_toast.dart';
+import '../widgets/company_logo.dart';
 import 'company_detail_page.dart'; // Uncommented
 import 'company_form_page.dart';
 import '../theme/wallet_tokens.dart';
@@ -369,22 +370,11 @@ class _CompanySelectPageState extends ConsumerState<CompanySelectPage> {
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? Wallet.darkLine
-                            : const Color(0xFFEFF6FF),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.business,
-                        color: isDark
-                            ? Wallet.accentDark
-                            : AppColors.primary,
-                        size: 28,
-                      ),
+                    CompanyLogo(
+                      name: company.name,
+                      logo: company.logo,
+                      size: 50,
+                      isDark: isDark,
                     ),
                     const SizedBox(width: 16),
                     Expanded(

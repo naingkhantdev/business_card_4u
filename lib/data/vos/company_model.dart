@@ -15,6 +15,8 @@ class CompanyModel {
   final String? website;
   final String? phone;
   final String? email;
+  /// Storage path of the logo (resolve with ImageUrl), or null if none.
+  final String? logo;
   @JsonKey(name: 'created_by')
   final int? createdBy;
   final List<CompanySocialModel> socials;
@@ -29,6 +31,7 @@ class CompanyModel {
     this.website,
     this.phone,
     this.email,
+    this.logo,
     this.createdBy,
     this.socials = const [],
   });
@@ -52,6 +55,7 @@ class CompanyModel {
       website: json['website'] as String?,
       phone: json['phone'] as String?,
       email: json['email'] as String?,
+      logo: json['logo'] as String?,
       createdBy: (json['created_by'] as num?)?.toInt(),
       socials: parsedSocials,
     );

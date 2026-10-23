@@ -1,8 +1,14 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../l10n/generated/app_localizations.dart';
 import '../../providers/company/company_provider.dart';
+import '../../utils/image_upload.dart';
+import '../widgets/company_logo.dart';
+import '../widgets/image_source_sheet.dart';
 import '../responsive/responsive.dart';
 import '../theme/app_colors.dart';
 import '../../data/vos/company_model.dart';
@@ -29,6 +35,15 @@ class _CompanyFormPageState extends ConsumerState<CompanyFormPage> {
   final _websiteCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
+
+  // A newly picked logo, uploaded on save. _removeLogo is set when the user
+  // clears an existing logo, so an untouched edit keeps it server-side.
+  XFile? _logoFile;
+  Uint8List? _logoBytes;
+  bool _removeLogo = false;
+
+  String? get _existingLogo => _removeLogo ? null : widget.company?.logo;
+  bool get _hasLogo => _logoBytes != null || _existingLogo != null;
 
   @override
   void initState() {
@@ -87,8 +102,9 @@ class _CompanyFormPageState extends ConsumerState<CompanyFormPage> {
     }
 
     final result = widget.company == null
-        ? await notifier.createCompany(payload)
-        : await notifier.updateCompany(widget.company!.id, payload);
+        ? await notifier.createCompany(payload, logoFile: _logoFile)
+        : await notifier.updateCompany(widget.company!.id, payload,
+            logoFile: _logoFile, removeLogo: _removeLogo);
 
     if (!mounted) return;
     if (result.isSuccess) {
@@ -118,6 +134,174 @@ class _CompanyFormPageState extends ConsumerState<CompanyFormPage> {
         type: AppToastType.error,
       );
     }
+  }
+
+  Future<void> _pickLogo() async {
+    final l10n = AppLocalizations.of(context)!;
+    final source = await showImageSourceSheet(
+      context,
+      title: l10n.companyFormLogoTitle,
+      subtitle: l10n.companyFormLogoSheetSubtitle,
+    );
+    if (source == null || !mounted) return;
+
+    final XFile? picked;
+    try {
+      picked = await pickImageForUpload(source, UploadImageKind.avatar);
+    } catch (_) {
+      if (!mounted) return;
+      AppToast.show(
+        context,
+        l10n.setupProfileImageSourceError(
+          source == ImageSource.camera
+              ? l10n.setupProfileSourceCamera
+              : l10n.setupProfileSourceGallery,
+        ),
+        type: AppToastType.error,
+      );
+      return;
+    }
+    if (picked == null) return;
+
+    final bytes = await picked.readAsBytes();
+    if (!mounted) return;
+    setState(() {
+      _logoFile = picked;
+      _logoBytes = bytes;
+      _removeLogo = false;
+    });
+  }
+
+  void _clearLogo() {
+    setState(() {
+      _logoFile = null;
+      _logoBytes = null;
+      // Only an already-saved logo needs deleting on the server.
+      _removeLogo = widget.company?.logo != null;
+    });
+  }
+
+  /// Logo first: it's the one thing on this form people recognise a company
+  /// by, and a live preview (the letter until a logo is picked) shows how it
+  /// will appear on cards before anything is saved.
+  Widget _buildLogoPicker(AppLocalizations l10n, bool isDark) {
+    final accent = Wallet.accentOf(isDark);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? Wallet.darkSurface : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Wallet.darkLine : Colors.grey.withOpacity(0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: _pickLogo,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                CompanyLogo(
+                  name: _nameCtrl.text,
+                  logo: _existingLogo,
+                  bytes: _logoBytes,
+                  size: 72,
+                  isDark: isDark,
+                ),
+                Positioned(
+                  right: -2,
+                  bottom: -2,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: accent,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isDark ? Wallet.darkSurface : Colors.white,
+                        width: 2,
+                      ),
+                    ),
+                    child: Icon(
+                      _hasLogo ? Icons.edit_rounded : Icons.add_a_photo_rounded,
+                      size: 13,
+                      color: Wallet.onAccentOf(isDark),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.companyFormLogoTitle,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Wallet.darkInk : Wallet.ink,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  l10n.companyFormLogoHelp,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    height: 1.35,
+                    color: isDark ? Wallet.darkMuted : Colors.black54,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Flexible(
+                      child: FilledButton.tonalIcon(
+                        onPressed: _pickLogo,
+                        icon: Icon(
+                          _hasLogo
+                              ? Icons.swap_horiz_rounded
+                              : Icons.add_photo_alternate_outlined,
+                          size: 18,
+                        ),
+                        label: Text(
+                          _hasLogo
+                              ? l10n.companyFormChangeLogo
+                              : l10n.companyFormAddLogo,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        style: FilledButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                          foregroundColor: accent,
+                          backgroundColor: accent.withOpacity(.12),
+                        ),
+                      ),
+                    ),
+                    // An icon, not a text button: "Change logo" + "Remove"
+                    // didn't fit on one line and Remove wrapped below.
+                    if (_hasLogo) ...[
+                      const SizedBox(width: 6),
+                      IconButton(
+                        onPressed: _clearLogo,
+                        tooltip: l10n.companyFormRemoveLogo,
+                        icon: const Icon(Icons.delete_outline_rounded),
+                        color: Colors.redAccent,
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.redAccent.withOpacity(.1),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   InputDecoration _inputDecoration(String label, IconData icon) {
@@ -210,8 +394,12 @@ class _CompanyFormPageState extends ConsumerState<CompanyFormPage> {
                     ),
                   ),
                   const SizedBox(height: 24),
+                  _buildLogoPicker(l10n, isDark),
+                  const SizedBox(height: 20),
                   TextFormField(
                     controller: _nameCtrl,
+                    // Keeps the logo preview's fallback letter in step.
+                    onChanged: (_) => setState(() {}),
                     decoration: _inputDecoration(l10n.companyFormNameLabel, Icons.business_rounded),
                     validator: (v) => v == null || v.trim().isEmpty ? l10n.companyFormNameRequired : null,
                   ),

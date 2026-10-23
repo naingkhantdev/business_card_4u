@@ -339,3 +339,6 @@ Drafted alongside Phase 3 changes. Each is live in `lib/l10n/app_my.arb`; replac
 | `cardDetailNoPhoneAppCopied` | No app here can make calls. The number has been copied. | ဤစက်တွင် ဖုန်းခေါ်နိုင်သော အက်ပ် မရှိပါ။ နံပါတ်ကို ကူးယူပြီးပါပြီ။ | ☐ |
 | `cardDetailNoMailAppCopied` | No email app is set up. The address has been copied. | အီးမေးလ် အက်ပ် မရှိပါ။ လိပ်စာကို ကူးယူပြီးပါပြီ။ | ☐ |
 | `cardDetailLinkCopied` | Couldn't open this link. It has been copied instead. | ဤလင့်ခ်ကို ဖွင့်၍ မရပါ။ ကူးယူပြီးပါပြီ။ | ☐ |
+| `onboardingStepEmail` | Email | အီးမေးလ် | ☐ |
+| `onboardingStepVerify` | Verify | အတည်ပြုရန် | ☐ |
+| `onboardingStepEmailDone` | Email entered | အီးမေးလ် ထည့်ပြီး | ☐ |

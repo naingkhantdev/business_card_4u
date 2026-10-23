@@ -110,8 +110,8 @@ class _CompleteRegisterPageState extends ConsumerState<CompleteRegisterPage> {
     final l10n = AppLocalizations.of(context)!;
 
     return OnboardingStepScaffold(
-      step: 1,
-      totalSteps: 2,
+      step: 3,
+      totalSteps: kSignUpSteps,
       label: l10n.completeRegisterStepLabel,
       completed: l10n.completeRegisterStepCompleted,
       headline: l10n.completeRegisterHeadline,

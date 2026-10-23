@@ -78,9 +78,12 @@ abstract class BcaApi {
     @Query("per_page") int? perPage,
   });
 
+  // Multipart so the body can carry a 'logo' file. Same convention as
+  // createCard below.
+  @MultiPart()
   @POST(kEndPointCompanies)
   Future<Object?> createCompany(
-      @Body() Map<String, dynamic> body,
+      @Part() Map<String, dynamic> body,
       );
 
   @GET("$kEndPointCompanies/{id}")
@@ -88,10 +91,13 @@ abstract class BcaApi {
       @Path("id") int id,
       );
 
-  @PUT("$kEndPointCompanies/{id}")
+  // POST + '_method': 'PUT' for the same reason as updateCard: PHP doesn't
+  // parse a multipart body (or its files) on a real PUT.
+  @MultiPart()
+  @POST("$kEndPointCompanies/{id}")
   Future<Object?> updateCompany(
       @Path("id") int id,
-      @Body() Map<String, dynamic> body,
+      @Part() Map<String, dynamic> body, // must include body['_method'] = 'PUT'
       );
 
   @DELETE("$kEndPointCompanies/{id}")

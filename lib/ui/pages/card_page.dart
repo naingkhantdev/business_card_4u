@@ -61,10 +61,6 @@ class _CardPageState extends ConsumerState<CardPage>
   int _previousNotificationCount = 0;
   bool _hasSeenInitialNotificationCount = false;
 
-  /// Set once the first card load has landed and the opening tab was picked
-  /// from it, so later refreshes never move the user off the tab they chose.
-  bool _initialTabChosen = false;
-
   @override
   void initState() {
     super.initState();
@@ -538,14 +534,23 @@ class _CardPageState extends ConsumerState<CardPage>
           onPrimary: _clearFilters,
         );
       } else if (isFriendsTab) {
-        // Connections start from an exchange, so the first move is handing
-        // over your own code; searching is the fallback.
+        // This state hides the Add Friend FAB, so it must offer the scanner
+        // itself — it used to offer only "Show My QR" and search, leaving no
+        // way to scan someone. The scanner page has its own "show my QR"
+        // option, so the exchange still works both ways from here.
         emptyState = _EmptyState(
           icon: Icons.people_outline_rounded,
           title: l10n.cardPageEmptyFriendsTitle,
           subtitle: l10n.cardPageEmptyFriendsSubtitle,
-          primaryLabel: l10n.cardPageEmptyFriendsQrCta,
-          onPrimary: () => _showMyQrCode(context, myProfileCard),
+          primaryLabel: l10n.cardPageScanQrCodeTitle,
+          onPrimary: () => Navigator.push(
+            context,
+            AppPageRoute(
+              builder: (_) => ScanPage(
+                onShowMyQr: () => _showMyQrCode(context, myProfileCard),
+              ),
+            ),
+          ),
           secondaryLabel: l10n.cardPageEmptyFriendsSearchCta,
           onSecondary: () => Navigator.push(
             context,
@@ -1276,18 +1281,10 @@ class _CardPageState extends ConsumerState<CardPage>
     // (card_type == 'user_card' AND has accepted relation in friendships table)
     final myFriendsCards = cardState.cards.where(onFriendsTab).toList();
 
-    // Open on the tab that has something to show — once, when the first load
-    // lands. Friends is tab 0, but a new account has no connections yet, and
-    // Saved is where its first scanned card goes.
-    if (!_initialTabChosen && !isCardLoading && ref.read(cardProvider).hasValue) {
-      _initialTabChosen = true;
-      final preferred = myFriendsCards.isNotEmpty ? 0 : 1;
-      if (_tabController!.index != preferred) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _tabController!.index = preferred;
-        });
-      }
-    }
+    // Always opens on Friends (tab 0). It used to jump to Saved whenever the
+    // Friends list was empty on first load — which also happened when the
+    // card request failed and came back as an empty list, so the app seemed
+    // to open on the wrong tab at random.
 
     // A filter that matches nothing is left in place: the list shows the
     // no-match state with a Clear Filters action instead. Clearing it here

@@ -90,8 +90,14 @@ class BcaDataAgentImpl implements BcaDataAgent {
   }
 
   @override
-  Future<CompanyModel?> createCompany(Map<String, dynamic> data) async {
-    final response = await _guard(() => _bcaApi.createCompany(data));
+  Future<CompanyModel?> createCompany(
+    Map<String, dynamic> data, {
+    XFile? logoFile,
+  }) async {
+    final formDataMap = Map<String, dynamic>.from(data);
+    await _attachImage(formDataMap, 'logo', logoFile);
+
+    final response = await _guard(() => _bcaApi.createCompany(formDataMap));
     if (response is Map<String, dynamic> &&
         response['data'] is Map<String, dynamic>) {
       return CompanyModel.fromJson(Map<String, dynamic>.from(response['data']));
@@ -110,8 +116,25 @@ class BcaDataAgentImpl implements BcaDataAgent {
   }
 
   @override
-  Future<CompanyModel?> updateCompany(int id, Map<String, dynamic> data) async {
-    final response = await _guard(() => _bcaApi.updateCompany(id, data));
+  Future<CompanyModel?> updateCompany(
+    int id,
+    Map<String, dynamic> data, {
+    XFile? logoFile,
+    bool removeLogo = false,
+  }) async {
+    final formDataMap = Map<String, dynamic>.from(data);
+
+    // Required for Laravel to route POST as PUT for multipart (see bca_api.dart comments)
+    formDataMap['_method'] = 'PUT';
+
+    if (logoFile != null) {
+      await _attachImage(formDataMap, 'logo', logoFile);
+    } else if (removeLogo) {
+      formDataMap['remove_logo'] = '1';
+    }
+
+    final response =
+        await _guard(() => _bcaApi.updateCompany(id, formDataMap));
     if (response is Map<String, dynamic> &&
         response['data'] is Map<String, dynamic>) {
       return CompanyModel.fromJson(Map<String, dynamic>.from(response['data']));

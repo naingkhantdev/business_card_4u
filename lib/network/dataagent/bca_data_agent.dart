@@ -30,11 +30,21 @@ abstract class BcaDataAgent {
   // ================= COMPANIES =================
   Future<CompanyPage> getCompanies({int page = 1, int perPage = 20});
 
-  Future<CompanyModel?> createCompany(Map<String, dynamic> data);
+  Future<CompanyModel?> createCompany(
+    Map<String, dynamic> data, {
+    XFile? logoFile,
+  });
 
   Future<CompanyModel?> getCompanyDetail(int id);
 
-  Future<CompanyModel?> updateCompany(int id, Map<String, dynamic> data);
+  /// [removeLogo] clears the current logo; a null [logoFile] without it
+  /// leaves the logo as it is.
+  Future<CompanyModel?> updateCompany(
+    int id,
+    Map<String, dynamic> data, {
+    XFile? logoFile,
+    bool removeLogo = false,
+  });
 
   Future<String?> deleteCompany(int id);
 

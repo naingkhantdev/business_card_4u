@@ -16,6 +16,7 @@ CompanyModel _$CompanyModelFromJson(Map<String, dynamic> json) => CompanyModel(
       website: json['website'] as String?,
       phone: json['phone'] as String?,
       email: json['email'] as String?,
+      logo: json['logo'] as String?,
       createdBy: (json['created_by'] as num?)?.toInt(),
       socials: (json['socials'] as List<dynamic>?)
               ?.map(
@@ -35,6 +36,7 @@ Map<String, dynamic> _$CompanyModelToJson(CompanyModel instance) =>
       'website': instance.website,
       'phone': instance.phone,
       'email': instance.email,
+      'logo': instance.logo,
       'created_by': instance.createdBy,
       'socials': instance.socials,
     };

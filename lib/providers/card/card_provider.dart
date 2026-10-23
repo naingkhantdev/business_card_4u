@@ -277,19 +277,18 @@ class CardNotifier extends AsyncNotifier<CardState> {
     String? state,
     String? country,
   }) async {
-    try {
-      final res = await _dataAgent.searchCards(
-        query,
-        companyId: companyId,
-        cardType: cardType,
-        city: city,
-        state: state,
-        country: country,
-      );
-      return res ?? [];
-    } catch (e) {
-      return [];
-    }
+    // Errors are left to the caller: swallowing them here turned "can't reach
+    // the server" into "no results", and the search page had nothing to
+    // offer a retry on.
+    final res = await _dataAgent.searchCards(
+      query,
+      companyId: companyId,
+      cardType: cardType,
+      city: city,
+      state: state,
+      country: country,
+    );
+    return res ?? [];
   }
 
   Future<BusinessCardModel?> scanQr(String qrData) async {

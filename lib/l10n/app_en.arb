@@ -207,7 +207,7 @@
   "cardPageEmptySavedSubtitle": "Photograph a business card and we'll fill in the details for you.",
   "cardPageEmptySavedScanCta": "Scan Your First Card",
   "cardPageEmptyFriendsTitle": "No connections yet",
-  "cardPageEmptyFriendsSubtitle": "Let someone scan your QR code to connect, or search for people you know.",
+  "cardPageEmptyFriendsSubtitle": "Scan someone's QR code to connect, or search for people you know.",
   "cardPageEmptyFriendsQrCta": "Show My QR",
   "cardPageEmptyFriendsSearchCta": "Find People",
   "cardPageNoMatchingCardsSubtitle": "Nothing on this tab matches your search or filters.",
@@ -586,7 +586,16 @@
   },
   "friendRequestsDefaultSubtitle": "Requested to add you",
   "friendRequestsNowFriends": "You are now friends",
-  "friendRequestsReject": "Reject",
+  "friendRequestsReject": "Decline",
+  "friendRequestsWaiting": "{count, plural, one{1 person wants to connect} other{{count} people want to connect}}",
+  "@friendRequestsWaiting": {
+    "placeholders": {
+      "count": {
+        "type": "num"
+      }
+    }
+  },
+  "friendRequestsEmptySubtitle": "When someone scans your QR code or finds you in search, their request shows up here.",
   "friendRequestsAccept": "Accept",
   "companyDetailContactDetails": "Contact Details",
   "companyDetailAboutCompany": "About Company",
@@ -611,6 +620,12 @@
   "companyFormEmailLabel": "Email",
   "companyFormUpdateButton": "UPDATE COMPANY",
   "companyFormCreateButton": "CREATE COMPANY",
+  "companyFormLogoTitle": "Company logo",
+  "companyFormLogoSheetSubtitle": "Shown on every card that works at this company.",
+  "companyFormAddLogo": "Add logo",
+  "companyFormChangeLogo": "Change logo",
+  "companyFormRemoveLogo": "Remove",
+  "companyFormLogoHelp": "Shown in a circle, so a square logo looks best.",
   "saveToGalleryAccessDenied": "Allow photo access in Settings to save images.",
   "saveToGallerySuccess": "Saved to gallery",
   "saveToGalleryError": "Could not save image. Please try again.",
@@ -734,5 +749,8 @@
   "cardDetailDeleteCardBodyNoPhotos": "Its contact details will be removed. This can't be undone.",
   "cardDetailNoPhoneAppCopied": "No app here can make calls. The number has been copied.",
   "cardDetailNoMailAppCopied": "No email app is set up. The address has been copied.",
-  "cardDetailLinkCopied": "Couldn't open this link. It has been copied instead."
+  "cardDetailLinkCopied": "Couldn't open this link. It has been copied instead.",
+  "onboardingStepEmail": "Email",
+  "onboardingStepVerify": "Verify",
+  "onboardingStepEmailDone": "Email entered"
 }

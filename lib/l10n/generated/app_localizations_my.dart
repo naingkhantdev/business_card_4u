@@ -73,7 +73,7 @@ class AppLocalizationsMy extends AppLocalizations {
   String get cardDetailShare => 'မျှဝေမည်';
 
   @override
-  String get cardDetailEdit => 'တည်းဖြတ်မည်';
+  String get cardDetailEdit => 'ပြင်မည်';
 
   @override
   String get cardDetailDeactivateAccount => 'အကောင့်ပိတ်ရန်';
@@ -157,6 +157,22 @@ class AppLocalizationsMy extends AppLocalizations {
   String cardDetailAddedOn(String date) {
     return '$date တွင် ထည့်သွင်းခဲ့သည်';
   }
+
+  @override
+  String cardDetailCallPerson(String name) {
+    return '$name ကို ဖုန်းခေါ်မည်';
+  }
+
+  @override
+  String cardDetailEmailPerson(String name) {
+    return '$name ထံ အီးမေးလ်ပို့မည်';
+  }
+
+  @override
+  String get cardDetailGetDirections => 'လမ်းညွှန် ရယူမည်';
+
+  @override
+  String get cardDetailVisitWebsite => 'ဝဘ်ဆိုက်သို့ သွားမည်';
 
   @override
   String get cardDetailPhone => 'ဖုန်းနံပါတ်';
@@ -280,7 +296,7 @@ class AppLocalizationsMy extends AppLocalizations {
   String get userDrawerManageCompanies => 'ကုမ္ပဏီများ စီမံမည်';
 
   @override
-  String get userDrawerHelpSupport => 'အကူအညီနှင့် ပံ့ပိုးမှု';
+  String get userDrawerHelpSupport => 'အကူအညီ';
 
   @override
   String get userDrawerLogout => 'ထွက်မည်';
@@ -303,7 +319,7 @@ class AppLocalizationsMy extends AppLocalizations {
   String get cardPageNoCardsYetTitle => 'ကတ်များ မရှိသေးပါ';
 
   @override
-  String get cardPageFilterHidingCardsSubtitle => 'ဒေတာဘေ့စ်တွင် ကတ်များ ရှိပါသည်၊ သို့သော် သင့်ရှာဖွေမှု သို့မဟုတ် ကုမ္ပဏီစစ်ထုတ်မှုက ၎င်းတို့ကို ဖုံးကွယ်ထားပါသည်။\nကြည့်ရှုရန် စစ်ထုတ်မှုကို ဖယ်ရှားပါ။';
+  String get cardPageFilterHidingCardsSubtitle => 'ဒေတာဘေ့စ်တွင် ကတ်များ ရှိပါသည်၊ သို့သော် သင့်ရှာဖွေမှု သို့မဟုတ် ကုမ္ပဏီfilter က ၎င်းတို့ကို ဖုံးကွယ်ထားပါသည်။\nကြည့်ရှုရန် filter ထားသည်များကို ဖယ်ရှားပါ။';
 
   @override
   String get cardPagePullToRefreshSubtitle => 'ပြန်လည်စတင်ရန် အောက်သို့ဆွဲချပါ သို့မဟုတ် ကတ်အသစ်ထည့်ပါ။';
@@ -401,7 +417,7 @@ class AppLocalizationsMy extends AppLocalizations {
   String get cardPageSearchHint => 'ကတ်များ ရှာဖွေရန်...';
 
   @override
-  String get cardPageFilterByCompanyTooltip => 'ကုမ္ပဏီဖြင့် စစ်ထုတ်ရန်';
+  String get cardPageFilterByCompanyTooltip => 'ကုမ္ပဏီဖြင့် ရှာမည်';
 
   @override
   String get cardPageAddFriendFabLabel => 'မိတ်ဆွေထည့်ရန်';
@@ -410,7 +426,7 @@ class AppLocalizationsMy extends AppLocalizations {
   String get cardPageNewCardFabLabel => 'ကတ်အသစ်ထည့်မည်';
 
   @override
-  String get cardPageFilterByCompanySheetTitle => 'ကုမ္ပဏီဖြင့် စစ်ထုတ်ရန်';
+  String get cardPageFilterByCompanySheetTitle => 'ကုမ္ပဏီဖြင့် ရှာမည်';
 
   @override
   String cardPageCompanyCount(num count) {
@@ -425,6 +441,33 @@ class AppLocalizationsMy extends AppLocalizations {
 
   @override
   String get cardPageClearFilter => 'ရှင်းလင်းမည်';
+
+  @override
+  String get cardPageEmptySavedTitle => 'သင့်ကတ်အိတ် ဗလာဖြစ်နေပါသည်';
+
+  @override
+  String get cardPageEmptySavedSubtitle => 'စီးပွားရေးကတ်ကို ဓာတ်ပုံရိုက်ပါ၊ အချက်အလက်များကို ကျွန်ုပ်တို့ ဖြည့်ပေးပါမည်။';
+
+  @override
+  String get cardPageEmptySavedScanCta => 'ပထမဆုံးကတ်ကို စကင်ဖတ်မည်';
+
+  @override
+  String get cardPageEmptyFriendsTitle => 'ချိတ်ဆက်မှု မရှိသေးပါ';
+
+  @override
+  String get cardPageEmptyFriendsSubtitle => 'ချိတ်ဆက်ရန် တစ်ဖက်လူ၏ QR ကုဒ်ကို စကင်ဖတ်ပါ၊ သို့မဟုတ် သိသူများကို ရှာဖွေပါ။';
+
+  @override
+  String get cardPageEmptyFriendsQrCta => 'ကျွန်ုပ်၏ QR ကို ပြမည်';
+
+  @override
+  String get cardPageEmptyFriendsSearchCta => 'လူများ ရှာဖွေမည်';
+
+  @override
+  String get cardPageNoMatchingCardsSubtitle => 'သင့်ရှာဖွေမှု သို့မဟုတ် ရှာဖွေထားသောအချက်အလက်နှင့် ကိုက်ညီသော ကတ် မရှိပါ။';
+
+  @override
+  String get cardPageClearFiltersCta => 'ရှာထားသည်များ ရှင်းမည်';
 
   @override
   String get cardPageSearchCompaniesHint => 'ကုမ္ပဏီများ ရှာဖွေရန်';
@@ -516,7 +559,7 @@ class AppLocalizationsMy extends AppLocalizations {
   String get deactivateAccountHeadline => 'သင့်အကောင့်ကို ယခုပိတ်တော့မည်။';
 
   @override
-  String get deactivateAccountSubtext => '၇ ရက်အတွင်း ပြန်ဝင်ရောက်ပါက ပြန်လည်ရယူနိုင်ပါသည်။';
+  String get deactivateAccountSubtext => 'စက်ပစ္စည်းအားလုံးမှ ထွက်သွားပါမည်။ ရက် ၇ ရက်အတွင်း ပြန်ဝင်ပါက အားလုံး ပြန်ရပါမည်။ ထို့နောက်တွင် အကူအညီဌာနကို ဆက်သွယ်မှသာ ပြန်ဖွင့်နိုင်ပါမည်။';
 
   @override
   String get deactivateAccountPasswordLabel => 'စကားဝှက်';
@@ -552,7 +595,7 @@ class AppLocalizationsMy extends AppLocalizations {
   String get helpPageContactSection => 'ဆက်သွယ်ရန်';
 
   @override
-  String get helpPageContactSupport => 'ပံ့ပိုးမှုအဖွဲ့ကို ဆက်သွယ်ရန်';
+  String get helpPageContactSupport => 'software teamကို ဆက်သွယ်ရန်';
 
   @override
   String get helpPageHowItWorksSection => 'BusinessCard4U အလုပ်လုပ်ပုံ';
@@ -561,13 +604,13 @@ class AppLocalizationsMy extends AppLocalizations {
   String get helpPageFeatureScan => 'ကတ်ကို စကင်ဖတ်လိုက်ရုံဖြင့် အမည်၊ ရာထူး၊ ဖုန်းနံပါတ်၊ အီးမေးလ်နှင့် လိပ်စာများ အလိုအလျောက် ဖြည့်ပေးပါသည်။';
 
   @override
-  String get helpPageFeatureCompany => 'စကင်ဖတ်ချိန်တွင် ကုမ္ပဏီများကို အလိုအလျောက် ရှာဖွေချိတ်ဆက်ပေးသည် သို့မဟုတ် အသစ်ဖန်တီးပေးသည် — သီးခြားအဆင့် မလိုအပ်ပါ။';
+  String get helpPageFeatureCompany => 'စကင်ဖတ်ချိန်တွင် ကုမ္ပဏီများကို အလိုအလျောက် ရှာဖွေချိတ်ဆက်ပေးသည် သို့မဟုတ် အသစ်ဖန်တီးပေးသည် — တခြားအဆင့် လုပ်ဆောင်ရန်မလိုအပ်ပါ။';
 
   @override
   String get helpPageFeatureQr => 'QR ကုဒ်ဖြင့် သင့်ကတ်ကို ချက်ချင်းမျှဝေနိုင်ပါသည်။';
 
   @override
-  String get helpPageFeatureFriends => 'အခြားအသုံးပြုသူများနှင့် မိတ်ဆွေအဖြစ် ချိတ်ဆက်ပါက သူတို့၏ ကတ်အချက်အလက်များကို အပ်ဒိတ်လုပ်တိုင်း သင့်ဘက်တွင် အလိုအလျောက် မွမ်းမံပေးပါသည်။';
+  String get helpPageFeatureFriends => 'အခြားအသုံးပြုသူများနှင့် မိတ်ဆွေအဖြစ် ချိတ်ဆက်ပါက သူတို့၏ ကတ်အချက်အလက်များကို အလွယ်တကူ ဆက်သွယ်နိုင်သည်။';
 
   @override
   String get helpPageFaqSection => 'မေးလေ့ရှိသောမေးခွန်းများ';
@@ -576,19 +619,19 @@ class AppLocalizationsMy extends AppLocalizations {
   String get helpPageFaq1Question => 'ကတ်တစ်ခုကို စကင်ဖတ်လိုက်ရင် ကုမ္ပဏီကို အလိုအလျောက် ဖန်တီးပေးပါသလား။';
 
   @override
-  String get helpPageFaq1Answer => 'ဟုတ်ကဲ့ပါ။ ဓာတ်ပုံပေါ်တွင် ရှိပြီးသား ကုမ္ပဏီအမည်ဖြစ်ပါက ချိတ်ဆက်ပေးပြီး၊ မရှိသေးပါက BusinessCard4U က ချက်ချင်း ကုမ္ပဏီအသစ်တစ်ခု ဖန်တီးပေးသဖြင့် စကင်ဖတ်နေစဉ် အနှောင့်အယှက် မဖြစ်ပါ။ နောက်ပိုင်းတွင် ကတ်၏ တည်းဖြတ်မှုစာမျက်နှာမှ ချိတ်ဆက်ထားသော ကုမ္ပဏီကို အမြဲပြောင်းနိုင်ပါသည်။';
+  String get helpPageFaq1Answer => 'ဟုတ်ကဲ့ပါ။ ဓာတ်ပုံပေါ် က ကုမ္ပဏီအမည် က ရှိပြီးသား ကုမ္ပဏီအမည်ဖြစ်ပါက ချိတ်ဆက်ပေးပြီး၊ မရှိသေးပါက BusinessCard4U က ချက်ချင်း ကုမ္ပဏီအသစ်တစ်ခု ဖန်တီးပေးပါသည်။ နောက်ပိုင်းတွင် ကတ်scan ဖတ်ပီး ချိတ်ဆက်ထားသော ကုမ္ပဏီကို အမြဲပြောင်းနိုင်ပါသည်။';
 
   @override
-  String get helpPageFaq2Question => 'သိမ်းထားသောကတ်များနှင့် မိတ်ဆွေများ၏ ကွာခြားချက်က ဘာလဲ။';
+  String get helpPageFaq2Question => 'သိမ်းထားသောကတ်များနှင့် မိတ်ဆွေများ၏ ကတ်များ ကွာခြားချက်က ဘာလဲ။';
 
   @override
-  String get helpPageFaq2Answer => 'သိမ်းထားသောကတ်များသည် ဓာတ်ပုံမှ သို့မဟုတ် လက်ဖြင့်ရိုက်ထည့်ခဲ့သော မှတ်တမ်းများဖြစ်ပါသည်။ မိတ်ဆွေများသည် သင်နှင့်ချိတ်ဆက်ထားသော အခြား BusinessCard4U အသုံးပြုသူများဖြစ်ပြီး၊ သူတို့ ကတ်ကို ပြင်ဆင်တိုင်း သင့်ဘက်ရှိကတ်သည် နောက်ဆုံးအချက်အလက်များ ဖြစ်နေပါသည်။';
+  String get helpPageFaq2Answer => 'သိမ်းထားသောကတ်များသည် ဓာတ်ပုံမှ သို့မဟုတ် လက်ဖြင့်ရိုက်ထည့်ခဲ့သော မှတ်တမ်းများဖြစ်ပါသည်။ မိတ်ဆွေကတ်များသည် သင်နှင့်ချိတ်ဆက်ထားသော အခြား BusinessCard4U အသုံးပြုသူများဖြစ်ပြီး၊ သူတို့ ကတ်ကို ပြင်ဆင်တိုင်း သင့်ဘက်ရှိကတ်သည် နောက်ဆုံးအချက်အလက်များ ဖြစ်နေပါမည်။';
 
   @override
   String get helpPageFaq3Question => 'စကင်နာက မှားထည့်လိုက်တဲ့ အကွက်တစ်ခုကို ပြင်လို့ရပါသလား။';
 
   @override
-  String get helpPageFaq3Answer => 'စကင်ဖတ်ထားသော အကွက်တိုင်းကို ပြင်ဆင်နိုင်ပါသည် — စကင်ဖတ်ခြင်းသည် အကောင်းဆုံးခန့်မှန်းချက်သာဖြစ်ပြီး အတည်ဖြစ်သောအချက်အလက် မဟုတ်ပါ။ ကတ်ကိုဖွင့်ပြီး သိမ်းဆည်းမီ မှားနေသည်များကို ပြင်ဆင်နိုင်ပါသည်။';
+  String get helpPageFaq3Answer => 'စကင်ဖတ်ထားသော အကွက်တိုင်းကို ပြင်ဆင်နိုင်ပါသည် — စကင်ဖတ်ခြင်းသည် အကောင်းဆုံးခန့်မှန်းချက်သာဖြစ်ပြီး အတည်ဖြစ်သောအချက်အလက် မဟုတ်ပါ။ ကတ်ကိုဖွင့်ပြီး မသိမ်းဆည်းမီ မှားနေသည်များကို ပြင်ဆင်နိုင်ပါသည်။';
 
   @override
   String get helpPageFaq4Question => 'လူများက သင့်ကတ်ကို ဘယ်လိုရှာတွေ့ကြမလဲ။';
@@ -677,7 +720,7 @@ class AppLocalizationsMy extends AppLocalizations {
   String get searchPageSearchTooltip => 'ရှာဖွေမည်';
 
   @override
-  String get searchPageFilterByLocation => 'တည်နေရာဖြင့် စစ်ထုတ်ရန်';
+  String get searchPageFilterByLocation => 'တည်နေရာဖြင့် ရှာရန်';
 
   @override
   String searchPageFilterCity(String city) {
@@ -1247,6 +1290,19 @@ class AppLocalizationsMy extends AppLocalizations {
   String get friendRequestsReject => 'ငြင်းပယ်မည်';
 
   @override
+  String friendRequestsWaiting(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'လူ $count ဦး ချိတ်ဆက်လိုပါသည်',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get friendRequestsEmptySubtitle => 'တစ်စုံတစ်ယောက်က သင့် QR ကုဒ်ကို စကင်ဖတ်ခြင်း သို့မဟုတ် ရှာဖွေတွေ့ရှိခြင်း ပြုလုပ်ပါက ၎င်းတို့၏ တောင်းဆိုချက် ဤနေရာတွင် ပေါ်လာပါမည်။';
+
+  @override
   String get friendRequestsAccept => 'လက်ခံမည်';
 
   @override
@@ -1277,7 +1333,7 @@ class AppLocalizationsMy extends AppLocalizations {
   String get companyFormProfileTitle => 'ကုမ္ပဏီ ကိုယ်ရေးအချက်အလက်';
 
   @override
-  String get companyFormProfileSubtitle => 'အဆင့်မြင့် စီးပွားရေးပရိုဖိုင်းတစ်ခု ဖန်တီးရန် အောက်ပါအသေးစိတ်များကို ဖြည့်ပါ။';
+  String get companyFormProfileSubtitle => 'premium business ပရိုဖိုင်းတစ်ခု ဖန်တီးရန် အောက်ပါအသေးစိတ်များကို ဖြည့်ပါ။';
 
   @override
   String get companyFormNameLabel => 'ကုမ္ပဏီအမည် *';
@@ -1286,7 +1342,7 @@ class AppLocalizationsMy extends AppLocalizations {
   String get companyFormNameRequired => 'အမည် လိုအပ်ပါသည်';
 
   @override
-  String get companyFormIndustryLabel => 'စက်မှုလုပ်ငန်း *';
+  String get companyFormIndustryLabel => 'လုပ်ငန်း *';
 
   @override
   String get companyFormFieldRequired => 'လိုအပ်ပါသည်';
@@ -1319,6 +1375,24 @@ class AppLocalizationsMy extends AppLocalizations {
   String get companyFormCreateButton => 'ကုမ္ပဏီ ဖန်တီးမည်';
 
   @override
+  String get companyFormLogoTitle => 'ကုမ္ပဏီ logo';
+
+  @override
+  String get companyFormLogoSheetSubtitle => 'ဤကုမ္ပဏီတွင် အလုပ်လုပ်သူ ကတ်တိုင်းတွင် ပြသပါမည်။';
+
+  @override
+  String get companyFormAddLogo => 'လိုဂို ထည့်မည်';
+
+  @override
+  String get companyFormChangeLogo => 'လိုဂို ပြောင်းမည်';
+
+  @override
+  String get companyFormRemoveLogo => 'ဖယ်ရှားမည်';
+
+  @override
+  String get companyFormLogoHelp => 'စက်ဝိုင်းပုံဖြင့် ပြသမည်ဖြစ်၍ လေးထောင်ပုံ လိုဂိုက အကောင်းဆုံး ဖြစ်သည်။';
+
+  @override
   String get saveToGalleryAccessDenied => 'ဓာတ်ပုံများကို သိမ်းရန် ဆက်တင်များတွင် ခွင့်ပြုပေးပါ။';
 
   @override
@@ -1326,4 +1400,178 @@ class AppLocalizationsMy extends AppLocalizations {
 
   @override
   String get saveToGalleryError => 'ပုံကို မသိမ်းနိုင်ပါ။ ထပ်ကြိုးစားပါ။';
+
+  @override
+  String get addCardDiscardNewTitle => 'ဤကတ်ကို စွန့်ပစ်မည်လား။';
+
+  @override
+  String get addCardDiscardEditTitle => 'ပြင်ဆင်ချက်များကို စွန့်ပစ်မည်လား။';
+
+  @override
+  String addCardDiscardPhotoCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ဓာတ်ပုံ $count ပုံ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String addCardDiscardScannedFieldCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'စကင်ဖတ်ထားသော အကွက် $count ခု',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String addCardDiscardBoth(String photos, String fields) {
+    return '$photos နှင့် $fields';
+  }
+
+  @override
+  String addCardDiscardBodyItems(String items) {
+    return '$items ပျောက်ဆုံးသွားပါမည်။ ပြန်ယူ၍ မရပါ။';
+  }
+
+  @override
+  String get addCardDiscardBodyGeneric => 'ထည့်သွင်းထားသမျှ ပျောက်ဆုံးသွားပါမည်။ ပြန်ယူ၍ မရပါ။';
+
+  @override
+  String get addCardKeepEditing => 'ဆက်လက်ပြင်ဆင်မည်';
+
+  @override
+  String get addCardDiscard => 'စွန့်ပစ်မည်';
+
+  @override
+  String get addCardPhoneHint => 'ဥပမာ- 09 123 456 789';
+
+  @override
+  String get addCardEmailHint => 'ဥပမာ- mail@example.com';
+
+  @override
+  String get addCardAddPhone => 'ဖုန်းနံပါတ် ထပ်ထည့်မည်';
+
+  @override
+  String get addCardAddEmail => 'အီးမေးလ် ထပ်ထည့်မည်';
+
+  @override
+  String get addCardAddNote => 'မှတ်စု ထည့်မည်';
+
+  @override
+  String get addCardRemove => 'ဖယ်ရှားမည်';
+
+  @override
+  String addCardReviewScannedFields(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'စကင်ဖတ်ထားသော အကွက် $count ခုကို စစ်ဆေးပါ',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get addCardReviewScannedFieldsSubtitle => 'ဓာတ်ပုံမှ ဖတ်ယူထားသည်။ မသိမ်းမီ အောက်ပါ အရောင်ပြထားသော အကွက်များကို စစ်ဆေးပါ။';
+
+  @override
+  String addCardLookingUpCompany(String name) {
+    return '\"$name\" ကို ရှာဖွေနေသည်…';
+  }
+
+  @override
+  String addCardAddScannedCompanyPrompt(String name) {
+    return '\"$name\" ကို စကင်ဖတ်ရရှိသော်လည်း စာရင်းတွင် မရှိသေးပါ။ ကုမ္ပဏီအသစ်အဖြစ် ထည့်မည်လား။';
+  }
+
+  @override
+  String addCardCompanyAddedOnSave(String name) {
+    return 'ဤကတ်ကို သိမ်းသည့်အခါ \"$name\" ကို ကုမ္ပဏီအသစ်အဖြစ် ထည့်ပါမည်။';
+  }
+
+  @override
+  String addCardCompanyCreateFailed(String name) {
+    return '\"$name\" ကို ထည့်၍ မရပါ။ ရှိပြီးသား ကုမ္ပဏီကို ရွေးပါ သို့မဟုတ် ထပ်ကြိုးစားပါ။';
+  }
+
+  @override
+  String get addCardAddCompanyAction => 'ကုမ္ပဏီ ထည့်မည်';
+
+  @override
+  String get addCardChooseExistingCompany => 'ရှိပြီးသားကို ရွေးမည်';
+
+  @override
+  String get addCardUndo => 'ပြန်ဖျက်မည်';
+
+  @override
+  String get scanPageHint => 'တစ်စုံတစ်ယောက်၏ ပရိုဖိုင် QR ကုဒ်ကို ချိန်ပါ';
+
+  @override
+  String get scanPageTorch => 'မီး';
+
+  @override
+  String get scanPageFromPhoto => 'ဓာတ်ပုံမှ';
+
+  @override
+  String get scanPageScanFromPhoto => 'ဓာတ်ပုံမှ စကင်ဖတ်မည်';
+
+  @override
+  String get scanPageShowMyQr => 'ကျွန်ုပ်၏ QR ကို ပြမည်';
+
+  @override
+  String get scanPageNoQrInPhoto => 'ထိုဓာတ်ပုံတွင် QR ကုဒ် မတွေ့ပါ။';
+
+  @override
+  String get scanPageCameraDeniedTitle => 'ကင်မရာ အသုံးပြုခွင့် ပိတ်ထားသည်';
+
+  @override
+  String get scanPageCameraDeniedBody => 'ဖုန်း၏ ဆက်တင်တွင် ဤအက်ပ်အတွက် ကင်မရာ အသုံးပြုခွင့်ကို ဖွင့်ပြီး ထပ်ကြိုးစားမည်ကို နှိပ်ပါ။ သိမ်းထားသော ဓာတ်ပုံမှလည်း QR ကို စကင်ဖတ်နိုင်ပါသည်။';
+
+  @override
+  String get scanPageCameraErrorTitle => 'ကင်မရာ စတင်၍ မရပါ';
+
+  @override
+  String get scanPageCameraErrorBody => 'ထပ်ကြိုးစားပါ၊ သို့မဟုတ် သိမ်းထားသော ဓာတ်ပုံမှ QR ကို စကင်ဖတ်ပါ။';
+
+  @override
+  String get scanPageTryAgain => 'ထပ်ကြိုးစားမည်';
+
+  @override
+  String cardDetailDeleteNamedCardTitle(String name) {
+    return '$name ၏ ကတ်ကို ဖျက်မည်လား။';
+  }
+
+  @override
+  String cardDetailDeleteCardBodyWithPhotos(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ဓာတ်ပုံ $count ပုံနှင့် ဆက်သွယ်ရန် အချက်အလက်များကို ဖယ်ရှားပါမည်။',
+    );
+    return '$_temp0 ပြန်ယူ၍ မရပါ။';
+  }
+
+  @override
+  String get cardDetailDeleteCardBodyNoPhotos => 'ဆက်သွယ်ရန် အချက်အလက်များကို ဖယ်ရှားပါမည်။ ပြန်ယူ၍ မရပါ။';
+
+  @override
+  String get cardDetailNoPhoneAppCopied => 'ဤစက်တွင် ဖုန်းခေါ်နိုင်သော အက်ပ် မရှိပါ။ နံပါတ်ကို ကူးယူပြီးပါပြီ။';
+
+  @override
+  String get cardDetailNoMailAppCopied => 'အီးမေးလ် အက်ပ် မရှိပါ။ လိပ်စာကို ကူးယူပြီးပါပြီ။';
+
+  @override
+  String get cardDetailLinkCopied => 'ဤလင့်ခ်ကို ဖွင့်၍ မရပါ။ ကူးယူပြီးပါပြီ။';
+
+  @override
+  String get onboardingStepEmail => 'အီးမေးလ်';
+
+  @override
+  String get onboardingStepVerify => 'အတည်ပြုရန်';
+
+  @override
+  String get onboardingStepEmailDone => 'အီးမေးလ် ထည့်ပြီး';
 }

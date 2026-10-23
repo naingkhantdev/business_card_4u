@@ -9,6 +9,7 @@ import '../responsive/responsive.dart';
 import '../theme/app_typography.dart';
 import '../widgets/app_primary_button.dart';
 import '../widgets/app_toast.dart';
+import '../widgets/onboarding_step_scaffold.dart';
 import 'otp_page.dart';
 import '../theme/wallet_tokens.dart';
 
@@ -113,7 +114,15 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                               )
                             : null,
                       ),
-                      const SizedBox(height: 28),
+                      const SizedBox(height: 8),
+                      // Step one of four, shown from the very first screen so
+                      // the rest of sign-up isn't a surprise (F1).
+                      OnboardingProgress(
+                        step: 1,
+                        totalSteps: kSignUpSteps,
+                        label: l10n.onboardingStepEmail,
+                      ),
+                      const SizedBox(height: 24),
 
                       // The brand is the centrepiece: logo and a large
                       // wordmark, with the page's title and explanation in
@@ -273,6 +282,13 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           ),
           const SizedBox(height: 8),
         ],
+        OnboardingProgress(
+          step: 1,
+          totalSteps: kSignUpSteps,
+          label: l10n.onboardingStepEmail,
+          isDark: false,
+        ),
+        const SizedBox(height: 18),
         Text(
           l10n.registerPageTitle,
           style: const TextStyle(

@@ -206,30 +206,36 @@ class UserDrawer extends ConsumerWidget {
         ),
         child: Row(
           children: [
-            // Avatar with purple gradient ring (matches the premium style in card detail)
+            // Same avatar circle as card detail and the card list, so the
+            // placeholder letter looks identical on every screen.
             Container(
-              padding: const EdgeInsets.all(3.5),
-              decoration: const BoxDecoration(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [AppColors.primary, AppColors.secondary],
+                color: isDark
+                    ? Wallet.accentDark.withOpacity(.16)
+                    : Wallet.accentSoft,
+                border: Border.all(
+                  color: Wallet.accentOf(isDark).withOpacity(.25),
+                  width: 1.5,
                 ),
-              ),
-              child: CircleAvatar(
-                radius: 30,
-                backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
-                backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
-                child: !hasImage
-                    ? Text(
-                        initial,
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          color: isDark ? AppColors.secondary : AppColors.primaryDark,
-                        ),
-                      )
+                image: avatarUrl != null
+                    ? DecorationImage(
+                        image: NetworkImage(avatarUrl), fit: BoxFit.cover)
                     : null,
               ),
+              alignment: Alignment.center,
+              child: !hasImage
+                  ? Text(
+                      initial,
+                      style: TextStyle(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
+                        color: Wallet.accentOf(isDark),
+                      ),
+                    )
+                  : null,
             ),
             const SizedBox(width: 16),
             Expanded(

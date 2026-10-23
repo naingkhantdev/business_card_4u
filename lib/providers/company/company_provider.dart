@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../network/dataagent/bca_data_agent.dart';
 import '../../data/vos/company_model.dart';
 import '../../utils/app_result.dart';
@@ -123,11 +124,15 @@ class CompanyNotifier extends AsyncNotifier<CompanyState> {
     }
   }
 
-  Future<AppResult> createCompany(Map<String, dynamic> data) async {
+  Future<AppResult> createCompany(
+    Map<String, dynamic> data, {
+    XFile? logoFile,
+  }) async {
     state = AsyncData(
         state.value?.copyWith(isSaving: true) ?? CompanyState(isSaving: true));
     try {
-      final company = await _dataAgent.createCompany(data);
+      final company =
+          await _dataAgent.createCompany(data, logoFile: logoFile);
       if (company != null) {
         final updatedCompanies = [company, ...?state.value?.companies];
         state = AsyncData(state.value!.copyWith(
@@ -153,11 +158,17 @@ class CompanyNotifier extends AsyncNotifier<CompanyState> {
     }
   }
 
-  Future<AppResult> updateCompany(int id, Map<String, dynamic> data) async {
+  Future<AppResult> updateCompany(
+    int id,
+    Map<String, dynamic> data, {
+    XFile? logoFile,
+    bool removeLogo = false,
+  }) async {
     state = AsyncData(
         state.value?.copyWith(isSaving: true) ?? CompanyState(isSaving: true));
     try {
-      final updatedCompany = await _dataAgent.updateCompany(id, data);
+      final updatedCompany = await _dataAgent.updateCompany(id, data,
+          logoFile: logoFile, removeLogo: removeLogo);
       if (updatedCompany != null) {
         final updatedCompanies = state.value?.companies.map((c) {
           return c.id == id ? updatedCompany : c;

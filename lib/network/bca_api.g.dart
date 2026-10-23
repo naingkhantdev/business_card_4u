@@ -428,12 +428,12 @@ class _BcaApi implements BcaApi {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
-    final _data = <String, dynamic>{};
-    _data.addAll(body);
+    final _data = FormData.fromMap(body);
     final _options = _setStreamType<Object>(Options(
       method: 'POST',
       headers: _headers,
       extra: _extra,
+      contentType: 'multipart/form-data',
     )
         .compose(
           _dio.options,
@@ -486,12 +486,12 @@ class _BcaApi implements BcaApi {
     final _extra = <String, dynamic>{};
     final queryParameters = <String, dynamic>{};
     final _headers = <String, dynamic>{};
-    final _data = <String, dynamic>{};
-    _data.addAll(body);
+    final _data = FormData.fromMap(body);
     final _options = _setStreamType<Object>(Options(
-      method: 'PUT',
+      method: 'POST',
       headers: _headers,
       extra: _extra,
+      contentType: 'multipart/form-data',
     )
         .compose(
           _dio.options,

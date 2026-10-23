@@ -5,6 +5,7 @@ import '../theme/app_colors.dart';
 import '../../data/vos/company_model.dart';
 import '../responsive/responsive.dart';
 import '../theme/wallet_tokens.dart';
+import '../widgets/company_logo.dart';
 
 class CompanyDetailPage extends StatelessWidget {
   final CompanyModel company;
@@ -83,13 +84,20 @@ class CompanyDetailPage extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const SizedBox(height: 40),
+                // Light ring so the logo's white plate (or the letter
+                // fallback) sits cleanly on the dark gradient.
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(3),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
+                    color: Colors.white.withOpacity(0.25),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.business_rounded, color: Colors.white, size: 48),
+                  child: CompanyLogo(
+                    name: company.name,
+                    logo: company.logo,
+                    size: 76,
+                    isDark: isDark,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Text(

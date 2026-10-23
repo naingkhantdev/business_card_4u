@@ -393,6 +393,30 @@ abstract class AppLocalizations {
   /// **'Added {date}'**
   String cardDetailAddedOn(String date);
 
+  /// No description provided for @cardDetailCallPerson.
+  ///
+  /// In en, this message translates to:
+  /// **'Call {name}'**
+  String cardDetailCallPerson(String name);
+
+  /// No description provided for @cardDetailEmailPerson.
+  ///
+  /// In en, this message translates to:
+  /// **'Email {name}'**
+  String cardDetailEmailPerson(String name);
+
+  /// No description provided for @cardDetailGetDirections.
+  ///
+  /// In en, this message translates to:
+  /// **'Get Directions'**
+  String get cardDetailGetDirections;
+
+  /// No description provided for @cardDetailVisitWebsite.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit Website'**
+  String get cardDetailVisitWebsite;
+
   /// No description provided for @cardDetailPhone.
   ///
   /// In en, this message translates to:
@@ -897,6 +921,60 @@ abstract class AppLocalizations {
   /// **'Clear'**
   String get cardPageClearFilter;
 
+  /// No description provided for @cardPageEmptySavedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your card wallet is empty'**
+  String get cardPageEmptySavedTitle;
+
+  /// No description provided for @cardPageEmptySavedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Photograph a business card and we\'ll fill in the details for you.'**
+  String get cardPageEmptySavedSubtitle;
+
+  /// No description provided for @cardPageEmptySavedScanCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan Your First Card'**
+  String get cardPageEmptySavedScanCta;
+
+  /// No description provided for @cardPageEmptyFriendsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No connections yet'**
+  String get cardPageEmptyFriendsTitle;
+
+  /// No description provided for @cardPageEmptyFriendsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan someone\'s QR code to connect, or search for people you know.'**
+  String get cardPageEmptyFriendsSubtitle;
+
+  /// No description provided for @cardPageEmptyFriendsQrCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Show My QR'**
+  String get cardPageEmptyFriendsQrCta;
+
+  /// No description provided for @cardPageEmptyFriendsSearchCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Find People'**
+  String get cardPageEmptyFriendsSearchCta;
+
+  /// No description provided for @cardPageNoMatchingCardsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing on this tab matches your search or filters.'**
+  String get cardPageNoMatchingCardsSubtitle;
+
+  /// No description provided for @cardPageClearFiltersCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear Filters'**
+  String get cardPageClearFiltersCta;
+
   /// No description provided for @cardPageSearchCompaniesHint.
   ///
   /// In en, this message translates to:
@@ -1074,7 +1152,7 @@ abstract class AppLocalizations {
   /// No description provided for @deactivateAccountSubtext.
   ///
   /// In en, this message translates to:
-  /// **'You can get it back by logging in again within 7 days.'**
+  /// **'You\'ll be signed out on every device. Log in again within 7 days to restore everything. After that, the account can only be restored by contacting support.'**
   String get deactivateAccountSubtext;
 
   /// No description provided for @deactivateAccountPasswordLabel.
@@ -2430,8 +2508,20 @@ abstract class AppLocalizations {
   /// No description provided for @friendRequestsReject.
   ///
   /// In en, this message translates to:
-  /// **'Reject'**
+  /// **'Decline'**
   String get friendRequestsReject;
+
+  /// No description provided for @friendRequestsWaiting.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 person wants to connect} other{{count} people want to connect}}'**
+  String friendRequestsWaiting(num count);
+
+  /// No description provided for @friendRequestsEmptySubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When someone scans your QR code or finds you in search, their request shows up here.'**
+  String get friendRequestsEmptySubtitle;
 
   /// No description provided for @friendRequestsAccept.
   ///
@@ -2577,6 +2667,42 @@ abstract class AppLocalizations {
   /// **'CREATE COMPANY'**
   String get companyFormCreateButton;
 
+  /// No description provided for @companyFormLogoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Company logo'**
+  String get companyFormLogoTitle;
+
+  /// No description provided for @companyFormLogoSheetSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Shown on every card that works at this company.'**
+  String get companyFormLogoSheetSubtitle;
+
+  /// No description provided for @companyFormAddLogo.
+  ///
+  /// In en, this message translates to:
+  /// **'Add logo'**
+  String get companyFormAddLogo;
+
+  /// No description provided for @companyFormChangeLogo.
+  ///
+  /// In en, this message translates to:
+  /// **'Change logo'**
+  String get companyFormChangeLogo;
+
+  /// No description provided for @companyFormRemoveLogo.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get companyFormRemoveLogo;
+
+  /// No description provided for @companyFormLogoHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Shown in a circle, so a square logo looks best.'**
+  String get companyFormLogoHelp;
+
   /// No description provided for @saveToGalleryAccessDenied.
   ///
   /// In en, this message translates to:
@@ -2594,6 +2720,270 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not save image. Please try again.'**
   String get saveToGalleryError;
+
+  /// No description provided for @addCardDiscardNewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard this card?'**
+  String get addCardDiscardNewTitle;
+
+  /// No description provided for @addCardDiscardEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard your changes?'**
+  String get addCardDiscardEditTitle;
+
+  /// No description provided for @addCardDiscardPhotoCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 photo} other{{count} photos}}'**
+  String addCardDiscardPhotoCount(int count);
+
+  /// No description provided for @addCardDiscardScannedFieldCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 scanned field} other{{count} scanned fields}}'**
+  String addCardDiscardScannedFieldCount(int count);
+
+  /// No description provided for @addCardDiscardBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'{photos} and {fields}'**
+  String addCardDiscardBoth(String photos, String fields);
+
+  /// No description provided for @addCardDiscardBodyItems.
+  ///
+  /// In en, this message translates to:
+  /// **'{items} will be lost. This can\'t be undone.'**
+  String addCardDiscardBodyItems(String items);
+
+  /// No description provided for @addCardDiscardBodyGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'What you\'ve entered will be lost. This can\'t be undone.'**
+  String get addCardDiscardBodyGeneric;
+
+  /// No description provided for @addCardKeepEditing.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep Editing'**
+  String get addCardKeepEditing;
+
+  /// No description provided for @addCardDiscard.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get addCardDiscard;
+
+  /// No description provided for @addCardPhoneHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. 09 123 456 789'**
+  String get addCardPhoneHint;
+
+  /// No description provided for @addCardEmailHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. mail@example.com'**
+  String get addCardEmailHint;
+
+  /// No description provided for @addCardAddPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Add another phone'**
+  String get addCardAddPhone;
+
+  /// No description provided for @addCardAddEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Add another email'**
+  String get addCardAddEmail;
+
+  /// No description provided for @addCardAddNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a note'**
+  String get addCardAddNote;
+
+  /// No description provided for @addCardRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get addCardRemove;
+
+  /// No description provided for @addCardReviewScannedFields.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Review 1 scanned field} other{Review {count} scanned fields}}'**
+  String addCardReviewScannedFields(int count);
+
+  /// No description provided for @addCardReviewScannedFieldsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Read from the photo. Highlighted fields below are worth a quick check before you save.'**
+  String get addCardReviewScannedFieldsSubtitle;
+
+  /// No description provided for @addCardLookingUpCompany.
+  ///
+  /// In en, this message translates to:
+  /// **'Looking up \"{name}\"…'**
+  String addCardLookingUpCompany(String name);
+
+  /// No description provided for @addCardAddScannedCompanyPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Scanned \"{name}\", which isn\'t on file yet. Add it as a new company?'**
+  String addCardAddScannedCompanyPrompt(String name);
+
+  /// No description provided for @addCardCompanyAddedOnSave.
+  ///
+  /// In en, this message translates to:
+  /// **'\"{name}\" will be added as a new company when you save this card.'**
+  String addCardCompanyAddedOnSave(String name);
+
+  /// No description provided for @addCardCompanyCreateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t add \"{name}\". Choose an existing company or try again.'**
+  String addCardCompanyCreateFailed(String name);
+
+  /// No description provided for @addCardAddCompanyAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Company'**
+  String get addCardAddCompanyAction;
+
+  /// No description provided for @addCardChooseExistingCompany.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose Existing'**
+  String get addCardChooseExistingCompany;
+
+  /// No description provided for @addCardUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get addCardUndo;
+
+  /// No description provided for @scanPageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Point at someone\'s profile QR code'**
+  String get scanPageHint;
+
+  /// No description provided for @scanPageTorch.
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get scanPageTorch;
+
+  /// No description provided for @scanPageFromPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'From Photo'**
+  String get scanPageFromPhoto;
+
+  /// No description provided for @scanPageScanFromPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Scan From a Photo'**
+  String get scanPageScanFromPhoto;
+
+  /// No description provided for @scanPageShowMyQr.
+  ///
+  /// In en, this message translates to:
+  /// **'Show My QR Instead'**
+  String get scanPageShowMyQr;
+
+  /// No description provided for @scanPageNoQrInPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'No QR code found in that photo.'**
+  String get scanPageNoQrInPhoto;
+
+  /// No description provided for @scanPageCameraDeniedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera access is off'**
+  String get scanPageCameraDeniedTitle;
+
+  /// No description provided for @scanPageCameraDeniedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow camera access for this app in your phone\'s Settings, then tap Try Again. You can also scan a QR from a saved photo.'**
+  String get scanPageCameraDeniedBody;
+
+  /// No description provided for @scanPageCameraErrorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The camera couldn\'t start'**
+  String get scanPageCameraErrorTitle;
+
+  /// No description provided for @scanPageCameraErrorBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again, or scan a QR from a saved photo instead.'**
+  String get scanPageCameraErrorBody;
+
+  /// No description provided for @scanPageTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Try Again'**
+  String get scanPageTryAgain;
+
+  /// No description provided for @cardDetailDeleteNamedCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {name}\'s card?'**
+  String cardDetailDeleteNamedCardTitle(String name);
+
+  /// No description provided for @cardDetailDeleteCardBodyWithPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Its photo and contact details will be removed.} other{Its {count} photos and contact details will be removed.}} This can\'t be undone.'**
+  String cardDetailDeleteCardBodyWithPhotos(int count);
+
+  /// No description provided for @cardDetailDeleteCardBodyNoPhotos.
+  ///
+  /// In en, this message translates to:
+  /// **'Its contact details will be removed. This can\'t be undone.'**
+  String get cardDetailDeleteCardBodyNoPhotos;
+
+  /// No description provided for @cardDetailNoPhoneAppCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'No app here can make calls. The number has been copied.'**
+  String get cardDetailNoPhoneAppCopied;
+
+  /// No description provided for @cardDetailNoMailAppCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'No email app is set up. The address has been copied.'**
+  String get cardDetailNoMailAppCopied;
+
+  /// No description provided for @cardDetailLinkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open this link. It has been copied instead.'**
+  String get cardDetailLinkCopied;
+
+  /// No description provided for @onboardingStepEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get onboardingStepEmail;
+
+  /// No description provided for @onboardingStepVerify.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify'**
+  String get onboardingStepVerify;
+
+  /// No description provided for @onboardingStepEmailDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Email entered'**
+  String get onboardingStepEmailDone;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

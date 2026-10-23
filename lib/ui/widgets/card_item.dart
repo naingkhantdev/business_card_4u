@@ -272,11 +272,18 @@ class _Avatar extends StatelessWidget {
         width: 50,
         height: 50,
         decoration: BoxDecoration(
-          // Square. The circular crop is the friendly-app convention; the
-          // grid wants the portrait to align with the type block beside it,
-          // and a disc gives it no edge to align to.
-          borderRadius: BorderRadius.circular(Wallet.radiusTile),
-          color: Wallet.tintOf(isDark),
+          // Circle, matching the sidebar and card detail avatars: the same
+          // person showed up as a square here and a circle everywhere else.
+          shape: BoxShape.circle,
+          color: isDark ? Wallet.accentDark.withOpacity(.16) : Wallet.accentSoft,
+        ),
+        // Ring over the clipped content, not under it — see card detail.
+        foregroundDecoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: Wallet.accentOf(isDark).withOpacity(.25),
+            width: 1.5,
+          ),
         ),
         clipBehavior: Clip.antiAlias,
         child: url != null
@@ -301,14 +308,14 @@ class _Monogram extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        color: Wallet.tintOf(isDark),
+        color: isDark ? Wallet.accentDark.withOpacity(.16) : Wallet.accentSoft,
         alignment: Alignment.center,
         child: Text(
           letter,
           style: AppTypography.primary(TextStyle(
             color: Wallet.accentOf(isDark),
-            fontSize: 19,
-            fontWeight: FontWeight.w600,
+            fontSize: 21,
+            fontWeight: FontWeight.w700,
           )),
         ),
       );
