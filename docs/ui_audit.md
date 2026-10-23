@@ -275,3 +275,21 @@ AGENTS.md lists `goRouter` in the architecture chain, but the app navigates with
 2. F2 and F3 OTP paste/autofill and resend timing
 3. F4 login dark mode and F5 input affordances
 4. F6 CTA copy, then F7–F11
+
+---
+
+## Myanmar strings awaiting native review
+
+Drafted alongside Phase 3 changes. Each is live in `lib/l10n/app_my.arb`; replace the value there once reviewed and tick it off here.
+
+| Key | English | Myanmar (draft) | Reviewed |
+|---|---|---|---|
+| `cardPageEmptySavedTitle` | Your card wallet is empty | သင့်ကတ်အိတ် ဗလာဖြစ်နေပါသည် | ☐ |
+| `cardPageEmptySavedSubtitle` | Photograph a business card and we'll fill in the details for you. | စီးပွားရေးကတ်ကို ဓာတ်ပုံရိုက်ပါ၊ အချက်အလက်များကို ကျွန်ုပ်တို့ ဖြည့်ပေးပါမည်။ | ☐ |
+| `cardPageEmptySavedScanCta` | Scan Your First Card | ပထမဆုံးကတ်ကို စကင်ဖတ်မည် | ☐ |
+| `cardPageEmptyFriendsTitle` | No connections yet | ချိတ်ဆက်မှု မရှိသေးပါ | ☐ |
+| `cardPageEmptyFriendsSubtitle` | Let someone scan your QR code to connect, or search for people you know. | ချိတ်ဆက်ရန် သင့် QR ကုဒ်ကို စကင်ဖတ်ခိုင်းပါ၊ သို့မဟုတ် သိသူများကို ရှာဖွေပါ။ | ☐ |
+| `cardPageEmptyFriendsQrCta` | Show My QR | ကျွန်ုပ်၏ QR ကို ပြမည် | ☐ |
+| `cardPageEmptyFriendsSearchCta` | Find People | လူများ ရှာဖွေမည် | ☐ |
+| `cardPageNoMatchingCardsSubtitle` | Nothing on this tab matches your search or filters. | သင့်ရှာဖွေမှု သို့မဟုတ် စစ်ထုတ်မှုနှင့် ကိုက်ညီသော ကတ် မရှိပါ။ | ☐ |
+| `cardPageClearFiltersCta` | Clear Filters | စစ်ထုတ်မှုများ ရှင်းမည် | ☐ |

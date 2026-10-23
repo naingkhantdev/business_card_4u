@@ -61,6 +61,10 @@ class _CardPageState extends ConsumerState<CardPage>
   int _previousNotificationCount = 0;
   bool _hasSeenInitialNotificationCount = false;
 
+  /// Set once the first card load has landed and the opening tab was picked
+  /// from it, so later refreshes never move the user off the tab they chose.
+  bool _initialTabChosen = false;
+
   @override
   void initState() {
     super.initState();
@@ -91,18 +95,23 @@ class _CardPageState extends ConsumerState<CardPage>
   void _initTabController() {
     _tabController = TabController(length: 2, vsync: this);
     _tabController!.addListener(() {
-      if (mounted) {
-        // Reset search + company filter when switching tabs.
-        // Otherwise filters from one tab leak into the other and hide cards.
-        setState(() {
-          _query = "";
-          _searchController.clear();
-          _searchFocusNode.unfocus();
-          _selectedCompanyFilter = null;
-          _selectedProfession = null;
-          _dropApiResults();
-        });
-      }
+      // Reset search + company filter when switching tabs.
+      // Otherwise filters from one tab leak into the other and hide cards.
+      if (mounted) _clearFilters();
+    });
+  }
+
+  /// Drops the search, company and profession filters together. Used on a tab
+  /// switch and by the no-match empty state — never automatically while the
+  /// user is typing, which used to wipe a query the moment it matched nothing.
+  void _clearFilters() {
+    setState(() {
+      _query = "";
+      _searchController.clear();
+      _searchFocusNode.unfocus();
+      _selectedCompanyFilter = null;
+      _selectedProfession = null;
+      _dropApiResults();
     });
   }
 
@@ -480,9 +489,10 @@ class _CardPageState extends ConsumerState<CardPage>
   Widget _buildCardList(
     List<BusinessCardModel> cards,
     bool isLoading,
-    bool Function(BusinessCardModel) onTab,
-  ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    bool Function(BusinessCardModel) onTab, {
+    required bool isFriendsTab,
+    required BusinessCardModel? myProfileCard,
+  }) {
     final l10n = AppLocalizations.of(context)!;
     if (isLoading) {
       return const Center(
@@ -490,67 +500,52 @@ class _CardPageState extends ConsumerState<CardPage>
       );
     }
 
-    // No auto-clear here. This runs for both tabs on every build, including
-    // the one off screen, so a filter that matched nothing on the hidden tab
-    // used to reset the filter just picked on the visible one. build() does
-    // the auto-clear, for the current tab only.
+    // Filters are never cleared from here. This runs for both tabs on every
+    // build, including the one off screen; a no-match result is shown as its
+    // own state below, with Clear Filters as the way out.
     final filtered = _filterCards(cards, onTab);
 
     final scrollChildren = <Widget>[];
 
     if (filtered.isEmpty) {
-      final hasActiveFilter = _hasActiveFilter;
-      final title = hasActiveFilter
-          ? l10n.cardPageNoMatchingCardsTitle
-          : (cards.isNotEmpty ? l10n.cardPageNoCardsThisTabTitle : l10n.cardPageNoCardsYetTitle);
-      final subtitle = hasActiveFilter
-          ? l10n.cardPageFilterHidingCardsSubtitle
-          : l10n.cardPagePullToRefreshSubtitle;
-
-      scrollChildren.add(
-        Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 60),
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Wallet.tintOf(isDark),
-                ),
-                child: Icon(
-                  hasActiveFilter ? Icons.filter_list_off_rounded : Icons.style_outlined,
-                  size: 36,
-                  color: Wallet.accentOf(isDark).withOpacity(.5),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: isDark
-                      ? Wallet.darkInk
-                      : Wallet.ink,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Wallet.faintOf(isDark),
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 40),
-            ],
+      final Widget emptyState;
+      if (_hasActiveFilter) {
+        emptyState = _EmptyState(
+          icon: Icons.filter_list_off_rounded,
+          title: l10n.cardPageNoMatchingCardsTitle,
+          subtitle: l10n.cardPageNoMatchingCardsSubtitle,
+          primaryLabel: l10n.cardPageClearFiltersCta,
+          onPrimary: _clearFilters,
+        );
+      } else if (isFriendsTab) {
+        // Connections start from an exchange, so the first move is handing
+        // over your own code; searching is the fallback.
+        emptyState = _EmptyState(
+          icon: Icons.people_outline_rounded,
+          title: l10n.cardPageEmptyFriendsTitle,
+          subtitle: l10n.cardPageEmptyFriendsSubtitle,
+          primaryLabel: l10n.cardPageEmptyFriendsQrCta,
+          onPrimary: () => _showMyQrCode(context, myProfileCard),
+          secondaryLabel: l10n.cardPageEmptyFriendsSearchCta,
+          onSecondary: () => Navigator.push(
+            context,
+            AppPageRoute(builder: (_) => const SearchPage()),
           ),
-        ),
-      );
+        );
+      } else {
+        // Scanning is the fast path into an empty wallet; typing a card in is
+        // still one tap away.
+        emptyState = _EmptyState(
+          icon: Icons.document_scanner_outlined,
+          title: l10n.cardPageEmptySavedTitle,
+          subtitle: l10n.cardPageEmptySavedSubtitle,
+          primaryLabel: l10n.cardPageEmptySavedScanCta,
+          onPrimary: _startCardScan,
+          secondaryLabel: l10n.cardPageEnterDetailsManually,
+          onSecondary: _openAddCard,
+        );
+      }
+      scrollChildren.add(emptyState);
     } else if (Responsive.isDesktop(context)) {
       // A single-column list stretched across a browser window reads as
       // mostly empty space. A wrapped multi-column layout uses that width
@@ -1253,30 +1248,29 @@ class _CardPageState extends ConsumerState<CardPage>
     // (card_type == 'user_card' AND has accepted relation in friendships table)
     final myFriendsCards = cardState.cards.where(onFriendsTab).toList();
 
-    // Auto-clear filters if they would hide all cards for the current tab
-    // (prevents cards from DB not appearing due to leftover filter). Not
-    // while the server is still answering — the list is mid-update then.
+    // Open on the tab that has something to show — once, when the first load
+    // lands. Friends is tab 0, but a new account has no connections yet, and
+    // Saved is where its first scanned card goes.
+    if (!_initialTabChosen && !isCardLoading && ref.read(cardProvider).hasValue) {
+      _initialTabChosen = true;
+      final preferred = myFriendsCards.isNotEmpty ? 0 : 1;
+      if (_tabController!.index != preferred) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _tabController!.index = preferred;
+        });
+      }
+    }
+
+    // A filter that matches nothing is left in place: the list shows the
+    // no-match state with a Clear Filters action instead. Clearing it here
+    // automatically erased the search box mid-typing.
     final isFriendsTab = (_tabController?.index ?? 0) == 0;
     final currentTabList = isFriendsTab ? myFriendsCards : mySavedCards;
-    final filteredCurrent = _filterCards(
-        currentTabList, isFriendsTab ? onFriendsTab : onSavedTab);
-    if (currentTabList.isNotEmpty &&
-        filteredCurrent.isEmpty &&
-        _hasActiveFilter &&
-        !_isFiltering) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          setState(() {
-            _query = "";
-            _searchController.clear();
-            _searchFocusNode.unfocus();
-            _selectedCompanyFilter = null;
-            _selectedProfession = null;
-            _dropApiResults();
-          });
-        }
-      });
-    }
+
+    // The empty state carries its own primary action, so the FAB would be a
+    // second one competing with it.
+    final showEmptyState =
+        !isCardLoading && currentTabList.isEmpty && !_hasActiveFilter;
 
     return Scaffold(
       backgroundColor: isDark ? Wallet.darkGround : AppColors.surface,
@@ -1577,8 +1571,20 @@ class _CardPageState extends ConsumerState<CardPage>
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildCardList(myFriendsCards, isCardLoading, onFriendsTab),
-                _buildCardList(mySavedCards, isCardLoading, onSavedTab),
+                _buildCardList(
+                  myFriendsCards,
+                  isCardLoading,
+                  onFriendsTab,
+                  isFriendsTab: true,
+                  myProfileCard: myProfileCard,
+                ),
+                _buildCardList(
+                  mySavedCards,
+                  isCardLoading,
+                  onSavedTab,
+                  isFriendsTab: false,
+                  myProfileCard: myProfileCard,
+                ),
               ],
             ),
           ),
@@ -1586,7 +1592,9 @@ class _CardPageState extends ConsumerState<CardPage>
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: showEmptyState
+          ? null
+          : FloatingActionButton.extended(
         heroTag: 'action_fab',
         backgroundColor: Wallet.accentOf(isDark),
         elevation: 4,
@@ -1862,6 +1870,94 @@ class _CompanyFilterSheetState extends State<_CompanyFilterSheet> {
               if (isSelected) ...[
                 const SizedBox(width: 12),
                 Icon(Icons.check_rounded, size: 20, color: accent),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A tab with nothing to show: what this space is for, and the one thing to
+/// do about it. The primary action is the only filled block on the screen
+/// (the FAB steps aside while this is up); the secondary is a plain link.
+class _EmptyState extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String primaryLabel;
+  final VoidCallback onPrimary;
+  final String? secondaryLabel;
+  final VoidCallback? onSecondary;
+
+  const _EmptyState({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.primaryLabel,
+    required this.onPrimary,
+    this.secondaryLabel,
+    this.onSecondary,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 360),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 48, 8, 40),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Wallet.tintOf(isDark),
+                ),
+                child: Icon(icon, size: 36, color: Wallet.accentOf(isDark)),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: AppTypography.primary(TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Wallet.inkOf(isDark),
+                )),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                textAlign: TextAlign.center,
+                style: AppTypography.secondary(TextStyle(
+                  fontSize: 14,
+                  height: 1.5,
+                  color: Wallet.mutedOf(isDark),
+                )),
+              ),
+              const SizedBox(height: 24),
+              AppPrimaryButton(
+                text: primaryLabel,
+                loading: false,
+                onPressed: onPrimary,
+              ),
+              if (secondaryLabel != null && onSecondary != null) ...[
+                const SizedBox(height: 4),
+                TextButton(
+                  onPressed: onSecondary,
+                  style: TextButton.styleFrom(
+                    foregroundColor: Wallet.accentOf(isDark),
+                    minimumSize: const Size(0, 48),
+                  ),
+                  child: Text(secondaryLabel!),
+                ),
               ],
             ],
           ),
