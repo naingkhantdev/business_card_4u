@@ -703,5 +703,16 @@
   },
   "addCardAddCompanyAction": "Add Company",
   "addCardChooseExistingCompany": "Choose Existing",
-  "addCardUndo": "Undo"
+  "addCardUndo": "Undo",
+  "scanPageHint": "Point at someone's profile QR code",
+  "scanPageTorch": "Light",
+  "scanPageFromPhoto": "From Photo",
+  "scanPageScanFromPhoto": "Scan From a Photo",
+  "scanPageShowMyQr": "Show My QR Instead",
+  "scanPageNoQrInPhoto": "No QR code found in that photo.",
+  "scanPageCameraDeniedTitle": "Camera access is off",
+  "scanPageCameraDeniedBody": "Allow camera access for this app in your phone's Settings, then tap Try Again. You can also scan a QR from a saved photo.",
+  "scanPageCameraErrorTitle": "The camera couldn't start",
+  "scanPageCameraErrorBody": "Try again, or scan a QR from a saved photo instead.",
+  "scanPageTryAgain": "Try Again"
 }

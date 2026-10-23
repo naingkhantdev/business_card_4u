@@ -37,8 +37,13 @@ class MyQrPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final qrData = profileCard?.qrCodeData?.trim() ?? '';
-    final hasProfile = profileCard != null;
+    // id 0 is the stand-in card the app builds before a real profile card
+    // exists. Its qrCodeData is made up, so a code drawn from it would scan
+    // as "Card not found" — treat it as no profile at all.
+    final isPlaceholder = profileCard?.id == 0;
+    final qrData =
+        isPlaceholder ? '' : (profileCard?.qrCodeData?.trim() ?? '');
+    final hasProfile = profileCard != null && !isPlaceholder;
     final hasQr = qrData.isNotEmpty;
     // A 216pt plate plus its quiet zone needs more width than a narrow phone
     // has left after the sheet and panel padding, so the plate takes what the

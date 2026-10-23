@@ -684,7 +684,9 @@ class _CardPageState extends ConsumerState<CardPage>
                       child: MyQrPanel(profileCard: myProfileCard),
                     ),
                   ),
-                  if (myProfileCard == null) ...[
+                  // The id-0 placeholder has no real code either; see
+                  // MyQrPanel.
+                  if (myProfileCard == null || myProfileCard.id == 0) ...[
                     const SizedBox(height: 20),
                     AppPrimaryButton(
                       text: l10n.cardPageCreateProfileCard,
@@ -1084,7 +1086,7 @@ class _CardPageState extends ConsumerState<CardPage>
     });
   }
 
-  void _showAddOptions(BuildContext context) {
+  void _showAddOptions(BuildContext context, BusinessCardModel? myProfileCard) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
@@ -1123,7 +1125,13 @@ class _CardPageState extends ConsumerState<CardPage>
                     Navigator.pop(ctx);
                     Navigator.push(
                       context,
-                      AppPageRoute(builder: (_) => const ScanPage()),
+                      AppPageRoute(
+                        builder: (_) => ScanPage(
+                          // An exchange goes both ways; the scanner offers
+                          // the user's own code without a trip back here.
+                          onShowMyQr: () => _showMyQrCode(context, myProfileCard),
+                        ),
+                      ),
                     );
                   },
                 ),
@@ -1639,7 +1647,7 @@ class _CardPageState extends ConsumerState<CardPage>
         ),
         onPressed: () {
           if (_tabController?.index == 0) {
-            _showAddOptions(context);
+            _showAddOptions(context, myProfileCard);
           } else {
             _showNewCardOptions();
           }

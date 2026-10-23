@@ -453,5 +453,16 @@
   "addCardCompanyCreateFailed": "\"{name}\" ကို ထည့်၍ မရပါ။ ရှိပြီးသား ကုမ္ပဏီကို ရွေးပါ သို့မဟုတ် ထပ်ကြိုးစားပါ။",
   "addCardAddCompanyAction": "ကုမ္ပဏီ ထည့်မည်",
   "addCardChooseExistingCompany": "ရှိပြီးသားကို ရွေးမည်",
-  "addCardUndo": "ပြန်ဖျက်မည်"
+  "addCardUndo": "ပြန်ဖျက်မည်",
+  "scanPageHint": "တစ်စုံတစ်ယောက်၏ ပရိုဖိုင် QR ကုဒ်ကို ချိန်ပါ",
+  "scanPageTorch": "မီး",
+  "scanPageFromPhoto": "ဓာတ်ပုံမှ",
+  "scanPageScanFromPhoto": "ဓာတ်ပုံမှ စကင်ဖတ်မည်",
+  "scanPageShowMyQr": "ကျွန်ုပ်၏ QR ကို ပြမည်",
+  "scanPageNoQrInPhoto": "ထိုဓာတ်ပုံတွင် QR ကုဒ် မတွေ့ပါ။",
+  "scanPageCameraDeniedTitle": "ကင်မရာ အသုံးပြုခွင့် ပိတ်ထားသည်",
+  "scanPageCameraDeniedBody": "ဖုန်း၏ ဆက်တင်တွင် ဤအက်ပ်အတွက် ကင်မရာ အသုံးပြုခွင့်ကို ဖွင့်ပြီး ထပ်ကြိုးစားမည်ကို နှိပ်ပါ။ သိမ်းထားသော ဓာတ်ပုံမှလည်း QR ကို စကင်ဖတ်နိုင်ပါသည်။",
+  "scanPageCameraErrorTitle": "ကင်မရာ စတင်၍ မရပါ",
+  "scanPageCameraErrorBody": "ထပ်ကြိုးစားပါ၊ သို့မဟုတ် သိမ်းထားသော ဓာတ်ပုံမှ QR ကို စကင်ဖတ်ပါ။",
+  "scanPageTryAgain": "ထပ်ကြိုးစားမည်"
 }

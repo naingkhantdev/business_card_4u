@@ -321,3 +321,14 @@ Drafted alongside Phase 3 changes. Each is live in `lib/l10n/app_my.arb`; replac
 | `addCardAddCompanyAction` | Add Company | ကုမ္ပဏီ ထည့်မည် | ☐ |
 | `addCardChooseExistingCompany` | Choose Existing | ရှိပြီးသားကို ရွေးမည် | ☐ |
 | `addCardUndo` | Undo | ပြန်ဖျက်မည် | ☐ |
+| `scanPageHint` | Point at someone's profile QR code | တစ်စုံတစ်ယောက်၏ ပရိုဖိုင် QR ကုဒ်ကို ချိန်ပါ | ☐ |
+| `scanPageTorch` | Light | မီး | ☐ |
+| `scanPageFromPhoto` | From Photo | ဓာတ်ပုံမှ | ☐ |
+| `scanPageScanFromPhoto` | Scan From a Photo | ဓာတ်ပုံမှ စကင်ဖတ်မည် | ☐ |
+| `scanPageShowMyQr` | Show My QR Instead | ကျွန်ုပ်၏ QR ကို ပြမည် | ☐ |
+| `scanPageNoQrInPhoto` | No QR code found in that photo. | ထိုဓာတ်ပုံတွင် QR ကုဒ် မတွေ့ပါ။ | ☐ |
+| `scanPageCameraDeniedTitle` | Camera access is off | ကင်မရာ အသုံးပြုခွင့် ပိတ်ထားသည် | ☐ |
+| `scanPageCameraDeniedBody` | Allow camera access for this app in your phone's Settings, then tap Try Again. You can also scan a QR from a saved photo. | ဖုန်း၏ ဆက်တင်တွင် ဤအက်ပ်အတွက် ကင်မရာ အသုံးပြုခွင့်ကို ဖွင့်ပြီး ထပ်ကြိုးစားမည်ကို နှိပ်ပါ။ သိမ်းထားသော ဓာတ်ပုံမှလည်း QR ကို စကင်ဖတ်နိုင်ပါသည်။ | ☐ |
+| `scanPageCameraErrorTitle` | The camera couldn't start | ကင်မရာ စတင်၍ မရပါ | ☐ |
+| `scanPageCameraErrorBody` | Try again, or scan a QR from a saved photo instead. | ထပ်ကြိုးစားပါ၊ သို့မဟုတ် သိမ်းထားသော ဓာတ်ပုံမှ QR ကို စကင်ဖတ်ပါ။ | ☐ |
+| `scanPageTryAgain` | Try Again | ထပ်ကြိုးစားမည် | ☐ |
