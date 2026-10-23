@@ -613,5 +613,45 @@
   "companyFormCreateButton": "CREATE COMPANY",
   "saveToGalleryAccessDenied": "Allow photo access in Settings to save images.",
   "saveToGallerySuccess": "Saved to gallery",
-  "saveToGalleryError": "Could not save image. Please try again."
+  "saveToGalleryError": "Could not save image. Please try again.",
+  "addCardDiscardNewTitle": "Discard this card?",
+  "addCardDiscardEditTitle": "Discard your changes?",
+  "addCardDiscardPhotoCount": "{count, plural, =1{1 photo} other{{count} photos}}",
+  "@addCardDiscardPhotoCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addCardDiscardScannedFieldCount": "{count, plural, =1{1 scanned field} other{{count} scanned fields}}",
+  "@addCardDiscardScannedFieldCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "addCardDiscardBoth": "{photos} and {fields}",
+  "@addCardDiscardBoth": {
+    "placeholders": {
+      "photos": {
+        "type": "String"
+      },
+      "fields": {
+        "type": "String"
+      }
+    }
+  },
+  "addCardDiscardBodyItems": "{items} will be lost. This can't be undone.",
+  "@addCardDiscardBodyItems": {
+    "placeholders": {
+      "items": {
+        "type": "String"
+      }
+    }
+  },
+  "addCardDiscardBodyGeneric": "What you've entered will be lost. This can't be undone.",
+  "addCardKeepEditing": "Keep Editing",
+  "addCardDiscard": "Discard"
 }

@@ -21,6 +21,7 @@ import '../../data/vos/company_model.dart';
 import '../../data/vos/scanned_card_data.dart';
 import '../responsive/responsive.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_typography.dart';
 import '../widgets/app_primary_button.dart';
 import '../widgets/app_toast.dart';
 import '../widgets/image_source_sheet.dart';
@@ -101,6 +102,14 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
 
   bool _isRescanning = false;
 
+  /// [_formSignature] as it stood before the user (or a scan) touched the
+  /// form, so leaving can tell real work from an untouched form.
+  late final String _baselineSignature;
+
+  /// Set once the card is saved, so the pop that follows isn't mistaken for
+  /// walking away from unsaved work.
+  bool _saved = false;
+
   bool get isEditing => widget.card != null;
 
   /// True when this form is editing (or creating) the signed-in user's own
@@ -162,6 +171,9 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     if (_addressEntries.isEmpty) {
       _addressEntries.add(_AddressEntry());
     }
+    // Taken before the scan's photos and fields are applied: those are work
+    // the user would lose too.
+    _baselineSignature = _formSignature();
 
     _frontImage = widget.frontImageFile;
     _backImage = widget.backImageFile;
@@ -408,6 +420,158 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     }
   }
 
+  /// Everything the user can change on this form, flattened to one string.
+  /// New photos aren't in it — any picked photo counts as a change by itself.
+  String _formSignature() => [
+        _nameCtrl.text,
+        _positionCtrl.text,
+        _phonesCtrl.text,
+        _emailsCtrl.text,
+        _bioCtrl.text,
+        _profileImageCtrl.text,
+        _selectedCompanyId,
+        _profession,
+        for (final e in _addressEntries.where((e) => !e.isEmpty))
+          e.toModel().displayText,
+      ].map((v) => (v ?? '').toString().trim()).join('\u0000');
+
+  /// Photos picked or carried over from the scan this session — the ones
+  /// that exist nowhere else yet.
+  int get _newPhotoCount => [_frontImage, _backImage, _pickedImage]
+      .where((f) => f != null)
+      .length;
+
+  bool get _isDirty =>
+      !_saved &&
+      (_newPhotoCount > 0 || _formSignature() != _baselineSignature);
+
+  /// Back, swipe-back and the app bar arrow all land here. Leaving an
+  /// untouched form is instant; otherwise the sheet names what goes with it.
+  Future<void> _handleBack() async {
+    if (!_isDirty) {
+      Navigator.of(context).pop();
+      return;
+    }
+    final discard = await _showDiscardSheet();
+    if (discard == true && mounted) Navigator.of(context).pop();
+  }
+
+  Future<bool?> _showDiscardSheet() {
+    final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final photos = _newPhotoCount;
+    final fields = _scannedFields.length;
+
+    final String body;
+    if (photos > 0 && fields > 0) {
+      body = l10n.addCardDiscardBodyItems(l10n.addCardDiscardBoth(
+          l10n.addCardDiscardPhotoCount(photos),
+          l10n.addCardDiscardScannedFieldCount(fields)));
+    } else if (photos > 0) {
+      body = l10n.addCardDiscardBodyItems(l10n.addCardDiscardPhotoCount(photos));
+    } else if (fields > 0) {
+      body = l10n.addCardDiscardBodyItems(
+          l10n.addCardDiscardScannedFieldCount(fields));
+    } else {
+      body = l10n.addCardDiscardBodyGeneric;
+    }
+
+    return showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Wallet.surfaceOf(isDark),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(Wallet.radiusPanel),
+        ),
+      ),
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(
+              Wallet.margin, 10, Wallet.margin, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 32,
+                  height: 3,
+                  color: Wallet.lineOf(isDark),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Wallet.danger.withOpacity(isDark ? .18 : .1),
+                    ),
+                    child: const Icon(Icons.delete_outline_rounded,
+                        size: 20, color: Wallet.danger),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      isEditing
+                          ? l10n.addCardDiscardEditTitle
+                          : l10n.addCardDiscardNewTitle,
+                      style: AppTypography.primary(TextStyle(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w600,
+                        height: 1.2,
+                        color: Wallet.inkOf(isDark),
+                      )),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                body,
+                style: AppTypography.secondary(TextStyle(
+                  fontSize: 14,
+                  height: 1.45,
+                  color: Wallet.mutedOf(isDark),
+                )),
+              ),
+              const SizedBox(height: 24),
+              // Staying is the safe choice, so it gets the filled button.
+              AppPrimaryButton(
+                text: l10n.addCardKeepEditing,
+                loading: false,
+                onPressed: () => Navigator.of(sheetContext).pop(false),
+                height: 52,
+                borderRadius: BorderRadius.circular(14),
+                fontSize: 16,
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 48,
+                child: TextButton(
+                  onPressed: () => Navigator.of(sheetContext).pop(true),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Wallet.danger,
+                  ),
+                  child: Text(
+                    l10n.addCardDiscard,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   List<String> _splitToList(String input) {
     return input
         .split(',')
@@ -494,6 +658,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     if (result.isSuccess) {
       // A newly typed profession is now on the server's list.
       ref.invalidate(professionsProvider);
+      _saved = true;
       // Success toast is shown by the caller after pop (to avoid timing issues with navigation)
       Navigator.of(context).pop(true);
     } else {
@@ -515,7 +680,15 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final l10n = AppLocalizations.of(context)!;
 
-    return Scaffold(
+    // Never pops on its own: typing doesn't rebuild this widget, so a canPop
+    // worked out at build time could be stale. _handleBack decides at the
+    // moment of leaving instead. The cost is that iOS swipe-back is off here.
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) _handleBack();
+      },
+      child: Scaffold(
       backgroundColor:
           Wallet.groundOf(isDark),
       appBar: AppBar(
@@ -655,6 +828,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
               child: const Center(child: LoadingView(size: 96)),
             ),
         ],
+      ),
       ),
     );
   }

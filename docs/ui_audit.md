@@ -297,3 +297,12 @@ Drafted alongside Phase 3 changes. Each is live in `lib/l10n/app_my.arb`; replac
 | `cardDetailEmailPerson` | Email {name} | {name} ထံ အီးမေးလ်ပို့မည် | ☐ |
 | `cardDetailGetDirections` | Get Directions | လမ်းညွှန် ရယူမည် | ☐ |
 | `cardDetailVisitWebsite` | Visit Website | ဝဘ်ဆိုက်သို့ သွားမည် | ☐ |
+| `addCardDiscardNewTitle` | Discard this card? | ဤကတ်ကို စွန့်ပစ်မည်လား။ | ☐ |
+| `addCardDiscardEditTitle` | Discard your changes? | ပြင်ဆင်ချက်များကို စွန့်ပစ်မည်လား။ | ☐ |
+| `addCardDiscardPhotoCount` | {count} photos | ဓာတ်ပုံ {count} ပုံ | ☐ |
+| `addCardDiscardScannedFieldCount` | {count} scanned fields | စကင်ဖတ်ထားသော အကွက် {count} ခု | ☐ |
+| `addCardDiscardBoth` | {photos} and {fields} | {photos} နှင့် {fields} | ☐ |
+| `addCardDiscardBodyItems` | {items} will be lost. This can't be undone. | {items} ပျောက်ဆုံးသွားပါမည်။ ပြန်ယူ၍ မရပါ။ | ☐ |
+| `addCardDiscardBodyGeneric` | What you've entered will be lost. This can't be undone. | ထည့်သွင်းထားသမျှ ပျောက်ဆုံးသွားပါမည်။ ပြန်ယူ၍ မရပါ။ | ☐ |
+| `addCardKeepEditing` | Keep Editing | ဆက်လက်ပြင်ဆင်မည် | ☐ |
+| `addCardDiscard` | Discard | စွန့်ပစ်မည် | ☐ |

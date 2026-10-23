@@ -429,5 +429,14 @@
   "companyFormCreateButton": "ကုမ္ပဏီ ဖန်တီးမည်",
   "saveToGalleryAccessDenied": "ဓာတ်ပုံများကို သိမ်းရန် ဆက်တင်များတွင် ခွင့်ပြုပေးပါ။",
   "saveToGallerySuccess": "ဓာတ်ပုံများထဲ သိမ်းပြီးပါပြီ",
-  "saveToGalleryError": "ပုံကို မသိမ်းနိုင်ပါ။ ထပ်ကြိုးစားပါ။"
+  "saveToGalleryError": "ပုံကို မသိမ်းနိုင်ပါ။ ထပ်ကြိုးစားပါ။",
+  "addCardDiscardNewTitle": "ဤကတ်ကို စွန့်ပစ်မည်လား။",
+  "addCardDiscardEditTitle": "ပြင်ဆင်ချက်များကို စွန့်ပစ်မည်လား။",
+  "addCardDiscardPhotoCount": "{count, plural, other{ဓာတ်ပုံ {count} ပုံ}}",
+  "addCardDiscardScannedFieldCount": "{count, plural, other{စကင်ဖတ်ထားသော အကွက် {count} ခု}}",
+  "addCardDiscardBoth": "{photos} နှင့် {fields}",
+  "addCardDiscardBodyItems": "{items} ပျောက်ဆုံးသွားပါမည်။ ပြန်ယူ၍ မရပါ။",
+  "addCardDiscardBodyGeneric": "ထည့်သွင်းထားသမျှ ပျောက်ဆုံးသွားပါမည်။ ပြန်ယူ၍ မရပါ။",
+  "addCardKeepEditing": "ဆက်လက်ပြင်ဆင်မည်",
+  "addCardDiscard": "စွန့်ပစ်မည်"
 }
