@@ -336,3 +336,6 @@ Drafted alongside Phase 3 changes. Each is live in `lib/l10n/app_my.arb`; replac
 | `cardDetailDeleteCardBodyWithPhotos` | Its {count} photos and contact details will be removed. This can't be undone. | ဓာတ်ပုံ {count} ပုံနှင့် ဆက်သွယ်ရန် အချက်အလက်များကို ဖယ်ရှားပါမည်။ ပြန်ယူ၍ မရပါ။ | ☐ |
 | `cardDetailDeleteCardBodyNoPhotos` | Its contact details will be removed. This can't be undone. | ဆက်သွယ်ရန် အချက်အလက်များကို ဖယ်ရှားပါမည်။ ပြန်ယူ၍ မရပါ။ | ☐ |
 | `deactivateAccountSubtext (reworded)` | You'll be signed out on every device. Log in again within 7 days to restore everything. After that, the account can only be restored by contacting support. | စက်ပစ္စည်းအားလုံးမှ ထွက်သွားပါမည်။ ရက် ၇ ရက်အတွင်း ပြန်ဝင်ပါက အားလုံး ပြန်ရပါမည်။ ထို့နောက်တွင် အကူအညီဌာနကို ဆက်သွယ်မှသာ ပြန်ဖွင့်နိုင်ပါမည်။ | ☐ |
+| `cardDetailNoPhoneAppCopied` | No app here can make calls. The number has been copied. | ဤစက်တွင် ဖုန်းခေါ်နိုင်သော အက်ပ် မရှိပါ။ နံပါတ်ကို ကူးယူပြီးပါပြီ။ | ☐ |
+| `cardDetailNoMailAppCopied` | No email app is set up. The address has been copied. | အီးမေးလ် အက်ပ် မရှိပါ။ လိပ်စာကို ကူးယူပြီးပါပြီ။ | ☐ |
+| `cardDetailLinkCopied` | Couldn't open this link. It has been copied instead. | ဤလင့်ခ်ကို ဖွင့်၍ မရပါ။ ကူးယူပြီးပါပြီ။ | ☐ |

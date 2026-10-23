@@ -731,5 +731,8 @@
       }
     }
   },
-  "cardDetailDeleteCardBodyNoPhotos": "Its contact details will be removed. This can't be undone."
+  "cardDetailDeleteCardBodyNoPhotos": "Its contact details will be removed. This can't be undone.",
+  "cardDetailNoPhoneAppCopied": "No app here can make calls. The number has been copied.",
+  "cardDetailNoMailAppCopied": "No email app is set up. The address has been copied.",
+  "cardDetailLinkCopied": "Couldn't open this link. It has been copied instead."
 }

@@ -467,5 +467,8 @@
   "scanPageTryAgain": "ထပ်ကြိုးစားမည်",
   "cardDetailDeleteNamedCardTitle": "{name} ၏ ကတ်ကို ဖျက်မည်လား။",
   "cardDetailDeleteCardBodyWithPhotos": "{count, plural, other{ဓာတ်ပုံ {count} ပုံနှင့် ဆက်သွယ်ရန် အချက်အလက်များကို ဖယ်ရှားပါမည်။}} ပြန်ယူ၍ မရပါ။",
-  "cardDetailDeleteCardBodyNoPhotos": "ဆက်သွယ်ရန် အချက်အလက်များကို ဖယ်ရှားပါမည်။ ပြန်ယူ၍ မရပါ။"
+  "cardDetailDeleteCardBodyNoPhotos": "ဆက်သွယ်ရန် အချက်အလက်များကို ဖယ်ရှားပါမည်။ ပြန်ယူ၍ မရပါ။",
+  "cardDetailNoPhoneAppCopied": "ဤစက်တွင် ဖုန်းခေါ်နိုင်သော အက်ပ် မရှိပါ။ နံပါတ်ကို ကူးယူပြီးပါပြီ။",
+  "cardDetailNoMailAppCopied": "အီးမေးလ် အက်ပ် မရှိပါ။ လိပ်စာကို ကူးယူပြီးပါပြီ။",
+  "cardDetailLinkCopied": "ဤလင့်ခ်ကို ဖွင့်၍ မရပါ။ ကူးယူပြီးပါပြီ။"
 }

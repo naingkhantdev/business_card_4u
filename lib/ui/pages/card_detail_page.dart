@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_page_route.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -21,13 +22,39 @@ import '../widgets/profession_picker.dart';
 import 'add_card_page.dart';
 import 'company_detail_page.dart';
 
-/// Opens a tel:/mailto:/https: link in whatever app handles it, swallowing
-/// failures — every launcher call on this page (quick actions, detail rows,
-/// company links) goes through this one place.
-Future<void> _openLink(String url) async {
+/// Opens a tel:/mailto:/https: link in whatever app handles it — every
+/// launcher call on this page (quick actions, detail rows, company links)
+/// goes through this one place.
+///
+/// When nothing can open it (no dialer on a tablet, no mail app set up), the
+/// value is copied instead and a toast says so, rather than the tap doing
+/// nothing at all.
+Future<void> _openLink(BuildContext context, String url) async {
+  var opened = false;
   try {
-    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-  } catch (_) {}
+    opened =
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  } catch (_) {
+    opened = false;
+  }
+  if (opened || !context.mounted) return;
+
+  final l10n = AppLocalizations.of(context)!;
+  final String value;
+  final String message;
+  if (url.startsWith('tel:')) {
+    value = Uri.decodeComponent(url.substring(4));
+    message = l10n.cardDetailNoPhoneAppCopied;
+  } else if (url.startsWith('mailto:')) {
+    value = Uri.decodeComponent(url.substring(7));
+    message = l10n.cardDetailNoMailAppCopied;
+  } else {
+    value = url;
+    message = l10n.cardDetailLinkCopied;
+  }
+  await Clipboard.setData(ClipboardData(text: value));
+  if (!context.mounted) return;
+  AppToast.show(context, message, type: AppToastType.error);
 }
 
 /// A website often comes back bare ("acme.com"), which `Uri.parse` treats as
@@ -795,24 +822,24 @@ class _PremiumHero extends StatelessWidget {
     final quickActions = <_QuickAction>[
       if (card.phones.isNotEmpty)
         _QuickAction(Icons.call_rounded, l10n.cardDetailCall,
-            () => _openLink('tel:${card.phones.first}'),
+            () => _openLink(context, 'tel:${card.phones.first}'),
             primaryLabel:
                 name.isEmpty ? null : l10n.cardDetailCallPerson(name)),
       if (card.emails.isNotEmpty)
         _QuickAction(Icons.mail_rounded, l10n.cardDetailEmail,
-            () => _openLink('mailto:${card.emails.first}'),
+            () => _openLink(context, 'mailto:${card.emails.first}'),
             primaryLabel:
                 name.isEmpty ? null : l10n.cardDetailEmailPerson(name)),
       if (mapAddress != null)
         _QuickAction(
             Icons.map_rounded,
             l10n.cardDetailMap,
-            () => _openLink(
+            () => _openLink(context,
                 'https://maps.google.com/?q=${Uri.encodeComponent(mapAddress.displayText)}'),
             primaryLabel: l10n.cardDetailGetDirections),
       if (companyWebsite != null && companyWebsite.isNotEmpty)
         _QuickAction(Icons.language_rounded, l10n.cardDetailWebsite,
-            () => _openLink(_normalizeUrl(companyWebsite)),
+            () => _openLink(context, _normalizeUrl(companyWebsite)),
             primaryLabel: l10n.cardDetailVisitWebsite),
     ];
     final primaryAction =
@@ -957,7 +984,7 @@ class _PremiumHero extends StatelessWidget {
                 if (createdAt != null) ...[
                   const SizedBox(height: 10),
                   Text(
-                    l10n.cardDetailAddedOn(_formatDate(createdAt)),
+                    l10n.cardDetailAddedOn(_formatDate(context, createdAt)),
                     style: TextStyle(
                       fontSize: 11,
                       color: Wallet.faintOf(isDark),
@@ -973,7 +1000,11 @@ class _PremiumHero extends StatelessWidget {
     );
   }
 
-  String _formatDate(DateTime date) => DateFormat('MMM d, yyyy').format(date);
+  /// Month names follow the app's language, so Myanmar users don't get
+  /// "Oct 23, 2026" in English.
+  String _formatDate(BuildContext context, DateTime date) =>
+      DateFormat.yMMMd(Localizations.localeOf(context).toString())
+          .format(date);
 }
 
 class _QuickAction {
@@ -1470,7 +1501,7 @@ class _DetailsCard extends StatelessWidget {
           icon: Icons.place_outlined,
           label: l10n.cardDetailAddress,
           value: company.address!,
-          onTap: () => _openLink(
+          onTap: () => _openLink(context,
               'https://maps.google.com/?q=${Uri.encodeComponent(company.address!)}'),
           isDark: isDark,
         ));
@@ -1480,7 +1511,7 @@ class _DetailsCard extends StatelessWidget {
           icon: Icons.language_rounded,
           label: l10n.cardDetailWebsite,
           value: company.website!,
-          onTap: () => _openLink(_normalizeUrl(company.website!)),
+          onTap: () => _openLink(context, _normalizeUrl(company.website!)),
           isDark: isDark,
         ));
       }
@@ -1489,7 +1520,7 @@ class _DetailsCard extends StatelessWidget {
           icon: Icons.call_rounded,
           label: l10n.cardDetailPhone,
           value: company.phone!,
-          onTap: () => _openLink('tel:${company.phone}'),
+          onTap: () => _openLink(context, 'tel:${company.phone}'),
           isDark: isDark,
         ));
       }
@@ -1498,7 +1529,7 @@ class _DetailsCard extends StatelessWidget {
           icon: Icons.mail_outline_rounded,
           label: l10n.cardDetailEmail,
           value: company.email!,
-          onTap: () => _openLink('mailto:${company.email}'),
+          onTap: () => _openLink(context, 'mailto:${company.email}'),
           isDark: isDark,
         ));
       }
@@ -1509,7 +1540,7 @@ class _DetailsCard extends StatelessWidget {
           icon: _socialIconFor(s.platform),
           label: s.platform,
           value: s.url,
-          onTap: () => _openLink(s.url),
+          onTap: () => _openLink(context, s.url),
           isDark: isDark,
         ));
       }
@@ -1523,14 +1554,14 @@ class _DetailsCard extends StatelessWidget {
             icon: Icons.call_rounded,
             label: l10n.cardDetailPhone,
             value: p,
-            onTap: () => _openLink('tel:$p'),
+            onTap: () => _openLink(context, 'tel:$p'),
             isDark: isDark),
       for (final e in card.emails)
         _DetailRow(
             icon: Icons.mail_outline_rounded,
             label: l10n.cardDetailEmail,
             value: e,
-            onTap: () => _openLink('mailto:$e'),
+            onTap: () => _openLink(context, 'mailto:$e'),
             isDark: isDark),
       // The API always emits all five address keys, so an entry with nothing
       // filled in still arrives as an object — rendering it would give a row
@@ -1541,7 +1572,7 @@ class _DetailsCard extends StatelessWidget {
               icon: Icons.place_outlined,
               label: l10n.cardDetailAddress,
               value: a.displayText,
-              onTap: () => _openLink(
+              onTap: () => _openLink(context,
                   'https://maps.google.com/?q=${Uri.encodeComponent(a.displayText)}'),
               isDark: isDark),
     ];
@@ -1560,7 +1591,7 @@ class _DetailsCard extends StatelessWidget {
         icon: _socialIconFor(platform),
         label: platform,
         value: url.isEmpty ? platform : url,
-        onTap: url.isEmpty ? () {} : () => _openLink(url),
+        onTap: url.isEmpty ? () {} : () => _openLink(context, url),
         isDark: isDark,
       ));
     }
