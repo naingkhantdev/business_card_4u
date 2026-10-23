@@ -176,7 +176,7 @@
   "deactivateAccountFailed": "အကောင့်ပိတ်ခြင်း မအောင်မြင်ပါ",
   "deactivateAccountSuccessMessage": "သင့်အကောင့်ကို ပိတ်လိုက်ပါပြီ။ ၇ ရက်အတွင်း ပြန်ဝင်ရောက်ပါက ပြန်လည်ရယူနိုင်ပါသည်။",
   "deactivateAccountHeadline": "သင့်အကောင့်ကို ယခုပိတ်တော့မည်။",
-  "deactivateAccountSubtext": "၇ ရက်အတွင်း ပြန်ဝင်ရောက်ပါက ပြန်လည်ရယူနိုင်ပါသည်။",
+  "deactivateAccountSubtext": "စက်ပစ္စည်းအားလုံးမှ ထွက်သွားပါမည်။ ရက် ၇ ရက်အတွင်း ပြန်ဝင်ပါက အားလုံး ပြန်ရပါမည်။ ထို့နောက်တွင် အကူအညီဌာနကို ဆက်သွယ်မှသာ ပြန်ဖွင့်နိုင်ပါမည်။",
   "deactivateAccountPasswordLabel": "စကားဝှက်",
   "deactivateAccountCancel": "ပယ်ဖျက်မည်",
   "registerPageTagline": "သင့်ကတ်ကို မျှဝေရန် အကောင့်တစ်ခု ဖွင့်ပါ။",
@@ -464,5 +464,8 @@
   "scanPageCameraDeniedBody": "ဖုန်း၏ ဆက်တင်တွင် ဤအက်ပ်အတွက် ကင်မရာ အသုံးပြုခွင့်ကို ဖွင့်ပြီး ထပ်ကြိုးစားမည်ကို နှိပ်ပါ။ သိမ်းထားသော ဓာတ်ပုံမှလည်း QR ကို စကင်ဖတ်နိုင်ပါသည်။",
   "scanPageCameraErrorTitle": "ကင်မရာ စတင်၍ မရပါ",
   "scanPageCameraErrorBody": "ထပ်ကြိုးစားပါ၊ သို့မဟုတ် သိမ်းထားသော ဓာတ်ပုံမှ QR ကို စကင်ဖတ်ပါ။",
-  "scanPageTryAgain": "ထပ်ကြိုးစားမည်"
+  "scanPageTryAgain": "ထပ်ကြိုးစားမည်",
+  "cardDetailDeleteNamedCardTitle": "{name} ၏ ကတ်ကို ဖျက်မည်လား။",
+  "cardDetailDeleteCardBodyWithPhotos": "{count, plural, other{ဓာတ်ပုံ {count} ပုံနှင့် ဆက်သွယ်ရန် အချက်အလက်များကို ဖယ်ရှားပါမည်။}} ပြန်ယူ၍ မရပါ။",
+  "cardDetailDeleteCardBodyNoPhotos": "ဆက်သွယ်ရန် အချက်အလက်များကို ဖယ်ရှားပါမည်။ ပြန်ယူ၍ မရပါ။"
 }

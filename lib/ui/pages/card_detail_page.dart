@@ -20,7 +20,6 @@ import '../widgets/my_qr_panel.dart';
 import '../widgets/profession_picker.dart';
 import 'add_card_page.dart';
 import 'company_detail_page.dart';
-import 'deactivate_account_page.dart';
 
 /// Opens a tel:/mailto:/https: link in whatever app handles it, swallowing
 /// failures — every launcher call on this page (quick actions, detail rows,
@@ -213,12 +212,6 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
     );
   }
 
-  Future<void> _showDeactivateAccountFlow(BuildContext context) async {
-    await Navigator.of(context).push(
-      AppPageRoute(builder: (_) => const DeactivateAccountPage()),
-    );
-  }
-
   /// The QR sheet. Lifted out of the body so the overflow menu is its only
   /// caller — sharing used to be reachable from two places at once.
   void _showQrSheet(BusinessCardModel card, bool isDark) {
@@ -398,17 +391,21 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                   }
 
                   if (value == 'delete') {
-                    if (isMyProfileCard) {
-                      await _showDeactivateAccountFlow(context);
-                      return;
-                    }
-
+                    // Name the loss rather than ask "are you sure?": whose
+                    // card it is, and that its photos go with it for good.
+                    final name = card.fullName.trim();
+                    final photoCount = cardPhotoUrls.length;
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder: (ctx) => _buildActionDialog(
                         ctx,
-                        title: l10n.cardDetailDeleteCardTitle,
-                        content: l10n.cardDetailDeleteCardBody,
+                        title: name.isEmpty
+                            ? l10n.cardDetailDeleteCardTitle
+                            : l10n.cardDetailDeleteNamedCardTitle(name),
+                        content: photoCount > 0
+                            ? l10n.cardDetailDeleteCardBodyWithPhotos(
+                                photoCount)
+                            : l10n.cardDetailDeleteCardBodyNoPhotos,
                         confirmText: l10n.cardDetailDelete,
                         destructive: true,
                         onConfirm: () => Navigator.pop(ctx, true),
@@ -500,7 +497,10 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                         ],
                       ),
                     ),
-                  if (isSavedCard || isMyCard)
+                  // Not on your own profile card: that slot used to open
+                  // Deactivate account, which now lives in Settings only —
+                  // one tap from a card menu is too close for it.
+                  if ((isSavedCard || isMyCard) && !isMyProfileCard)
                     PopupMenuItem(
                       value: 'delete',
                       child: Row(
@@ -509,9 +509,7 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                               size: 19, color: Wallet.danger),
                           const SizedBox(width: 12),
                           Text(
-                            isMyProfileCard
-                                ? l10n.cardDetailDeactivateAccount
-                                : l10n.cardDetailDelete,
+                            l10n.cardDetailDelete,
                             style: const TextStyle(color: Wallet.danger),
                           ),
                         ],

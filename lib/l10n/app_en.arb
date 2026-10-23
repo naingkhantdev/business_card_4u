@@ -248,7 +248,7 @@
   "deactivateAccountFailed": "Failed to deactivate account",
   "deactivateAccountSuccessMessage": "Your account has been deactivated. Log in again within 7 days to restore it.",
   "deactivateAccountHeadline": "Your account will be turned off now.",
-  "deactivateAccountSubtext": "You can get it back by logging in again within 7 days.",
+  "deactivateAccountSubtext": "You'll be signed out on every device. Log in again within 7 days to restore everything. After that, the account can only be restored by contacting support.",
   "deactivateAccountPasswordLabel": "Password",
   "deactivateAccountCancel": "Cancel",
   "registerPageTagline": "Create an account to start sharing your card.",
@@ -714,5 +714,22 @@
   "scanPageCameraDeniedBody": "Allow camera access for this app in your phone's Settings, then tap Try Again. You can also scan a QR from a saved photo.",
   "scanPageCameraErrorTitle": "The camera couldn't start",
   "scanPageCameraErrorBody": "Try again, or scan a QR from a saved photo instead.",
-  "scanPageTryAgain": "Try Again"
+  "scanPageTryAgain": "Try Again",
+  "cardDetailDeleteNamedCardTitle": "Delete {name}'s card?",
+  "@cardDetailDeleteNamedCardTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "cardDetailDeleteCardBodyWithPhotos": "{count, plural, =1{Its photo and contact details will be removed.} other{Its {count} photos and contact details will be removed.}} This can't be undone.",
+  "@cardDetailDeleteCardBodyWithPhotos": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cardDetailDeleteCardBodyNoPhotos": "Its contact details will be removed. This can't be undone."
 }

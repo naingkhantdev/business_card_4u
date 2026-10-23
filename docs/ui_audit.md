@@ -332,3 +332,7 @@ Drafted alongside Phase 3 changes. Each is live in `lib/l10n/app_my.arb`; replac
 | `scanPageCameraErrorTitle` | The camera couldn't start | ကင်မရာ စတင်၍ မရပါ | ☐ |
 | `scanPageCameraErrorBody` | Try again, or scan a QR from a saved photo instead. | ထပ်ကြိုးစားပါ၊ သို့မဟုတ် သိမ်းထားသော ဓာတ်ပုံမှ QR ကို စကင်ဖတ်ပါ။ | ☐ |
 | `scanPageTryAgain` | Try Again | ထပ်ကြိုးစားမည် | ☐ |
+| `cardDetailDeleteNamedCardTitle` | Delete {name}'s card? | {name} ၏ ကတ်ကို ဖျက်မည်လား။ | ☐ |
+| `cardDetailDeleteCardBodyWithPhotos` | Its {count} photos and contact details will be removed. This can't be undone. | ဓာတ်ပုံ {count} ပုံနှင့် ဆက်သွယ်ရန် အချက်အလက်များကို ဖယ်ရှားပါမည်။ ပြန်ယူ၍ မရပါ။ | ☐ |
+| `cardDetailDeleteCardBodyNoPhotos` | Its contact details will be removed. This can't be undone. | ဆက်သွယ်ရန် အချက်အလက်များကို ဖယ်ရှားပါမည်။ ပြန်ယူ၍ မရပါ။ | ☐ |
+| `deactivateAccountSubtext (reworded)` | You'll be signed out on every device. Log in again within 7 days to restore everything. After that, the account can only be restored by contacting support. | စက်ပစ္စည်းအားလုံးမှ ထွက်သွားပါမည်။ ရက် ၇ ရက်အတွင်း ပြန်ဝင်ပါက အားလုံး ပြန်ရပါမည်။ ထို့နောက်တွင် အကူအညီဌာနကို ဆက်သွယ်မှသာ ပြန်ဖွင့်နိုင်ပါမည်။ | ☐ |
