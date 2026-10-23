@@ -314,3 +314,10 @@ Drafted alongside Phase 3 changes. Each is live in `lib/l10n/app_my.arb`; replac
 | `addCardRemove` | Remove | ဖယ်ရှားမည် | ☐ |
 | `addCardReviewScannedFields` | Review {count} scanned fields | စကင်ဖတ်ထားသော အကွက် {count} ခုကို စစ်ဆေးပါ | ☐ |
 | `addCardReviewScannedFieldsSubtitle` | Read from the photo. Highlighted fields below are worth a quick check before you save. | ဓာတ်ပုံမှ ဖတ်ယူထားသည်။ မသိမ်းမီ အောက်ပါ အရောင်ပြထားသော အကွက်များကို စစ်ဆေးပါ။ | ☐ |
+| `addCardLookingUpCompany` | Looking up "{name}"… | "{name}" ကို ရှာဖွေနေသည်… | ☐ |
+| `addCardAddScannedCompanyPrompt` | Scanned "{name}", which isn't on file yet. Add it as a new company? | "{name}" ကို စကင်ဖတ်ရရှိသော်လည်း စာရင်းတွင် မရှိသေးပါ။ ကုမ္ပဏီအသစ်အဖြစ် ထည့်မည်လား။ | ☐ |
+| `addCardCompanyAddedOnSave` | "{name}" will be added as a new company when you save this card. | ဤကတ်ကို သိမ်းသည့်အခါ "{name}" ကို ကုမ္ပဏီအသစ်အဖြစ် ထည့်ပါမည်။ | ☐ |
+| `addCardCompanyCreateFailed` | Couldn't add "{name}". Choose an existing company or try again. | "{name}" ကို ထည့်၍ မရပါ။ ရှိပြီးသား ကုမ္ပဏီကို ရွေးပါ သို့မဟုတ် ထပ်ကြိုးစားပါ။ | ☐ |
+| `addCardAddCompanyAction` | Add Company | ကုမ္ပဏီ ထည့်မည် | ☐ |
+| `addCardChooseExistingCompany` | Choose Existing | ရှိပြီးသားကို ရွေးမည် | ☐ |
+| `addCardUndo` | Undo | ပြန်ဖျက်မည် | ☐ |

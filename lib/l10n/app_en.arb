@@ -668,5 +668,40 @@
       }
     }
   },
-  "addCardReviewScannedFieldsSubtitle": "Read from the photo. Highlighted fields below are worth a quick check before you save."
+  "addCardReviewScannedFieldsSubtitle": "Read from the photo. Highlighted fields below are worth a quick check before you save.",
+  "addCardLookingUpCompany": "Looking up \"{name}\"…",
+  "@addCardLookingUpCompany": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "addCardAddScannedCompanyPrompt": "Scanned \"{name}\", which isn't on file yet. Add it as a new company?",
+  "@addCardAddScannedCompanyPrompt": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "addCardCompanyAddedOnSave": "\"{name}\" will be added as a new company when you save this card.",
+  "@addCardCompanyAddedOnSave": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "addCardCompanyCreateFailed": "Couldn't add \"{name}\". Choose an existing company or try again.",
+  "@addCardCompanyCreateFailed": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "addCardAddCompanyAction": "Add Company",
+  "addCardChooseExistingCompany": "Choose Existing",
+  "addCardUndo": "Undo"
 }

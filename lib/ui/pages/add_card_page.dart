@@ -98,11 +98,18 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
   /// say which scanned name produced it.
   String? _scannedCompanyName;
 
-  /// Outcome of resolving [_scannedCompanyName]: true when the scan created the
-  /// company, false when it matched one already on file, null while unresolved.
-  bool? _companyCreatedByScan;
+  /// True when [_scannedCompanyName] matched a company already on file.
+  bool _scannedCompanyMatched = false;
+
+  /// The user accepted the scanned name as a new company. Nothing is created
+  /// on the server until the card itself is saved, so an abandoned card or a
+  /// misread like "ACME C0RP" never leaves a company record behind.
+  bool _addScannedCompanyOnSave = false;
 
   bool _isResolvingCompany = false;
+
+  /// True while the accepted company is being created during save.
+  bool _isAddingCompany = false;
 
   /// Field keys that were filled by OCR rather than typed, so the form can
   /// mark them as needing a glance.
@@ -392,17 +399,19 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         // A hand-picked company overrides whatever the scan concluded, so the
         // scan's own note about it should stop being shown.
         _scannedCompanyName = null;
-        _companyCreatedByScan = null;
+        _scannedCompanyMatched = false;
+        _addScannedCompanyOnSave = false;
       });
     }
   }
 
   /// Links the card to the company OCR read off it when one already on file
-  /// matches. When none does, files it as a new company right away — the scan
-  /// flow should not stall on a confirmation for something this routine.
+  /// matches. When none does, it only suggests adding one — see
+  /// [_buildScannedCompanyHint]. Creating it is left to [_submit], so OCR
+  /// never writes to the server on its own.
   ///
-  /// Failures stay quiet — the hint falls back to pointing at the picker, so a
-  /// card can still be saved by hand.
+  /// Failures stay quiet — the hint still offers the picker, so a card can
+  /// be saved by hand.
   Future<void> _resolveScannedCompany() async {
     final name = _scannedCompanyName;
     if (name == null || _selectedCompanyId != null || _isResolvingCompany) {
@@ -419,30 +428,52 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     }
     if (!mounted) return;
 
-    if (match != null) {
-      final matched = match;
-      setState(() {
+    final matched = match;
+    setState(() {
+      _isResolvingCompany = false;
+      // The user may have picked a company while the lookup ran.
+      if (matched != null && _selectedCompanyId == null) {
         _selectedCompanyId = matched.id;
         _selectedCompanyName = matched.name;
-        _companyCreatedByScan = false;
-        _isResolvingCompany = false;
-      });
-      return;
-    }
+        _scannedCompanyMatched = true;
+        _addScannedCompanyOnSave = false;
+      }
+    });
+  }
 
-    // Nothing matched — file it as a new company without asking.
+  /// Creates the scanned company the user accepted, as the first step of
+  /// saving. Checks for a match once more first, in case someone added it in
+  /// the meantime. Returns false, with a toast, when it couldn't be created.
+  Future<bool> _createAcceptedCompany() async {
+    final name = _scannedCompanyName;
+    if (!_addScannedCompanyOnSave || _selectedCompanyId != null || name == null) {
+      return true;
+    }
+    final l10n = AppLocalizations.of(context)!;
+    final notifier = ref.read(companyProvider.notifier);
+    setState(() => _isAddingCompany = true);
+    CompanyModel? company;
     try {
-      final created =
-          await ref.read(companyProvider.notifier).createMinimal(name);
-      if (!mounted || created == null) return;
-      setState(() {
+      company = await notifier.findByName(name) ??
+          await notifier.createMinimal(name);
+    } catch (_) {
+      company = null;
+    }
+    if (!mounted) return false;
+    final created = company;
+    setState(() {
+      _isAddingCompany = false;
+      if (created != null) {
         _selectedCompanyId = created.id;
         _selectedCompanyName = created.name;
-        _companyCreatedByScan = true;
-      });
-    } finally {
-      if (mounted) setState(() => _isResolvingCompany = false);
+        _addScannedCompanyOnSave = false;
+      }
+    });
+    if (created == null) {
+      _showToast(l10n.addCardCompanyCreateFailed(name), isError: true);
+      return false;
     }
+    return true;
   }
 
   /// Everything the user can change on this form, flattened to one string.
@@ -456,6 +487,7 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         _bioCtrl.text,
         _profileImageCtrl.text,
         _selectedCompanyId,
+        _addScannedCompanyOnSave,
         _profession,
         for (final e in _addressEntries.where((e) => !e.isEmpty))
           e.toModel().displayText,
@@ -646,7 +678,9 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
   }
 
   Future<void> _submit() async {
+    if (_isAddingCompany) return;
     if (!_formKey.currentState!.validate()) return;
+    if (!await _createAcceptedCompany() || !mounted) return;
 
     final notifier = ref.read(cardProvider.notifier);
     final companyId = _selectedCompanyId;
@@ -746,7 +780,8 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
         elevation: 0,
         iconTheme: IconThemeData(color: Wallet.inkOf(isDark)),
       ),
-      bottomNavigationBar: _buildSubmitBar(isCreating, isDark),
+      bottomNavigationBar:
+          _buildSubmitBar(isCreating || _isAddingCompany, isDark),
       body: Stack(
         children: [
           SingleChildScrollView(
@@ -1310,82 +1345,137 @@ class _AddCardPageState extends ConsumerState<AddCardPage> {
     );
   }
 
-  /// Reports what became of the company name OCR read off the card: filed as a
-  /// new company, matched to one already on file, or still unresolved — in
-  /// which case it points at the picker, as it always did.
-  ///
-  /// Auto-linking is silent about the id it chose, and the user may well
-  /// disagree with it, so the outcome is always stated and the picker stays one
-  /// tap away underneath.
+  /// What became of the company name OCR read off the card: still being
+  /// looked up, matched to one on file, accepted as a new company to add on
+  /// save, or unmatched — in which case it asks, rather than creating a
+  /// company from what may be a misread.
   List<Widget> _buildScannedCompanyHint() {
     final scannedName = _scannedCompanyName;
     if (scannedName == null) return [];
     final l10n = AppLocalizations.of(context)!;
-
-    final IconData icon;
-    final String message;
-    // Only the unresolved state asks for a decision; the others are reports.
-    final bool needsChoice;
-
-    if (_isResolvingCompany) {
-      icon = Icons.hourglass_top;
-      message = l10n.addCardFilingCompany(scannedName);
-      needsChoice = false;
-    } else if (_companyCreatedByScan == true) {
-      icon = Icons.add_business_outlined;
-      message = l10n.addCardAddedNewCompany(scannedName);
-      needsChoice = false;
-    } else if (_companyCreatedByScan == false) {
-      icon = Icons.auto_awesome;
-      message = l10n.addCardMatchedCompany(scannedName);
-      needsChoice = false;
-    } else {
-      icon = Icons.auto_awesome;
-      message = l10n.addCardScannedPickCompany(scannedName);
-      needsChoice = true;
-    }
-
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return [
-      const SizedBox(height: 10),
-      InkWell(
-        onTap: _isResolvingCompany ? null : _pickCompany,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+    final accent = Wallet.accentOf(isDark);
+
+    Widget banner({
+      required IconData icon,
+      required String message,
+      List<Widget> actions = const [],
+    }) =>
+        Container(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
           decoration: BoxDecoration(
             color: Wallet.tintOf(isDark),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, size: 15, color: Wallet.accentOf(isDark)),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  message,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDark
-                        ? Wallet.darkInk
-                        : Wallet.ink,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 1),
+                    child: Icon(icon, size: 15, color: accent),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      message,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        height: 1.4,
+                        color: Wallet.inkOf(isDark),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              if (!_isResolvingCompany)
-                Text(
-                  needsChoice ? l10n.addCardChoose : l10n.addCardChange,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Wallet.accentOf(isDark),
-                  ),
+              if (actions.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.only(left: 23),
+                  child: Wrap(spacing: 8, runSpacing: 8, children: actions),
                 ),
+              ],
             ],
           ),
-        ),
-      ),
-    ];
+        );
+
+    Widget action(String label, VoidCallback onTap, {bool filled = false}) =>
+        SizedBox(
+          height: 40,
+          child: filled
+              ? FilledButton(
+                  onPressed: onTap,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: accent,
+                    foregroundColor: Wallet.onAccentOf(isDark),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    textStyle: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w700),
+                  ),
+                  child: Text(label),
+                )
+              : OutlinedButton(
+                  onPressed: onTap,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: accent,
+                    side: BorderSide(color: accent.withOpacity(.4)),
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    textStyle: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  child: Text(label),
+                ),
+        );
+
+    final Widget hint;
+    if (_isResolvingCompany) {
+      hint = banner(
+        icon: Icons.hourglass_top,
+        message: l10n.addCardLookingUpCompany(scannedName),
+      );
+    } else if (_scannedCompanyMatched) {
+      hint = banner(
+        icon: Icons.auto_awesome,
+        message: l10n.addCardMatchedCompany(scannedName),
+        actions: [action(l10n.addCardChange, _pickCompany)],
+      );
+    } else if (_addScannedCompanyOnSave) {
+      hint = banner(
+        icon: Icons.add_business_outlined,
+        message: l10n.addCardCompanyAddedOnSave(scannedName),
+        actions: [
+          action(
+            l10n.addCardUndo,
+            () => setState(() {
+              _addScannedCompanyOnSave = false;
+              _selectedCompanyName = null;
+            }),
+          ),
+        ],
+      );
+    } else {
+      hint = banner(
+        icon: Icons.auto_awesome,
+        message: l10n.addCardAddScannedCompanyPrompt(scannedName),
+        actions: [
+          // Adding is the likely answer for a card from a new contact, so
+          // it gets the fill; picking an existing one stays one tap away.
+          action(
+            l10n.addCardAddCompanyAction,
+            () => setState(() {
+              _addScannedCompanyOnSave = true;
+              _selectedCompanyName = scannedName;
+            }),
+            filled: true,
+          ),
+          action(l10n.addCardChooseExistingCompany, _pickCompany),
+        ],
+      );
+    }
+
+    return [const SizedBox(height: 10), hint];
   }
 
   /// Marks a field OCR filled in, so the user knows which values to
