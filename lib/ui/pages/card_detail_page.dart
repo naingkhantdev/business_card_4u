@@ -287,6 +287,41 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
     );
   }
 
+  /// Lives in the app bar menu next to Delete, not in the page body, so a
+  /// friend's card never offers a destructive action as its main button.
+  Future<void> _confirmUnfriend(
+      BuildContext context, BusinessCardModel card) async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => _buildActionDialog(
+        ctx,
+        title: l10n.cardDetailUnfriend,
+        content: l10n.cardDetailUnfriendBody,
+        confirmText: l10n.cardDetailUnfriend,
+        destructive: true,
+        onConfirm: () => Navigator.pop(ctx, true),
+      ),
+    );
+    if (confirm != true || !context.mounted) return;
+    setState(() => _isProcessing = true);
+    final res = await ref.read(cardProvider.notifier).removeFriend(card.id);
+    if (!context.mounted) return;
+    setState(() {
+      _isProcessing = false;
+      if (res.isSuccess) {
+        _isFriend = false;
+        _friendRequestStatus = 'none';
+      }
+    });
+    if (res.isSuccess) {
+      _showToast(context, l10n.cardDetailFriendRemoved, isDestructiveSoft: true);
+    } else {
+      _showToast(context, res.message ?? l10n.cardDetailFriendRemoveFailed,
+          isError: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -354,6 +389,11 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
 
                   if (value == 'edit') {
                     await _openCardEditor(card);
+                    return;
+                  }
+
+                  if (value == 'unfriend') {
+                    await _confirmUnfriend(context, card);
                     return;
                   }
 
@@ -444,6 +484,22 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                         ],
                       ),
                     ),
+                  if (isFriend && isUserCard && !isMyProfileCard)
+                    PopupMenuItem(
+                      value: 'unfriend',
+                      enabled: !_isProcessing,
+                      child: Row(
+                        children: [
+                          const Icon(Icons.person_remove_alt_1_rounded,
+                              size: 19, color: Wallet.danger),
+                          const SizedBox(width: 12),
+                          Text(
+                            l10n.cardDetailUnfriend,
+                            style: const TextStyle(color: Wallet.danger),
+                          ),
+                        ],
+                      ),
+                    ),
                   if (isSavedCard || isMyCard)
                     PopupMenuItem(
                       value: 'delete',
@@ -480,6 +536,9 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                 ? l10n.cardDetailTypeSaved
                 : l10n.cardDetailTypeBusiness,
             isFriend: isFriend,
+            // Only when the body has no main button of its own — Connect or
+            // Accept on a stranger's card keeps that role.
+            promoteFirstAction: !isMyProfileCard && (!isUserCard || isFriend),
             // A portrait belongs to a person's own card. A saved card is a
             // photo of someone's printed card — it has no portrait, so that
             // slot shows the printed card itself instead (see cardPhotoUrls
@@ -508,36 +567,7 @@ class _CardDetailPageState extends ConsumerState<CardDetailPage> {
                       isProcessing: _isProcessing,
                       onFriendAction: () async {
                         if (isFriend) {
-                          final confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (ctx) => _buildActionDialog(
-                              ctx,
-                              title: l10n.cardDetailUnfriend,
-                              content: l10n.cardDetailUnfriendBody,
-                              confirmText: l10n.cardDetailUnfriend,
-                              destructive: true,
-                              onConfirm: () => Navigator.pop(ctx, true),
-                            ),
-                          );
-                          if (confirm == true && context.mounted) {
-                            setState(() => _isProcessing = true);
-                            final res = await ref
-                                .read(cardProvider.notifier)
-                                .removeFriend(card.id);
-                            if (!context.mounted) return;
-                            setState(() {
-                              _isProcessing = false;
-                              if (res.isSuccess) {
-                                _isFriend = false;
-                                _friendRequestStatus = 'none';
-                              }
-                            });
-                            if (res.isSuccess) {
-                              _showToast(context, l10n.cardDetailFriendRemoved, isDestructiveSoft: true);
-                            } else {
-                              _showToast(context, res.message ?? l10n.cardDetailFriendRemoveFailed, isError: true);
-                            }
-                          }
+                          await _confirmUnfriend(context, card);
                         } else if (friendRequestStatus == 'pending_sent' || friendRequestStatus == 'pending') {
                           final confirm = await showDialog<bool>(
                             context: context,
@@ -709,6 +739,10 @@ class _PremiumHero extends StatelessWidget {
   final String cardTypeLabel;
   final bool isFriend;
 
+  /// Shows the first contact action as the page's one filled button, e.g. a
+  /// full-width "Call Aung Aung", with the rest as pills beneath it.
+  final bool promoteFirstAction;
+
   /// Only a person's own card carries a portrait; a saved card shows the
   /// printed card itself in that spot instead — see [cardPhotoUrls].
   final bool showAvatar;
@@ -724,6 +758,7 @@ class _PremiumHero extends StatelessWidget {
     required this.isMyProfileCard,
     required this.cardTypeLabel,
     required this.isFriend,
+    required this.promoteFirstAction,
     required this.showAvatar,
     required this.cardPhotoUrls,
   });
@@ -758,23 +793,34 @@ class _PremiumHero extends StatelessWidget {
     final mapAddress = firstAddress;
     final companyWebsite = website;
 
+    final name = card.fullName.trim();
     final quickActions = <_QuickAction>[
       if (card.phones.isNotEmpty)
         _QuickAction(Icons.call_rounded, l10n.cardDetailCall,
-            () => _openLink('tel:${card.phones.first}')),
+            () => _openLink('tel:${card.phones.first}'),
+            primaryLabel:
+                name.isEmpty ? null : l10n.cardDetailCallPerson(name)),
       if (card.emails.isNotEmpty)
         _QuickAction(Icons.mail_rounded, l10n.cardDetailEmail,
-            () => _openLink('mailto:${card.emails.first}')),
+            () => _openLink('mailto:${card.emails.first}'),
+            primaryLabel:
+                name.isEmpty ? null : l10n.cardDetailEmailPerson(name)),
       if (mapAddress != null)
         _QuickAction(
             Icons.map_rounded,
             l10n.cardDetailMap,
             () => _openLink(
-                'https://maps.google.com/?q=${Uri.encodeComponent(mapAddress.displayText)}')),
+                'https://maps.google.com/?q=${Uri.encodeComponent(mapAddress.displayText)}'),
+            primaryLabel: l10n.cardDetailGetDirections),
       if (companyWebsite != null && companyWebsite.isNotEmpty)
         _QuickAction(Icons.language_rounded, l10n.cardDetailWebsite,
-            () => _openLink(_normalizeUrl(companyWebsite))),
+            () => _openLink(_normalizeUrl(companyWebsite)),
+            primaryLabel: l10n.cardDetailVisitWebsite),
     ];
+    final primaryAction =
+        promoteFirstAction && quickActions.isNotEmpty ? quickActions.first : null;
+    final pillActions =
+        primaryAction == null ? quickActions : quickActions.skip(1).toList();
 
     const avatarSize = 60.0;
 
@@ -885,17 +931,26 @@ class _PremiumHero extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (quickActions.isNotEmpty) ...[
+                if (primaryAction != null) ...[
                   const SizedBox(height: 14),
+                  _PrimaryButton(
+                    icon: primaryAction.icon,
+                    label: primaryAction.primaryLabel ?? primaryAction.label,
+                    onTap: primaryAction.onTap,
+                    isDark: isDark,
+                  ),
+                ],
+                if (pillActions.isNotEmpty) ...[
+                  SizedBox(height: primaryAction != null ? 8 : 14),
                   // Equal-width slots so a 4-action row always fits on one
                   // line; a fixed gap pushed it onto two on a normal phone.
                   Row(
                     children: [
-                      for (var i = 0; i < quickActions.length; i++) ...[
+                      for (var i = 0; i < pillActions.length; i++) ...[
                         if (i > 0) const SizedBox(width: 8),
                         Expanded(
                           child: _QuickActionButton(
-                              action: quickActions[i], isDark: isDark),
+                              action: pillActions[i], isDark: isDark),
                         ),
                       ],
                     ],
@@ -927,7 +982,11 @@ class _QuickAction {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _QuickAction(this.icon, this.label, this.onTap);
+
+  /// The fuller label used when this is the hero's primary button, such as
+  /// "Call Aung Aung" in place of "Call".
+  final String? primaryLabel;
+  const _QuickAction(this.icon, this.label, this.onTap, {this.primaryLabel});
 }
 
 /// One of the hero's quick actions (call, email, map, website) — a compact
@@ -951,19 +1010,19 @@ class _QuickActionButton extends StatelessWidget {
         onTap: action.onTap,
         borderRadius: BorderRadius.circular(12),
         child: SizedBox(
-          height: 38,
+          height: 48,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(action.icon, size: 16, color: accent),
-              const SizedBox(width: 5),
+              Icon(action.icon, size: 17, color: accent),
+              const SizedBox(width: 6),
               Flexible(
                 child: Text(
                   action.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: accent,
                   ),
@@ -1179,7 +1238,7 @@ class _PrimaryButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           child: Ink(
             child: SizedBox(
-              height: 46,
+              height: 48,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -1245,7 +1304,7 @@ class _SecondaryButton extends StatelessWidget {
               border: CardDetailPage.hairline(isDark),
             ),
             child: SizedBox(
-              height: 46,
+              height: 48,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -1274,7 +1333,8 @@ class _SecondaryButton extends StatelessWidget {
   }
 }
 
-/// The relationship actions. Share, Edit and Delete live in the app bar menu.
+/// The relationship actions. Share, Edit, Unfriend and Delete live in the app
+/// bar menu.
 class _ActionList extends StatelessWidget {
   final BusinessCardModel card;
   final bool isDark;
@@ -1302,21 +1362,16 @@ class _ActionList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (isMyProfileCard || card.cardType != 'user_card') {
+    // Once connected there is nothing to do about the relationship here —
+    // the hero's contact action is the main button, and Unfriend sits in
+    // the app bar menu.
+    if (isMyProfileCard || card.cardType != 'user_card' || isFriend) {
       return const SizedBox.shrink();
     }
 
     final l10n = AppLocalizations.of(context)!;
     final Widget content;
-    if (isFriend) {
-      content = _SecondaryButton(
-        icon: Icons.person_remove_alt_1_rounded,
-        label: l10n.cardDetailUnfriend,
-        onTap: isProcessing ? null : onFriendAction,
-        isDark: isDark,
-        destructive: true,
-      );
-    } else if (friendRequestStatus == 'pending_received') {
+    if (friendRequestStatus == 'pending_received') {
       content = Row(
         children: [
           Expanded(

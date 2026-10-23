@@ -60,6 +60,24 @@
       }
     }
   },
+  "cardDetailCallPerson": "Call {name}",
+  "@cardDetailCallPerson": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "cardDetailEmailPerson": "Email {name}",
+  "@cardDetailEmailPerson": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "cardDetailGetDirections": "Get Directions",
+  "cardDetailVisitWebsite": "Visit Website",
   "cardDetailPhone": "Phone",
   "cardDetailAddress": "Address",
   "cardDetailCompanyHeader": "Company",

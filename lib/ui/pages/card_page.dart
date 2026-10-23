@@ -273,11 +273,15 @@ class _CardPageState extends ConsumerState<CardPage>
   /// clears it without a trip through the sheet.
   Widget _buildActiveCompanyFilterPill(
       bool isDark, List<BusinessCardModel> currentTabCards) {
+    final l10n = AppLocalizations.of(context)!;
     final name = _selectedCompanyFilter!;
+    // 44 dp tall so the ✕ can be a full 44 dp square; the visible circle
+    // inside it stays small.
     return GestureDetector(
       onTap: _showCompanyFilterSheet,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(10, 6, 6, 6),
+        height: 44,
+        padding: const EdgeInsets.only(left: 12),
         decoration: BoxDecoration(
           color: Wallet.accentOf(isDark).withOpacity(isDark ? .16 : .08),
           borderRadius: BorderRadius.circular(999),
@@ -302,20 +306,30 @@ class _CardPageState extends ConsumerState<CardPage>
                 ),
               ),
             ),
-            const SizedBox(width: 6),
-            GestureDetector(
-              onTap: () {
-                setState(() => _selectedCompanyFilter = null);
-                _runFilter();
-              },
-              child: Container(
-                padding: const EdgeInsets.all(3),
-                decoration: BoxDecoration(
-                  color: Wallet.accentOf(isDark).withOpacity(.18),
-                  shape: BoxShape.circle,
+            Semantics(
+              button: true,
+              label: l10n.cardPageClearFilter,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  setState(() => _selectedCompanyFilter = null);
+                  _runFilter();
+                },
+                child: SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Wallet.accentOf(isDark).withOpacity(.18),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.close_rounded,
+                          size: 13, color: Wallet.accentOf(isDark)),
+                    ),
+                  ),
                 ),
-                child: Icon(Icons.close_rounded,
-                    size: 11, color: Wallet.accentOf(isDark)),
               ),
             ),
           ],
@@ -383,8 +397,13 @@ class _CardPageState extends ConsumerState<CardPage>
       final fg = selected
           ? Wallet.onAccentOf(isDark)
           : (isDark ? Wallet.darkInk : Wallet.ink);
-      return Padding(
-        padding: const EdgeInsets.only(right: 8),
+      // The pill is drawn 34 dp tall, but the transparent band above and
+      // below it also takes the tap, so the target is the row's full 48 dp.
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Padding(
+        padding: const EdgeInsets.fromLTRB(0, 7, 8, 7),
         child: Material(
           color: selected
               ? Wallet.accentOf(isDark)
@@ -434,11 +453,12 @@ class _CardPageState extends ConsumerState<CardPage>
             ),
           ),
         ),
+        ),
       );
     }
 
     return SizedBox(
-      height: 34,
+      height: 48,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1504,16 +1524,23 @@ class _CardPageState extends ConsumerState<CardPage>
                           ),
                         ),
                         if (_query.isNotEmpty)
-                          GestureDetector(
+                          // The visible circle stays 20 dp, but the whole
+                          // 48 dp square around it takes the tap.
+                          Semantics(
+                            button: true,
+                            label: l10n.cardPageClearFilter,
+                            child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
                             onTap: () {
                               _searchController.clear();
                               setState(() => _query = "");
                               _runFilter();
                               _searchFocusNode.unfocus();
                             },
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 10),
+                            child: SizedBox(
+                              width: 44,
+                              height: 48,
+                              child: Center(
                               child: Container(
                                 width: 20,
                                 height: 20,
@@ -1527,7 +1554,9 @@ class _CardPageState extends ConsumerState<CardPage>
                                   color: Wallet.mutedOf(isDark),
                                 ),
                               ),
+                              ),
                             ),
+                          ),
                           )
                         else
                           const SizedBox(width: 14),
@@ -1552,7 +1581,8 @@ class _CardPageState extends ConsumerState<CardPage>
           ),
 
           Padding(
-            padding: const EdgeInsets.only(bottom: 6),
+            // No bottom gap: the chips' own 7 dp tap band provides it.
+            padding: EdgeInsets.zero,
             child: _buildProfessionChips(isDark, currentTabList),
           ),
           _buildFilterProgress(),

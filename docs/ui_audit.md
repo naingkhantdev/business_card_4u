@@ -293,3 +293,7 @@ Drafted alongside Phase 3 changes. Each is live in `lib/l10n/app_my.arb`; replac
 | `cardPageEmptyFriendsSearchCta` | Find People | လူများ ရှာဖွေမည် | ☐ |
 | `cardPageNoMatchingCardsSubtitle` | Nothing on this tab matches your search or filters. | သင့်ရှာဖွေမှု သို့မဟုတ် စစ်ထုတ်မှုနှင့် ကိုက်ညီသော ကတ် မရှိပါ။ | ☐ |
 | `cardPageClearFiltersCta` | Clear Filters | စစ်ထုတ်မှုများ ရှင်းမည် | ☐ |
+| `cardDetailCallPerson` | Call {name} | {name} ကို ဖုန်းခေါ်မည် | ☐ |
+| `cardDetailEmailPerson` | Email {name} | {name} ထံ အီးမေးလ်ပို့မည် | ☐ |
+| `cardDetailGetDirections` | Get Directions | လမ်းညွှန် ရယူမည် | ☐ |
+| `cardDetailVisitWebsite` | Visit Website | ဝဘ်ဆိုက်သို့ သွားမည် | ☐ |
